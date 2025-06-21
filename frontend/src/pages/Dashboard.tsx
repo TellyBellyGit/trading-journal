@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import MetricsCard from '../components/MetricsCard';
 import RecentTrades from '../components/RecentTrades';
 import QuickActions from '../components/QuickActions';
+import TradingCalendar from '../components/TradingCalendar';
 import useDashboardData from '../hooks/useDashboardData';
 import { Formatters } from '../utils/formatters';
 import type { Trade } from '../types/Trade';
@@ -25,6 +26,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onViewAllTrades,
   onTradeClick
 }) => {
+  const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
   // Use the custom hook for dashboard data
   const {
     trades,
@@ -37,6 +40,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     refresh,
     derivedData
   } = useDashboardData(30000); // Refresh every 30 seconds
+
+  const handleCalendarDateClick = (date: string, trades: Trade[]) => {
+    setSelectedDate(date);
+    setSelectedDateTrades(trades);
+  };
+
+  const closeTradeModal = () => {
+    setSelectedDateTrades(null);
+    setSelectedDate('');
+  };
 
   if (error) {
     return (
@@ -241,63 +254,110 @@ const Dashboard: React.FC<DashboardProps> = ({
             )}
           </div>
 
-          {/* Performance Insights */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Insights</h3>
-            <div className="space-y-4">
-              
-              {/* Risk-Reward Ratio */}
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium text-gray-900">Risk-Reward Ratio</div>
-                  <div className="text-sm text-gray-500">Average win vs average loss</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-gray-900">
-                    {derivedData.riskRewardRatio > 0 ? derivedData.riskRewardRatio.toFixed(2) : '-'}:1
-                  </div>
-                  <div className={`text-xs ${derivedData.riskRewardRatio >= 2 ? 'text-green-600' : derivedData.riskRewardRatio >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {derivedData.riskRewardRatio >= 2 ? 'Excellent' : derivedData.riskRewardRatio >= 1 ? 'Good' : 'Poor'}
-                  </div>
-                </div>
-              </div>
+          {/* Trading Calendar */}
+          <TradingCalendar onDateClick={handleCalendarDateClick} />
+        </div>
+      </div>
 
-              {/* Expected Value */}
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium text-gray-900">Expected Value</div>
-                  <div className="text-sm text-gray-500">Per trade expectation</div>
+      {/* Trade Details Modal */}
+      {selectedDateTrades && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Trades for {new Date(selectedDate).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              <button
+                onClick={closeTradeModal}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {selectedDateTrades.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-4xl mb-4">📅</div>
+                  <p>No trades found for this date</p>
                 </div>
-                <div className="text-right">
-                  <div className={`font-semibold ${derivedData.expectedValue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {Formatters.currency(derivedData.expectedValue)}
-                  </div>
-                  <div className={`text-xs ${derivedData.expectedValue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {derivedData.expectedValue >= 0 ? 'Positive edge' : 'Negative edge'}
-                  </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedDateTrades.map((trade, index) => (
+                    <div
+                      key={trade.id}
+                      className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => onTradeClick?.(trade)}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="font-semibold text-lg text-gray-900">
+                            {trade.symbol}
+                          </div>
+                          <div className={`px-2 py-1 rounded text-xs font-medium ${
+                            trade.direction === 'Long' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {trade.direction}
+                          </div>
+                          <div className={`px-2 py-1 rounded text-xs font-medium ${
+                            trade.status === 'Open' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {trade.status}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-lg font-bold ${
+                            (trade.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {Formatters.currency(trade.pnl || 0)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {Formatters.percentage(trade.percentChange || 0)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                        <div>
+                          <div className="font-medium">Quantity</div>
+                          <div>{trade.quantity?.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Entry Price</div>
+                          <div>{Formatters.currency(trade.entryPrice || 0)}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Exit Price</div>
+                          <div>{trade.exitPrice ? Formatters.currency(trade.exitPrice) : 'Open'}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Duration</div>
+                          <div>{trade.duration || 0} days</div>
+                        </div>
+                      </div>
+                      
+                      {trade.strategy && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          <span className="font-medium">Strategy:</span> {trade.strategy}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              {/* Trading Consistency */}
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium text-gray-900">Consistency Score</div>
-                  <div className="text-sm text-gray-500">Overall performance quality</div>
-                </div>
-                <div className="text-right">
-                  <div className={`font-semibold ${derivedData.consistency ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {derivedData.consistency ? 'Strong' : 'Developing'}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {metrics.winRate.toFixed(0)}% win rate
-                  </div>
-                </div>
-              </div>
-
+              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

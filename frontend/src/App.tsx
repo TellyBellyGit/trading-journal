@@ -4,6 +4,7 @@ import MetricsDashboard from './components/MetricsDashboard'; // Your existing p
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard'; // NEW analytics dashboard
 import AllTrades from './components/AllTrades';
 import ImportTrades from './components/ImportTrades';
+import TradingCalendar from './components/TradingCalendar';
 import './index.css';
 
 // API configuration
@@ -91,6 +92,8 @@ const OriginalDashboard = () => {
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   console.log("🔥 CURRENT STATE:", { loading, stats, recentTrades });
 
@@ -122,6 +125,17 @@ const OriginalDashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Handle calendar date clicks
+  const handleCalendarDateClick = (date: string, trades: Trade[]) => {
+    setSelectedDate(date);
+    setSelectedDateTrades(trades);
+  };
+
+  const closeTradeModal = () => {
+    setSelectedDateTrades(null);
+    setSelectedDate('');
+  };
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -346,23 +360,103 @@ const OriginalDashboard = () => {
         </div>
       </div>
 
-      {/* Performance Chart Placeholder */}
+      {/* Trading Calendar */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg">
-        <div className="p-6 border-b border-gray-700">
-          <h3 className="text-lg font-semibold text-white">Performance Overview</h3>
-        </div>
-        <div className="p-6">
-          <div className="h-64 bg-gray-700/50 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <span className="text-4xl">📈</span>
-              <p className="text-gray-400 mt-2">Performance Chart</p>
-              <p className="text-gray-500 text-sm">
-                {stats?.totalTrades ? `Based on ${stats.totalTrades} trades` : 'Component coming next...'}
-              </p>
+        <TradingCalendar onDateClick={handleCalendarDateClick} />
+      </div>
+
+      {/* Trade Details Modal */}
+      {selectedDateTrades && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-700">
+              <h3 className="text-xl font-semibold text-white">
+                Trades for {new Date(selectedDate).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              <button
+                onClick={closeTradeModal}
+                className="text-gray-400 hover:text-gray-200 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {selectedDateTrades.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-4xl mb-4">📅</div>
+                  <p>No trades found for this date</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedDateTrades.map((trade) => (
+                    <div
+                      key={trade.id}
+                      className="border border-gray-700 rounded-lg p-4 hover:bg-gray-700/30 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="font-semibold text-lg text-white">
+                            {trade.symbol}
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                            trade.direction === 'Long' 
+                              ? 'bg-green-600 text-white' 
+                              : 'bg-red-600 text-white'
+                          }`}>
+                            {trade.direction}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                            trade.status === 'Open' 
+                              ? 'bg-orange-600 text-white' 
+                              : 'bg-gray-600 text-white'
+                          }`}>
+                            {trade.status}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-lg font-bold ${
+                            (trade.profitLoss || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {trade.profitLoss ? formatCurrency(trade.profitLoss) : '$0.00'}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            {trade.percentChange ? `${trade.percentChange > 0 ? '+' : ''}${trade.percentChange.toFixed(2)}%` : '0%'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-300">
+                        <div>
+                          <div className="font-medium text-gray-400">Quantity</div>
+                          <div>{trade.quantity?.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-400">Entry Price</div>
+                          <div>{formatCurrency(trade.entryPrice || 0)}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-400">Exit Price</div>
+                          <div>{trade.exitPrice ? formatCurrency(trade.exitPrice) : 'Open'}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-400">Duration</div>
+                          <div>{trade.duration || 0} days</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
