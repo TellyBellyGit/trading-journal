@@ -1,0 +1,40 @@
+// prisma/schema.prisma
+// 1. Define the database
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// 2. Set generator for Prisma Client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 3. Define the Trade model
+model Trade {
+  id            Int      @id @default(autoincrement())
+  symbol        String
+  direction     String
+  quantity      Int
+  entryDate     DateTime
+  entryTime     String
+  entryPrice    Float
+  exitDate      DateTime
+  exitTime      String
+  exitPrice     Float
+  duration      String
+  pnl           Float
+  percentChange Float
+  orderType     String
+  assessment    String?
+  capital       Float
+  // 🔥 NEW: Rich text journaling fields
+  notes         String?  // Rich text content (HTML format from Tiptap)
+  strategy      String?  // Trading strategy used
+  riskReward    String?  // Risk:Reward ratio (e.g., "1:3")
+  commission    Float?   // Commission/fees paid
+  tags          String?  // Comma-separated tags for categorization
+  // Existing timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

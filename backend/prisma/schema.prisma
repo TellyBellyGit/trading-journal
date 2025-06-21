@@ -1,0 +1,65 @@
+// prisma/schema.prisma
+// 1. Define the database
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// 2. Set generator for Prisma Client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 3. Define the Broker model
+model Broker {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique  // e.g., "TD Ameritrade", "Interactive Brokers"
+  displayName String             // e.g., "TD Ameritrade - Main Account"
+  accountType String?            // e.g., "IRA", "Taxable", "Business"
+  accountId   String?            // Broker's account identifier
+  isActive    Boolean @default(true)
+  // Commission structure (optional)
+  defaultCommission Float?       // Default commission per trade
+  commissionType    String?      // "per_trade", "per_share", "percentage"
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Relations
+  trades      Trade[]
+}
+
+// 4. Define the Trade model
+model Trade {
+  id            Int      @id @default(autoincrement())
+  symbol        String
+  direction     String
+  quantity      Int
+  entryDate     DateTime
+  entryTime     String
+  entryPrice    Float
+  exitDate      DateTime
+  exitTime      String
+  exitPrice     Float
+  duration      String
+  pnl           Float
+  percentChange Float
+  orderType     String
+  assessment    String?
+  capital       Float
+  status        String?  @default("Closed")
+  // 🔥 NEW: Broker relationship
+  brokerId      Int
+  broker        Broker   @relation(fields: [brokerId], references: [id])
+  // 🔥 NEW: Rich text journaling fields
+  notes         String?  // Rich text content (HTML format from Tiptap)
+  strategy      String?  // Trading strategy used
+  riskReward    String?  // Risk:Reward ratio (e.g., "1:3")
+  commission    Float?   // Actual commission/fees paid (can override broker default)
+  tags          String?  // Comma-separated tags for categorization
+  // 🔥 NEW: Additional trade metadata
+  tradeId       String?  // Broker's trade confirmation number
+  executionVenue String? // Where trade was executed (e.g., "NASDAQ", "NYSE")
+  // Existing timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

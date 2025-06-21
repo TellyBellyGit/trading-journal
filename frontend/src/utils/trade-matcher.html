@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Matcher - Program 2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #111827;
+            color: #f9fafb;
+        }
+
+        .processing-log {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .log-success {
+            color: #4ade80;
+        }
+
+        .log-error {
+            color: #f87171;
+        }
+
+        .log-info {
+            color: #60a5fa;
+        }
+
+        .log-warning {
+            color: #fbbf24;
+        }
+
+        .log-header {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        .log-complete {
+            color: #a78bfa;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-gray-900 text-white">
+    <!-- Header -->
+    <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Trade Matcher</h1>
+                <p class="text-gray-400 text-sm mt-1">Program 2: FIFO matching of buy/sell pairs with P&L calculation
+                </p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-sm text-gray-400">FIFO Algorithm</span>
+                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-6 space-y-6">
+        <!-- File Upload Section -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-white mb-4">📁 Upload Parsed Trade Data</h2>
+
+            <div class="flex items-center space-x-4">
+                <input type="file" id="jsonFileInput" accept=".json" class="block w-full text-sm text-gray-400 
+                        file:mr-4 file:py-2 file:px-4 
+                        file:rounded-lg file:border-0 
+                        file:text-sm file:font-semibold 
+                        file:bg-green-600 file:text-white 
+                        hover:file:bg-green-700 file:transition-colors" />
+
+                <button id="clearButton"
+                    class="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors hidden">
+                    Clear
+                </button>
+            </div>
+
+            <div id="fileInfo" class="mt-4 p-4 bg-gray-700/50 rounded-lg hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p id="fileName" class="text-white font-medium"></p>
+                        <p id="tradesCount" class="text-gray-400 text-sm"></p>
+                    </div>
+                    <button id="matchButton"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        🎯 Start FIFO Matching
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Status -->
+        <div id="processingStatus" class="bg-gray-800 border border-green-600 rounded-lg p-6 hidden">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                <h3 class="text-lg font-semibold text-white">FIFO Matching in Progress...</h3>
+            </div>
+            <div class="bg-gray-900 border border-gray-600 rounded p-3 processing-log">
+                <div id="matchingLog"></div>
+            </div>
+        </div>
+
+        <!-- Matching Results -->
+        <div id="matchingResults" class="space-y-6 hidden">
+            <!-- Summary Statistics -->
+            <div class="bg-gray-800 border border-green-600 rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-white">🎯 Matching Results</h3>
+                    <div class="flex space-x-3">
+                        <button id="downloadJSONButton"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            📁 Download JSON
+                        </button>
+                        <button id="downloadCSVButton"
+                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                            📊 Download CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div id="summaryStats" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+
+            <!-- Matched Trades Preview -->
+            <div id="tradesPreview" class="bg-gray-800 border border-gray-700 rounded-lg hidden">
+                <div class="p-6 border-b border-gray-700">
+                    <h4 class="text-lg font-semibold text-white">📊 Matched Trades Preview</h4>
+                    <p class="text-gray-400 text-sm mt-1">
+                        Showing first 10 matched trades. Download full data using buttons above.
+                    </p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="p-3 text-left text-gray-300 font-medium">Symbol</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Direction</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Qty</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Entry</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Exit</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">P&L</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">%</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Status</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradesTableBody" class="divide-y divide-gray-700">
+                            <!-- Trades will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="moreTradesMessage" class="p-4 bg-gray-700/30 text-center text-gray-400 text-sm hidden">
+                    <!-- "... and X more trades" message -->
+                </div>
+            </div>
+
+            <!-- Open Positions -->
+            <div id="openPositions" class="bg-gray-800 border border-orange-600 rounded-lg p-6 hidden">
+                <h4 class="text-lg font-semibold text-orange-400 mb-4">📈 Open Positions</h4>
+                <div id="positionsList" class="space-y-3">
+                    <!-- Open positions will be populated here -->
+                </div>
+            </div>
+
+            <!-- Full Matching Log -->
+            <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-white mb-4">📝 Complete Matching Log</h4>
+                <div class="bg-gray-900 border border-gray-600 rounded p-3 processing-log max-h-96">
+                    <div id="fullMatchingLog"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-white mb-4">📖 How to Use</h3>
+            <div class="space-y-2 text-gray-300">
+                <div class="flex items-start space-x-3">
+                    <span class="text-green-400 font-bold">1.</span>
+                    <span>Upload the JSON file from Program 1 (CSV Statement Analyzer)</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-green-400 font-bold">2.</span>
+                    <span>Click "Start FIFO Matching" to process buy/sell pairs using First-In-First-Out logic</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-green-400 font-bold">3.</span>
+                    <span>Review the matched trades, open positions, and detailed matching log</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-green-400 font-bold">4.</span>
+                    <span>Download JSON (for Program 3) or CSV (for troubleshooting in Excel)</span>
+                </div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-green-600/10 border border-green-600/30 rounded">
+                    <h4 class="text-green-400 font-semibold mb-2">🎯 FIFO Matching Logic</h4>
+                    <ul class="text-green-300 text-sm space-y-1">
+                        <li>• First buy matches with first sell (chronologically)</li>
+                        <li>• Handles partial fills and multiple trades per symbol</li>
+                        <li>• Creates LONG positions (BUY → SELL)</li>
+                        <li>• Creates SHORT positions (SELL → BUY)</li>
+                        <li>• Calculates accurate P&L and percentage changes</li>
+                    </ul>
+                </div>
+
+                <div class="p-4 bg-blue-600/10 border border-blue-600/30 rounded">
+                    <h4 class="text-blue-400 font-semibold mb-2">📊 Output Formats</h4>
+                    <ul class="text-blue-300 text-sm space-y-1">
+                        <li>• <strong>JSON:</strong> Structured data for Program 3 (Duplicate Checker)</li>
+                        <li>• <strong>CSV:</strong> Excel-friendly format for troubleshooting</li>
+                        <li>• <strong>Log:</strong> Detailed matching process for debugging</li>
+                        <li>• <strong>Statistics:</strong> Summary counts and validation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript will be added in Part 2 -->
+    <script>
+        // Global variables
+        let inputFile = null;
+        let parsedData = null;
+        let matchingResult = null;
+        let matchingLog = [];
+
+        // DOM elements
+        const fileInput = document.getElementById('jsonFileInput');
+        const clearButton = document.getElementById('clearButton');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const tradesCount = document.getElementById('tradesCount');
+        const matchButton = document.getElementById('matchButton');
+        const processingStatus = document.getElementById('processingStatus');
+        const matchingLogDiv = document.getElementById('matchingLog');
+        const matchingResults = document.getElementById('matchingResults');
+        const summaryStats = document.getElementById('summaryStats');
+        const downloadJSONButton = document.getElementById('downloadJSONButton');
+        const downloadCSVButton = document.getElementById('downloadCSVButton');
+        const tradesPreview = document.getElementById('tradesPreview');
+        const tradesTableBody = document.getElementById('tradesTableBody');
+        const moreTradesMessage = document.getElementById('moreTradesMessage');
+        const openPositions = document.getElementById('openPositions');
+        const positionsList = document.getElementById('positionsList');
+        const fullMatchingLog = document.getElementById('fullMatchingLog');
+
+        // Event listeners
+        fileInput.addEventListener('change', handleFileUpload);
+        clearButton.addEventListener('click', resetMatcher);
+        matchButton.addEventListener('click', startMatching);
+        downloadJSONButton.addEventListener('click', downloadJSON);
+        downloadCSVButton.addEventListener('click', downloadCSV);
+
+        // PART 2 JavaScript functions will go here...
+        // (File upload, FIFO matching algorithm, display functions, etc.)
+
+        // Complete JavaScript for Trade Matcher - Replace the placeholder comment in Part 1 with this entire code block
+
+            function handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    inputFile = file;
+                    fileName.textContent = file.name;
+                    fileInfo.classList.remove('hidden');
+                    clearButton.classList.remove('hidden');
+                    matchingResults.classList.add('hidden');
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const content = e.target.result;
+                            parsedData = JSON.parse(content);
+
+                            if (parsedData.trades && Array.isArray(parsedData.trades)) {
+                                tradesCount.textContent = `${parsedData.trades.length} trades to process`;
+                                matchButton.disabled = false;
+                            } else {
+                                tradesCount.textContent = 'Invalid JSON format - no trades found';
+                                matchButton.disabled = true;
+                            }
+                        } catch (error) {
+                            tradesCount.textContent = 'Invalid JSON file format';
+                            matchButton.disabled = true;
+                            alert('Invalid JSON file. Please upload the output from Program 1.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            }
+
+            function resetMatcher() {
+                inputFile = null;
+                parsedData = null;
+                matchingResult = null;
+                matchingLog = [];
+                fileInput.value = '';
+                fileInfo.classList.add('hidden');
+                clearButton.classList.add('hidden');
+                matchingResults.classList.add('hidden');
+                processingStatus.classList.add('hidden');
+            }
+
+            function addToLog(message, type = 'info') {
+                matchingLog.push({ message, type, timestamp: new Date() });
+
+                const logClass = type === 'success' ? 'log-success' :
+                    type === 'error' ? 'log-error' :
+                        type === 'warning' ? 'log-warning' :
+                            type === 'header' ? 'log-header' :
+                                type === 'complete' ? 'log-complete' :
+                                    'log-info';
+
+                const logEntry = `<div class="${logClass}">${message}</div>`;
+                matchingLogDiv.innerHTML += logEntry;
+                matchingLogDiv.scrollTop = matchingLogDiv.scrollHeight;
+            }
+
+            function generateTradeId(symbol, index) {
+                    return `${symbol}_${Date.now()}_${index}`;
+                }
+
+                function calculatePnL(entryPrice, exitPrice, quantity, direction) {
+                    if (direction === 'LONG') {
+                        return (exitPrice - entryPrice) * quantity;
+                    } else {
+                        return (entryPrice - exitPrice) * quantity;
+                    }
+                }
+
+                function calculatePercentChange(entryPrice, exitPrice, direction) {
+                    if (direction === 'LONG') {
+                        return ((exitPrice - entryPrice) / entryPrice) * 100;
+                    } else {
+                        return ((entryPrice - exitPrice) / entryPrice) * 100;
+                    }
+                }
+
+                function extractDate(execTime) {
+                        if (execTime && execTime.includes(' ')) {
+                            return execTime.split(' ')[0];  // Split on space for MM/DD/YY format
+                        }
+                        return execTime;
+                    }
+
+                    function extractDateAndTime(execTime) {
+                            if (execTime && execTime.includes(' ')) {
+                                const [datePart, timePart] = execTime.split(' ');
+                                return { date: datePart, time: timePart };
+                            }
+                            return { date: execTime, time: '' };
+                        }
+
+
+                function formatCurrency(amount, decimals = 2) {
+                    if (amount === undefined || amount === null) return '—';
+                    return `$${amount.toFixed(decimals)}`;
+                }
+
+
+                // ================================
+                // NEW HELPER FUNCTIONS FOR PROPER MATCHING
+                // ================================
+
+                function createClosedTrade(entryTrade, exitTrade, quantity, direction) {
+                        const pnl = calculatePnL(entryTrade.price, exitTrade.price, quantity, direction);
+                        const percentChange = calculatePercentChange(entryTrade.price, exitTrade.price, direction);
+                        const entryDateTime = extractDateAndTime(entryTrade.execTime);
+                        const exitDateTime = extractDateAndTime(exitTrade.execTime);
+
+                        return {
+                            tradeId: generateTradeId(entryTrade.symbol, Date.now()),
+                            symbol: entryTrade.symbol,
+                            direction: direction,
+                            entryDate: entryDateTime.date,
+                            entryTime: entryDateTime.time,
+                            exitDate: exitDateTime.date,
+                            exitTime: exitDateTime.time,
+                            quantity: quantity,
+                            entryPrice: entryTrade.price,
+                            exitPrice: exitTrade.price,
+                            pnl: pnl,
+                            percentChange: percentChange,
+                            status: 'CLOSED',
+                            matchingMethod: 'FIFO',
+                            notes: '', // Notes field should be blank
+                            entryTrades: [entryTrade],
+                            exitTrades: [exitTrade],
+                            remainingQuantity: 0
+                        };
+                    }
+
+                    function createOpenTrade(entryTrade, direction, quantity) {
+                        return {
+                            tradeId: generateTradeId(entryTrade.symbol, Date.now()),
+                            symbol: entryTrade.symbol,
+                            direction: direction,
+                            entryDate: extractDate(entryTrade.execTime),
+                            entryTime: entryTrade.execTime,
+                            exitDate: null,
+                            exitTime: null,
+                            quantity: quantity,
+                            entryPrice: entryTrade.price,
+                            exitPrice: null,
+                            pnl: null,
+                            percentChange: null,
+                            duration: null,
+                            status: 'OPEN',
+                            matchingMethod: 'FIFO',
+                            notes: `Open ${direction} position: ${entryTrade.side} ${quantity} @ ${formatCurrency(entryTrade.price)} - Awaiting manual completion`,
+                            entryTrades: [entryTrade],
+                            exitTrades: [],
+                            remainingQuantity: quantity
+                        };
+                    }
+
+
+
+
+                // ================================
+                // NEW MATCHING FUNCTIONS
+                // ================================
+
+                function matchBuyAgainstSells(buyTrade, sellQueue) {
+                    let remainingBuyQty = buyTrade.qty;
+                    const matchedTrades = [];
+
+                    while (remainingBuyQty > 0 && sellQueue.length > 0) {
+                        const sellTrade = sellQueue[0];
+                        const matchQty = Math.min(remainingBuyQty, sellTrade.qty);
+
+                        // Create matched trade for short position
+                        const matchedTrade = createShortMatchedTrade(sellTrade, buyTrade, matchQty);
+                        matchedTrades.push(matchedTrade);
+
+                        addToLog(`    ✅ Matched SHORT: ${matchQty} shares, P&L: ${formatCurrency(matchedTrade.pnl)}`, 'success');
+
+                        // Update quantities
+                        sellTrade.qty -= matchQty;
+                        remainingBuyQty -= matchQty;
+
+                        // Remove fully matched sell from queue
+                        if (sellTrade.qty === 0) {
+                            sellQueue.shift();
+                        }
+                    }
+
+                    return { remainingQty: remainingBuyQty, matchedTrades };
+                }
+
+                function matchSellAgainstBuys(sellTrade, buyQueue) {
+                    let remainingSellQty = sellTrade.qty;
+                    const matchedTrades = [];
+
+                    while (remainingSellQty > 0 && buyQueue.length > 0) {
+                        const buyTrade = buyQueue[0];
+                        const matchQty = Math.min(remainingSellQty, buyTrade.qty);
+
+                        // Create matched trade for long position
+                        const matchedTrade = createLongMatchedTrade(buyTrade, sellTrade, matchQty);
+                        matchedTrades.push(matchedTrade);
+
+                        addToLog(`    ✅ Matched LONG: ${matchQty} shares, P&L: ${formatCurrency(matchedTrade.pnl)}`, 'success');
+
+                        // Update quantities
+                        buyTrade.qty -= matchQty;
+                        remainingSellQty -= matchQty;
+
+                        // Remove fully matched buy from queue
+                        if (buyTrade.qty === 0) {
+                            buyQueue.shift();
+                        }
+                    }
+
+                    return { remainingQty: remainingSellQty, matchedTrades };
+                }
+
+                function createLongMatchedTrade(buyTrade, sellTrade, quantity) {
+                    const pnl = calculatePnL(buyTrade.price, sellTrade.price, quantity, 'LONG');
+                    const percentChange = calculatePercentChange(buyTrade.price, sellTrade.price, 'LONG');
+
+                    return {
+                        tradeId: generateTradeId(buyTrade.symbol, Date.now()),
+                        symbol: buyTrade.symbol,
+                        direction: 'LONG',
+                        entryDate: extractDate(buyTrade.execTime),
+                        entryTime: buyTrade.execTime,
+                        exitDate: extractDate(sellTrade.execTime),
+                        exitTime: sellTrade.execTime,
+                        quantity: quantity,
+                        entryPrice: buyTrade.price,
+                        exitPrice: sellTrade.price,
+                        pnl: pnl,
+                        percentChange: percentChange,
+                        status: 'CLOSED',
+                        matchingMethod: 'FIFO',
+                        notes: `LONG: BUY ${quantity} @ ${formatCurrency(buyTrade.price)} → SELL ${quantity} @ ${formatCurrency(sellTrade.price)}`,
+                        entryTrades: [buyTrade],
+                        exitTrades: [sellTrade],
+                        remainingQuantity: 0
+                    };
+                }
+
+                function createShortMatchedTrade(sellTrade, buyTrade, quantity) {
+                    const pnl = calculatePnL(sellTrade.price, buyTrade.price, quantity, 'SHORT');
+                    const percentChange = calculatePercentChange(sellTrade.price, buyTrade.price, 'SHORT');
+
+                    return {
+                        tradeId: generateTradeId(sellTrade.symbol, Date.now()),
+                        symbol: sellTrade.symbol,
+                        direction: 'SHORT',
+                        entryDate: extractDate(sellTrade.execTime),
+                        entryTime: sellTrade.execTime,
+                        exitDate: extractDate(buyTrade.execTime),
+                        exitTime: buyTrade.execTime,
+                        quantity: quantity,
+                        entryPrice: sellTrade.price,
+                        exitPrice: buyTrade.price,
+                        pnl: pnl,
+                        percentChange: percentChange,
+                        status: 'CLOSED',
+                        matchingMethod: 'FIFO',
+                        notes: `SHORT: SELL ${quantity} @ ${formatCurrency(sellTrade.price)} → BUY ${quantity} @ ${formatCurrency(buyTrade.price)}`,
+                        entryTrades: [sellTrade],
+                        exitTrades: [buyTrade],
+                        remainingQuantity: 0
+                    };
+                }
+
+                function createOpenLongTrade(buyTrade) {
+                        const entryDateTime = extractDateAndTime(buyTrade.execTime);
+
+                        return {
+                            tradeId: generateTradeId(buyTrade.symbol, Date.now()),
+                            symbol: buyTrade.symbol,
+                            direction: 'LONG',
+                            entryDate: entryDateTime.date,
+                            entryTime: entryDateTime.time,
+                            quantity: buyTrade.qty,
+                            entryPrice: buyTrade.price,
+                            status: 'OPEN',
+                            matchingMethod: 'FIFO',
+                            notes: '', // Notes field should be blank
+                            entryTrades: [buyTrade],
+                            exitTrades: [],
+                            remainingQuantity: buyTrade.qty
+                        };
+                    }
+
+                function createOpenShortTrade(sellTrade) {
+                    return {
+                        tradeId: generateTradeId(sellTrade.symbol, Date.now()),
+                        symbol: sellTrade.symbol,
+                        direction: 'SHORT',
+                        entryDate: extractDate(sellTrade.execTime),
+                        entryTime: sellTrade.execTime,
+                        quantity: sellTrade.qty,
+                        entryPrice: sellTrade.price,
+                        status: 'OPEN',
+                        matchingMethod: 'FIFO',
+                        notes: `Open SHORT position: SELL ${sellTrade.qty} @ ${formatCurrency(sellTrade.price)}`,
+                        entryTrades: [sellTrade],
+                        exitTrades: [],
+                        remainingQuantity: sellTrade.qty
+                    };
+                }
+            
+                async function startMatching() {
+                        if (!parsedData?.trades) return;
+
+                        processingStatus.classList.remove('hidden');
+                        matchingResults.classList.add('hidden');
+                        matchingLog = [];
+                        matchingLogDiv.innerHTML = '';
+
+                        try {
+                            const trades = parsedData.trades;
+                            const matchedTrades = [];
+                            const openPositions = [];
+
+                            addToLog(`Processing ${trades.length} total trades...`, 'info');
+
+                            // Group trades by symbol
+                            const tradesBySymbol = new Map();
+                            trades.forEach(trade => {
+                                if (!tradesBySymbol.has(trade.symbol)) {
+                                    tradesBySymbol.set(trade.symbol, []);
+                                }
+                                tradesBySymbol.get(trade.symbol).push({ ...trade });
+                            });
+
+                            addToLog(`Found ${tradesBySymbol.size} unique symbols to process`, 'info');
+
+                            // Process each symbol separately
+                            for (const [symbol, symbolTrades] of tradesBySymbol) {
+                                addToLog(`\n--- Processing ${symbol} (${symbolTrades.length} trades) ---`, 'header');
+
+                                // Sort trades by execution time for proper FIFO
+                                symbolTrades.sort((a, b) => {
+                                    const dateA = new Date(`1970-01-01T${a.execTime}`);
+                                    const dateB = new Date(`1970-01-01T${b.execTime}`);
+                                    return dateA.getTime() - dateB.getTime();
+                                });
+
+                                // Simple FIFO queues
+                                const longQueue = [];   // BUY TO OPEN trades waiting for SELL TO CLOSE
+                                const shortQueue = [];  // SELL TO OPEN trades waiting for BUY TO CLOSE
+
+                                // Process each trade in chronological order
+                                for (const trade of symbolTrades) {
+                                    const posEffect = trade.posEffect || trade['Pos Effect'] || 'UNKNOWN';
+                                    addToLog(`  ${trade.execTime}: ${trade.side} ${trade.qty} @ $${trade.price} (${posEffect})`, 'info');
+
+                                    if (trade.side === 'BUY' && posEffect === 'TO OPEN') {
+                                        // Add to long queue - waiting for SELL TO CLOSE
+                                        longQueue.push({ qty: trade.qty, trade: trade });
+                                        addToLog(`    → Added to LONG queue (${trade.qty} shares)`, 'info');
+
+                                    } else if (trade.side === 'SELL' && posEffect === 'TO OPEN') {
+                                        // Add to short queue - waiting for BUY TO CLOSE
+                                        shortQueue.push({ qty: trade.qty, trade: trade });
+                                        addToLog(`    → Added to SHORT queue (${trade.qty} shares)`, 'info');
+
+                                    } else if (trade.side === 'SELL' && posEffect === 'TO CLOSE') {
+                                        // Match against LONG queue
+                                        let sellQtyRemaining = trade.qty;
+
+                                        while (sellQtyRemaining > 0 && longQueue.length > 0) {
+                                            const queueEntry = longQueue[0];
+                                            const matchQty = Math.min(sellQtyRemaining, queueEntry.qty);
+
+                                            // Create closed LONG trade - ONLY THIS, NO OPEN TRADE
+                                            const closedTrade = createClosedTrade(queueEntry.trade, trade, matchQty, 'LONG');
+                                            matchedTrades.push(closedTrade);
+
+                                            addToLog(`    ✅ LONG matched: ${matchQty} shares, P&L: ${formatCurrency(closedTrade.pnl)}`, 'success');
+
+                                            // Update quantities
+                                            sellQtyRemaining -= matchQty;
+                                            queueEntry.qty -= matchQty;
+
+                                            // Remove if fully matched
+                                            if (queueEntry.qty === 0) {
+                                                longQueue.shift();
+                                            }
+                                        }
+
+                                        if (sellQtyRemaining > 0) {
+                                            addToLog(`    ⚠️ WARNING: ${sellQtyRemaining} shares of SELL TO CLOSE could not be matched!`, 'warning');
+                                        }
+
+                                    } else if (trade.side === 'BUY' && posEffect === 'TO CLOSE') {
+                                        // Match against SHORT queue
+                                        let buyQtyRemaining = trade.qty;
+
+                                        while (buyQtyRemaining > 0 && shortQueue.length > 0) {
+                                            const queueEntry = shortQueue[0];
+                                            const matchQty = Math.min(buyQtyRemaining, queueEntry.qty);
+
+                                            // Create closed SHORT trade - ONLY THIS, NO OPEN TRADE
+                                            const closedTrade = createClosedTrade(queueEntry.trade, trade, matchQty, 'SHORT');
+                                            matchedTrades.push(closedTrade);
+
+                                            addToLog(`    ✅ SHORT matched: ${matchQty} shares, P&L: ${formatCurrency(closedTrade.pnl)}`, 'success');
+
+                                            // Update quantities
+                                            buyQtyRemaining -= matchQty;
+                                            queueEntry.qty -= matchQty;
+
+                                            // Remove if fully matched
+                                            if (queueEntry.qty === 0) {
+                                                shortQueue.shift();
+                                            }
+                                        }
+
+                                        if (buyQtyRemaining > 0) {
+                                            addToLog(`    ⚠️ WARNING: ${buyQtyRemaining} shares of BUY TO CLOSE could not be matched!`, 'warning');
+                                        }
+
+                                    } else {
+                                        addToLog(`    ⚠️ Unknown trade type: ${trade.side} ${posEffect}`, 'warning');
+                                    }
+                                }
+
+                                // ONLY NOW - Handle remaining UNMATCHED entries as OPEN trades
+                                longQueue.forEach(entry => {
+                                    const openTrade = createOpenTrade(entry.trade, 'LONG', entry.qty);
+                                    matchedTrades.push(openTrade);
+                                    addToLog(`  📊 Unmatched LONG: ${entry.qty} shares @ ${formatCurrency(entry.trade.price)}`, 'warning');
+                                });
+
+                                shortQueue.forEach(entry => {
+                                    const openTrade = createOpenTrade(entry.trade, 'SHORT', entry.qty);
+                                    matchedTrades.push(openTrade);
+                                    addToLog(`  📊 Unmatched SHORT: ${entry.qty} shares @ ${formatCurrency(entry.trade.price)}`, 'warning');
+                                });
+
+                                // Add to open positions summary
+                                if (longQueue.length > 0) {
+                                    const totalLongQty = longQueue.reduce((sum, entry) => sum + entry.qty, 0);
+                                    openPositions.push({
+                                        symbol: symbol,
+                                        direction: 'LONG',
+                                        totalQuantity: totalLongQty,
+                                        trades: longQueue.length
+                                    });
+                                }
+
+                                if (shortQueue.length > 0) {
+                                    const totalShortQty = shortQueue.reduce((sum, entry) => sum + entry.qty, 0);
+                                    openPositions.push({
+                                        symbol: symbol,
+                                        direction: 'SHORT',
+                                        totalQuantity: totalShortQty,
+                                        trades: shortQueue.length
+                                    });
+                                }
+                            }
+
+                            // Calculate final statistics
+                            const closedTrades = matchedTrades.filter(trade => trade.status === 'CLOSED');
+                            const openTrades = matchedTrades.filter(trade => trade.status === 'OPEN');
+                            const totalPnL = closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+                            const winningTrades = closedTrades.filter(trade => (trade.pnl || 0) > 0);
+                            const longTrades = closedTrades.filter(trade => trade.direction === 'LONG');
+                            const shortTrades = closedTrades.filter(trade => trade.direction === 'SHORT');
+
+                            const statistics = {
+                                totalInputTrades: trades.length,
+                                totalMatchedTrades: matchedTrades.length,
+                                totalOpenPositions: openPositions.length,
+                                totalUnmatchedTrades: 0
+                            };
+
+                            addToLog(`\n🎯 MATCHING COMPLETE!`, 'complete');
+                            addToLog(`📊 Input Trades: ${statistics.totalInputTrades}`, 'complete');
+                            addToLog(`✅ Closed Trades: ${closedTrades.length} (${longTrades.length} LONG, ${shortTrades.length} SHORT)`, 'complete');
+                            addToLog(`📈 Open Positions: ${openTrades.length}`, 'complete');
+                            addToLog(`💰 Total P&L: ${formatCurrency(totalPnL)}`, 'complete');
+
+                            if (closedTrades.length > 0) {
+                                const winRate = (winningTrades.length / closedTrades.length) * 100;
+                                addToLog(`📊 Win Rate: ${winRate.toFixed(2)}% (${winningTrades.length}/${closedTrades.length})`, 'complete');
+                            }
+
+                            matchingResult = {
+                                matchedTrades,
+                                openPositions,
+                                matchingLog: matchingLog,
+                                statistics
+                            };
+
+                            showResults();
+
+                        } catch (error) {
+                            addToLog(`❌ ERROR: ${error.message}`, 'error');
+                            console.error('Matching error:', error);
+                        }
+
+                        processingStatus.classList.add('hidden');
+                    }
+
+            function showResults() {
+                matchingResults.classList.remove('hidden');
+
+                // Update summary statistics
+                summaryStats.innerHTML = `
+        <div class="bg-blue-600/20 border border-blue-600 rounded p-3 text-center">
+            <div class="text-2xl font-bold text-blue-400">${matchingResult.statistics.totalInputTrades}</div>
+            <div class="text-blue-300 text-sm">Input Trades</div>
+        </div>
+        <div class="bg-green-600/20 border border-green-600 rounded p-3 text-center">
+            <div class="text-2xl font-bold text-green-400">${matchingResult.statistics.totalMatchedTrades}</div>
+            <div class="text-green-300 text-sm">Matched Trades</div>
+        </div>
+        <div class="bg-orange-600/20 border border-orange-600 rounded p-3 text-center">
+            <div class="text-2xl font-bold text-orange-400">${matchingResult.statistics.totalOpenPositions}</div>
+            <div class="text-orange-300 text-sm">Open Positions</div>
+        </div>
+        <div class="bg-red-600/20 border border-red-600 rounded p-3 text-center">
+            <div class="text-2xl font-bold text-red-400">${matchingResult.statistics.totalUnmatchedTrades}</div>
+            <div class="text-red-300 text-sm">Unmatched</div>
+        </div>
+    `;
+
+                // Show matched trades preview
+                if (matchingResult.matchedTrades.length > 0) {
+                    tradesPreview.classList.remove('hidden');
+
+                    const tradesToShow = matchingResult.matchedTrades.slice(0, 10);
+                    tradesTableBody.innerHTML = tradesToShow.map(trade => `
+    <tr class="hover:bg-gray-700/50">
+        <td class="p-3 text-white font-medium">${trade.tradeId}</td>
+        <td class="p-3">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${trade.direction === 'LONG' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                        }">
+                ${trade.direction}
+            </span>
+        </td>
+        <td class="p-3 text-gray-300">${trade.entryDate}</td>
+        <td class="p-3 text-gray-300">${trade.entryTime}</td>
+        <td class="p-3 text-gray-300">${trade.exitDate || '-'}</td>
+        <td class="p-3 text-gray-300">${trade.exitTime || '-'}</td>
+        <td class="p-3 text-gray-300">${trade.quantity}</td>
+        <td class="p-3 text-gray-300">$${trade.entryPrice.toFixed(2)}</td>
+        <td class="p-3 text-gray-300">
+            ${trade.exitPrice ? `$${trade.exitPrice.toFixed(2)}` : '-'}
+        </td>
+        <td class="p-3">
+            <span class="font-medium ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                        }">
+                ${trade.pnl ? `$${trade.pnl.toFixed(2)}` : '-'}
+            </span>
+        </td>
+        <td class="p-3">
+            <span class="font-medium ${(trade.percentChange || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                        }">
+                ${trade.percentChange ? `${trade.percentChange.toFixed(2)}%` : '-'}
+            </span>
+        </td>
+        <td class="p-3">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${trade.status === 'OPEN' ? 'bg-orange-600 text-white' : 'bg-gray-600 text-white'
+                        }">
+                ${trade.status}
+            </span>
+        </td>
+        <td class="p-3 text-gray-300 text-sm max-w-xs truncate">
+            ${trade.notes} <!-- This will be blank -->
+        </td>
+    </tr>
+`).join('');
+
+                    if (matchingResult.matchedTrades.length > 10) {
+                        moreTradesMessage.classList.remove('hidden');
+                        moreTradesMessage.textContent = `... and ${matchingResult.matchedTrades.length - 10} more matched trades`;
+                    }
+                }
+
+                // Show open positions
+                if (matchingResult.openPositions.length > 0) {
+                    openPositions.classList.remove('hidden');
+
+                    positionsList.innerHTML = matchingResult.openPositions.map(position => `
+            <div class="bg-orange-600/10 border border-orange-600/30 rounded p-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-white font-medium">${position.symbol}</span>
+                        <span class="ml-3 inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${position.side === 'BUY' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                        }">
+                            ${position.side === 'BUY' ? 'LONG' : 'SHORT'}
+                        </span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-white font-medium">${position.totalQuantity} shares</div>
+                        <div class="text-gray-400 text-sm">${position.trades.length} trades</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+                }
+
+                // Show full matching log
+                fullMatchingLog.innerHTML = matchingResult.matchingLog.map(logEntry => {
+                    const logClass = logEntry.type === 'success' ? 'log-success' :
+                        logEntry.type === 'error' ? 'log-error' :
+                            logEntry.type === 'warning' ? 'log-warning' :
+                                logEntry.type === 'header' ? 'log-header' :
+                                    logEntry.type === 'complete' ? 'log-complete' :
+                                        'log-info';
+
+                    return `<div class="${logClass}">${logEntry.message}</div>`;
+                }).join('');
+            }
+
+            function downloadJSON() {
+                    if (!matchingResult) return;
+                    const jsonData = {
+                        metadata: {
+                            fileName: inputFile?.name,
+                            processedAt: new Date().toISOString(),
+                            matchingMethod: 'FIFO',
+                            statistics: matchingResult.statistics
+                        },
+                        matchedTrades: matchingResult.matchedTrades,
+                        openPositions: matchingResult.openPositions,
+                        unmatchedTrades: matchingResult.unmatchedTrades,
+                        matchingLog: matchingResult.matchingLog
+                    };
+                    const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `matched-trades-${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+
+                function downloadCSV() {
+                        if (!matchingResult) return;
+                        const csvHeaders = [
+                            'TradeID', 'Symbol', 'Direction', 'EntryDate', 'EntryTime', 'ExitDate', 'ExitTime',
+                            'Quantity', 'EntryPrice', 'ExitPrice', 'PnL', 'PercentChange', 'Status', 'Notes'
+                        ];
+                        const csvRows = matchingResult.matchedTrades.map(trade => [
+                            trade.tradeId,
+                            trade.symbol,
+                            trade.direction,
+                            trade.entryDate,
+                            trade.entryTime,
+                            trade.exitDate || '',
+                            trade.exitTime || '',
+                            trade.quantity,
+                            trade.entryPrice.toFixed(2),
+                            trade.exitPrice?.toFixed(2) || '',
+                            trade.pnl?.toFixed(2) || '',
+                            trade.percentChange?.toFixed(2) || '',
+                            trade.status,
+                            trade.notes // This will be blank
+                        ]);
+                        const csvContent = [
+                            csvHeaders.join(','),
+                            ...csvRows.map(row => row.join(','))
+                        ].join('\n');
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `matched-trades-${Date.now()}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
+
+
+    </script>
+</body>
+
+</html>

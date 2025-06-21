@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Statement Analyzer - Program 1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #111827;
+            color: #f9fafb;
+        }
+        .processing-log {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-white">
+    <!-- Header -->
+    <div class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-white">CSV Statement Analyzer</h1>
+                <p class="text-gray-400 text-sm mt-1">Program 1: Parse broker statements and extract trade data</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-sm text-gray-400">Standalone HTML Version</span>
+                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-6 space-y-6">
+        <!-- File Upload Section -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-white mb-4">📁 Upload Broker Statement</h2>
+            
+            <div class="flex items-center space-x-4">
+                <input
+                    type="file"
+                    id="csvFileInput"
+                    accept=".csv"
+                    class="block w-full text-sm text-gray-400 
+                        file:mr-4 file:py-2 file:px-4 
+                        file:rounded-lg file:border-0 
+                        file:text-sm file:font-semibold 
+                        file:bg-blue-600 file:text-white 
+                        hover:file:bg-blue-700 file:transition-colors"
+                />
+                
+                <button
+                    id="clearButton"
+                    class="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors hidden"
+                >
+                    Clear
+                </button>
+            </div>
+            
+            <div id="fileInfo" class="mt-4 p-4 bg-gray-700/50 rounded-lg hidden">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p id="fileName" class="text-white font-medium"></p>
+                        <p id="fileSize" class="text-gray-400 text-sm"></p>
+                    </div>
+                    <button
+                        id="analyzeButton"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        🔍 Analyze CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Status -->
+        <div id="processingStatus" class="bg-gray-800 border border-blue-600 rounded-lg p-6 hidden">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <h3 class="text-lg font-semibold text-white">Processing...</h3>
+            </div>
+            <div class="bg-gray-900 border border-gray-600 rounded p-3 processing-log">
+                <div id="currentProcessingLine" class="text-blue-400"></div>
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div id="analysisResults" class="space-y-6 hidden">
+            <!-- Summary Card -->
+            <div id="summaryCard" class="border rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="summaryTitle" class="text-lg font-semibold text-white"></h3>
+                    <button
+                        id="downloadButton"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors hidden"
+                    >
+                        📁 Download Parsed Data
+                    </button>
+                </div>
+                
+                <div id="summaryStats" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Stats will be populated here -->
+                </div>
+                
+                <div id="errorMessages" class="text-red-400 mt-4 hidden">
+                    <!-- Error messages will be populated here -->
+                </div>
+            </div>
+
+            <!-- Errors and Warnings -->
+            <div id="errorsWarnings" class="grid grid-cols-1 lg:grid-cols-2 gap-6 hidden">
+                <div id="errorsSection" class="bg-gray-800 border border-red-600 rounded-lg p-6 hidden">
+                    <h4 class="text-lg font-semibold text-red-400 mb-4">❌ Errors</h4>
+                    <div id="errorsList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                </div>
+                
+                <div id="warningsSection" class="bg-gray-800 border border-yellow-600 rounded-lg p-6 hidden">
+                    <h4 class="text-lg font-semibold text-yellow-400 mb-4">⚠️ Warnings</h4>
+                    <div id="warningsList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Parsed Trades Preview -->
+            <div id="tradesPreview" class="bg-gray-800 border border-gray-700 rounded-lg hidden">
+                <div class="p-6 border-b border-gray-700">
+                    <h4 class="text-lg font-semibold text-white">📊 Parsed Trades Preview</h4>
+                    <p class="text-gray-400 text-sm mt-1">
+                        Showing first 10 trades. Download full data using the button above.
+                    </p>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="p-3 text-left text-gray-300 font-medium">Time</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Symbol</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Side</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Qty</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Price</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Net Price</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Order Type</th>
+                                <th class="p-3 text-left text-gray-300 font-medium">Line #</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradesTableBody" class="divide-y divide-gray-700">
+                            <!-- Trades will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="moreTradesMessage" class="p-4 bg-gray-700/30 text-center text-gray-400 text-sm hidden">
+                    <!-- "... and X more trades" message -->
+                </div>
+            </div>
+
+            <!-- Header Line Preview -->
+            <div id="headerPreview" class="bg-gray-800 border border-gray-700 rounded-lg p-6 hidden">
+                <h4 class="text-lg font-semibold text-white mb-4">📋 Detected Column Headers</h4>
+                <div class="bg-gray-900 border border-gray-600 rounded p-3 font-mono text-sm">
+                    <div id="headerLineText" class="text-gray-300"></div>
+                </div>
+                
+                <div id="headerValidation" class="mt-4 grid grid-cols-2 md:grid-cols-5 gap-2">
+                    <!-- Header validation badges will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-white mb-4">📖 How to Use</h3>
+            <div class="space-y-2 text-gray-300">
+                <div class="flex items-start space-x-3">
+                    <span class="text-blue-400 font-bold">1.</span>
+                    <span>Upload your broker CSV statement using the file input above</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-blue-400 font-bold">2.</span>
+                    <span>Click "Analyze CSV" to scan for the "Account Trade History" section</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-blue-400 font-bold">3.</span>
+                    <span>Review the parsed trades, errors, and warnings in the results below</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="text-blue-400 font-bold">4.</span>
+                    <span>Download the parsed data JSON file to use in Program 2 (Trade Matcher)</span>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-4 bg-blue-600/10 border border-blue-600/30 rounded">
+                <p class="text-blue-300 text-sm">
+                    <strong>Expected Format:</strong> This analyzer looks for "Account Trade History" followed by 
+                    columns: Exec Time, Symbol, Side, Qty, Strike, Type, Price, Net Price, Order Type, Pos Effect
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Expected column headers from broker statement
+        const EXPECTED_HEADERS = [
+            'Exec Time', 'Symbol', 'Side', 'Qty', 'Strike', 'Type', 'Price', 'Net Price', 'Order Type', 'Pos Effect'
+        ];
+
+        // Global variables
+        let currentFile = null;
+        let csvContent = '';
+        let analysisResult = null;
+
+        // DOM elements
+        const fileInput = document.getElementById('csvFileInput');
+        const clearButton = document.getElementById('clearButton');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const processingStatus = document.getElementById('processingStatus');
+        const currentProcessingLine = document.getElementById('currentProcessingLine');
+        const analysisResults = document.getElementById('analysisResults');
+        const summaryCard = document.getElementById('summaryCard');
+        const summaryTitle = document.getElementById('summaryTitle');
+        const summaryStats = document.getElementById('summaryStats');
+        const errorMessages = document.getElementById('errorMessages');
+        const downloadButton = document.getElementById('downloadButton');
+        const errorsWarnings = document.getElementById('errorsWarnings');
+        const errorsSection = document.getElementById('errorsSection');
+        const warningsSection = document.getElementById('warningsSection');
+        const errorsList = document.getElementById('errorsList');
+        const warningsList = document.getElementById('warningsList');
+        const tradesPreview = document.getElementById('tradesPreview');
+        const tradesTableBody = document.getElementById('tradesTableBody');
+        const moreTradesMessage = document.getElementById('moreTradesMessage');
+        const headerPreview = document.getElementById('headerPreview');
+        const headerLineText = document.getElementById('headerLineText');
+        const headerValidation = document.getElementById('headerValidation');
+
+        // Event listeners
+        fileInput.addEventListener('change', handleFileUpload);
+        clearButton.addEventListener('click', resetAnalyzer);
+        analyzeButton.addEventListener('click', analyzeCSV);
+        downloadButton.addEventListener('click', downloadParsedData);
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                currentFile = file;
+                fileName.textContent = file.name;
+                fileSize.textContent = `${(file.size / 1024).toFixed(2)} KB`;
+                fileInfo.classList.remove('hidden');
+                clearButton.classList.remove('hidden');
+                analysisResults.classList.add('hidden');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    csvContent = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function resetAnalyzer() {
+            currentFile = null;
+            csvContent = '';
+            analysisResult = null;
+            fileInput.value = '';
+            fileInfo.classList.add('hidden');
+            clearButton.classList.add('hidden');
+            analysisResults.classList.add('hidden');
+            processingStatus.classList.add('hidden');
+        }
+
+        function updateProcessingStatus(message) {
+            currentProcessingLine.textContent = message;
+        }
+
+        function findTradeHistorySection(lines) {
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                if (line.toLowerCase().includes('account trade history')) {
+                    for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+                        const headerLine = lines[j];
+                        
+                        const foundHeaders = EXPECTED_HEADERS.filter(header => 
+                            headerLine.toLowerCase().includes(header.toLowerCase())
+                        );
+                        
+                        if (foundHeaders.length >= 7) {
+                            return { found: true, startIndex: i, headerIndex: j };
+                        }
+                    }
+                }
+            }
+            
+            return { found: false, startIndex: -1, headerIndex: -1 };
+        }
+
+        function parseTradeData(dataLines, headerLine) {
+            const trades = [];
+            const errors = [];
+            const warnings = [];
+            
+            const headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
+            
+            dataLines.forEach((line, index) => {
+                const lineNumber = index + 1;
+                updateProcessingStatus(`Processing line ${lineNumber}: ${line.substring(0, 50)}...`);
+                
+                if (!line.trim()) return;
+                
+                try {
+                    const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
+                    
+                    const getColumnValue = (headerName) => {
+                        const headerIndex = headers.findIndex(h => 
+                            h.toLowerCase().includes(headerName.toLowerCase())
+                        );
+                        return headerIndex !== -1 ? columns[headerIndex] || '' : '';
+                    };
+                    
+                    const execTime = getColumnValue('exec time');
+                    const symbol = getColumnValue('symbol');
+                    const side = getColumnValue('side');
+                    const qtyStr = getColumnValue('qty');
+                    const strike = getColumnValue('strike');
+                    const type = getColumnValue('type');
+                    const priceStr = getColumnValue('price');
+                    const netPriceStr = getColumnValue('net price');
+                    const orderType = getColumnValue('order type');
+                    const posEffect = getColumnValue('pos effect');
+                    
+                    if (!symbol || !side || !qtyStr || !priceStr) {
+                        errors.push(`Line ${lineNumber}: Missing required fields (Symbol: ${symbol}, Side: ${side}, Qty: ${qtyStr}, Price: ${priceStr})`);
+                        return;
+                    }
+                    
+                    const qty = parseInt(qtyStr.replace(/,/g, ''));
+                    const price = parseFloat(priceStr.replace(/[$,]/g, ''));
+                    const netPrice = parseFloat(netPriceStr.replace(/[$,]/g, '')) || price;
+                    
+                    if (isNaN(qty) || isNaN(price)) {
+                        errors.push(`Line ${lineNumber}: Invalid numeric values (Qty: ${qtyStr}, Price: ${priceStr})`);
+                        return;
+                    }
+                    
+                    let formattedTime = execTime;
+                    if (execTime.match(/^\d{1,2}:\d{2}$/)) {
+                        formattedTime = execTime + ':00';
+                        warnings.push(`Line ${lineNumber}: Added :00 seconds to time ${execTime}`);
+                    }
+                    
+                    if (strike && strike !== '' && strike !== '0' && strike !== '-') {
+                        warnings.push(`Line ${lineNumber}: Skipping options trade ${symbol} (Strike: ${strike})`);
+                        return;
+                    }
+                    
+                    if (!['BUY', 'SELL', 'B', 'S'].includes(side.toUpperCase())) {
+                        warnings.push(`Line ${lineNumber}: Skipping unsupported side "${side}"`);
+                        return;
+                    }
+                    
+                    const trade = {
+                        execTime: formattedTime,
+                        symbol: symbol.toUpperCase(),
+                        side: side.toUpperCase() === 'B' ? 'BUY' : side.toUpperCase() === 'S' ? 'SELL' : side.toUpperCase(),
+                        qty,
+                        strike,
+                        type,
+                        price,
+                        netPrice,
+                        orderType,
+                        posEffect,
+                        originalLine: line,
+                        lineNumber
+                    };
+                    
+                    trades.push(trade);
+                    
+                } catch (error) {
+                    errors.push(`Line ${lineNumber}: Parse error - ${error}`);
+                }
+            });
+            
+            return { trades, errors, warnings };
+        }
+
+        async function analyzeCSV() {
+            if (!csvContent) return;
+            
+            processingStatus.classList.remove('hidden');
+            analysisResults.classList.add('hidden');
+            updateProcessingStatus('Starting analysis...');
+            
+            try {
+                const lines = csvContent.split('\n');
+                updateProcessingStatus(`Scanning ${lines.length} lines for "Account Trade History"...`);
+                
+                const { found, startIndex, headerIndex } = findTradeHistorySection(lines);
+                
+                if (!found) {
+                    analysisResult = {
+                        found: false,
+                        startLineNumber: -1,
+                        headerLine: '',
+                        headerLineNumber: -1,
+                        dataLines: [],
+                        parsedTrades: [],
+                        errors: ['Could not find "Account Trade History" section in the CSV file'],
+                        warnings: []
+                    };
+                    showResults();
+                    return;
+                }
+                
+                updateProcessingStatus(`Found "Account Trade History" at line ${startIndex + 1}, headers at line ${headerIndex + 1}`);
+                
+                const headerLine = lines[headerIndex];
+                const dataLines = lines.slice(headerIndex + 1).filter(line => line.trim() !== '');
+                
+                updateProcessingStatus(`Processing ${dataLines.length} data lines...`);
+                
+                const { trades, errors, warnings } = parseTradeData(dataLines, headerLine);
+                
+                analysisResult = {
+                    found: true,
+                    startLineNumber: startIndex + 1,
+                    headerLine,
+                    headerLineNumber: headerIndex + 1,
+                    dataLines,
+                    parsedTrades: trades,
+                    errors,
+                    warnings
+                };
+                
+                updateProcessingStatus(`Analysis complete: ${trades.length} trades found`);
+                showResults();
+                
+            } catch (error) {
+                analysisResult = {
+                    found: false,
+                    startLineNumber: -1,
+                    headerLine: '',
+                    headerLineNumber: -1,
+                    dataLines: [],
+                    parsedTrades: [],
+                    errors: [`Analysis failed: ${error}`],
+                    warnings: []
+                };
+                showResults();
+            }
+            
+            processingStatus.classList.add('hidden');
+        }
+
+        function showResults() {
+            analysisResults.classList.remove('hidden');
+            
+            // Update summary card
+            if (analysisResult.found) {
+                summaryCard.className = 'bg-gray-800 border-green-600 border rounded-lg p-6';
+                summaryTitle.textContent = '✅ Analysis Complete';
+                downloadButton.classList.remove('hidden');
+                
+                summaryStats.innerHTML = `
+                    <div class="bg-green-600/20 border border-green-600 rounded p-3 text-center">
+                        <div class="text-2xl font-bold text-green-400">${analysisResult.parsedTrades.length}</div>
+                        <div class="text-green-300 text-sm">Trades Found</div>
+                    </div>
+                    <div class="bg-blue-600/20 border border-blue-600 rounded p-3 text-center">
+                        <div class="text-2xl font-bold text-blue-400">${analysisResult.headerLineNumber}</div>
+                        <div class="text-blue-300 text-sm">Header Line</div>
+                    </div>
+                    <div class="bg-yellow-600/20 border border-yellow-600 rounded p-3 text-center">
+                        <div class="text-2xl font-bold text-yellow-400">${analysisResult.warnings.length}</div>
+                        <div class="text-yellow-300 text-sm">Warnings</div>
+                    </div>
+                    <div class="bg-red-600/20 border border-red-600 rounded p-3 text-center">
+                        <div class="text-2xl font-bold text-red-400">${analysisResult.errors.length}</div>
+                        <div class="text-red-300 text-sm">Errors</div>
+                    </div>
+                `;
+            } else {
+                summaryCard.className = 'bg-gray-800 border-red-600 border rounded-lg p-6';
+                summaryTitle.textContent = '❌ Analysis Failed';
+                downloadButton.classList.add('hidden');
+                
+                errorMessages.classList.remove('hidden');
+                errorMessages.innerHTML = analysisResult.errors.map(error => 
+                    `<div class="mb-2">• ${error}</div>`
+                ).join('');
+            }
+            
+            // Show errors and warnings
+            if (analysisResult.errors.length > 0 || analysisResult.warnings.length > 0) {
+                errorsWarnings.classList.remove('hidden');
+                
+                if (analysisResult.errors.length > 0) {
+                    errorsSection.classList.remove('hidden');
+                    errorsList.innerHTML = analysisResult.errors.map(error => 
+                        `<div class="bg-red-600/10 border border-red-600/30 rounded p-2 text-sm text-red-300">${error}</div>`
+                    ).join('');
+                }
+                
+                if (analysisResult.warnings.length > 0) {
+                    warningsSection.classList.remove('hidden');
+                    warningsList.innerHTML = analysisResult.warnings.map(warning => 
+                        `<div class="bg-yellow-600/10 border border-yellow-600/30 rounded p-2 text-sm text-yellow-300">${warning}</div>`
+                    ).join('');
+                }
+            }
+            
+            // Show trades preview
+            if (analysisResult.parsedTrades.length > 0) {
+                tradesPreview.classList.remove('hidden');
+                
+                const tradesToShow = analysisResult.parsedTrades.slice(0, 10);
+                tradesTableBody.innerHTML = tradesToShow.map(trade => `
+                    <tr class="hover:bg-gray-700/50">
+                        <td class="p-3 text-gray-300 font-mono text-sm">${trade.execTime}</td>
+                        <td class="p-3 text-white font-medium">${trade.symbol}</td>
+                        <td class="p-3">
+                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                                trade.side === 'BUY' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                            }">
+                                ${trade.side}
+                            </span>
+                        </td>
+                        <td class="p-3 text-gray-300">${trade.qty.toLocaleString()}</td>
+                        <td class="p-3 text-gray-300">$${trade.price.toFixed(2)}</td>
+                        <td class="p-3 text-gray-300">$${trade.netPrice.toFixed(2)}</td>
+                        <td class="p-3 text-gray-300">${trade.orderType}</td>
+                        <td class="p-3 text-gray-400 text-sm">${trade.lineNumber}</td>
+                    </tr>
+                `).join('');
+                
+                if (analysisResult.parsedTrades.length > 10) {
+                    moreTradesMessage.classList.remove('hidden');
+                    moreTradesMessage.textContent = `... and ${analysisResult.parsedTrades.length - 10} more trades`;
+                }
+            }
+            
+            // Show header preview
+            if (analysisResult.found) {
+                headerPreview.classList.remove('hidden');
+                headerLineText.textContent = `Line ${analysisResult.headerLineNumber}: ${analysisResult.headerLine}`;
+                
+                headerValidation.innerHTML = EXPECTED_HEADERS.map(header => {
+                    const found = analysisResult.headerLine.toLowerCase().includes(header.toLowerCase());
+                    return `
+                        <div class="p-2 rounded text-xs text-center ${
+                            found 
+                                ? 'bg-green-600/20 border border-green-600 text-green-300' 
+                                : 'bg-red-600/20 border border-red-600 text-red-300'
+                        }">
+                            ${found ? '✓' : '✗'} ${header}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function downloadParsedData() {
+            if (!analysisResult?.parsedTrades) return;
+            
+            const jsonData = {
+                metadata: {
+                    fileName: currentFile?.name,
+                    processedAt: new Date().toISOString(),
+                    totalTrades: analysisResult.parsedTrades.length,
+                    errors: analysisResult.errors.length,
+                    warnings: analysisResult.warnings.length
+                },
+                trades: analysisResult.parsedTrades,
+                errors: analysisResult.errors,
+                warnings: analysisResult.warnings
+            };
+            
+            const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `parsed-trades-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
