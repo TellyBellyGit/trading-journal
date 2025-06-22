@@ -7,6 +7,8 @@ import StarterKit from '@tiptap/starter-kit';
 import { Color } from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
 import Image from '@tiptap/extension-image';
+import { formatSimpleDate, formatTradingTime } from '../utils/formatters';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -534,6 +536,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 };
 
 const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
+  const { dateFormat } = useDateFormat();
   const [trade, setTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -662,20 +665,6 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
     }).format(value);
   };
 
-  const formatSimpleDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const totalCost = trade.entryPrice * trade.quantity;
   const totalReturn = trade.exitPrice ? (trade.exitPrice * trade.quantity) : 0;
@@ -702,7 +691,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
           )}
           {lastSaved && !isAutoSaving && (
             <span className="text-sm text-green-400">
-              Last saved: {lastSaved.toLocaleTimeString()}
+              Last saved: {formatTradingTime(lastSaved)}
             </span>
           )}
         </div>
@@ -764,11 +753,11 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
               <div className="space-y-2.5">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Date:</span>
-                  <span className="text-white text-sm font-medium">{formatSimpleDate(trade.entryDate)}</span>
+                  <span className="text-white text-sm font-medium">{formatSimpleDate(trade.entryDate, dateFormat)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Time:</span>
-                  <span className="text-white text-sm font-medium">{formatTime(trade.entryDate)}</span>
+                  <span className="text-white text-sm font-medium">{formatTradingTime(trade.entryDate)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Price:</span>
@@ -795,13 +784,13 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Date:</span>
                   <span className="text-white text-sm font-medium">
-                    {trade.exitDate ? formatSimpleDate(trade.exitDate) : '—'}
+                    {trade.exitDate ? formatSimpleDate(trade.exitDate, dateFormat) : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Time:</span>
                   <span className="text-white text-sm font-medium">
-                    {trade.exitDate ? formatTime(trade.exitDate) : '—'}
+                    {trade.exitDate ? formatTradingTime(trade.exitDate) : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -880,7 +869,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Created:</span>
-                  <span className="text-white text-sm font-medium">{formatSimpleDate(trade.createdAt)}</span>
+                  <span className="text-white text-sm font-medium">{formatSimpleDate(trade.createdAt, dateFormat)}</span>
                 </div>
               </div>
             </div>

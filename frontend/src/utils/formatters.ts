@@ -173,6 +173,7 @@ export const formatDate = (
     format?: 'short' | 'medium' | 'long' | 'relative';
     includeTime?: boolean;
     timeZone?: string;
+    dateFormat?: 'US' | 'INTL';
   } = {}
 ): string => {
   if (!date) return '-';
@@ -180,7 +181,8 @@ export const formatDate = (
   const {
     format = 'medium',
     includeTime = false,
-    timeZone = 'America/New_York' // Default to EST for trading
+    timeZone = 'America/New_York', // Default to EST for trading
+    dateFormat = 'US'
   } = options;
 
   const dateObj = date instanceof Date ? date : new Date(date);
@@ -203,16 +205,19 @@ export const formatDate = (
     })
   };
 
+  // Use appropriate locale based on date format
+  const locale = dateFormat === 'US' ? 'en-US' : 'en-GB';
+
   switch (format) {
     case 'short':
-      return new Intl.DateTimeFormat('en-US', {
+      return new Intl.DateTimeFormat(locale, {
         ...baseOptions,
         month: 'short',
         day: 'numeric',
       }).format(dateObj);
       
     case 'long':
-      return new Intl.DateTimeFormat('en-US', {
+      return new Intl.DateTimeFormat(locale, {
         ...baseOptions,
         weekday: 'long',
         year: 'numeric',
@@ -222,12 +227,40 @@ export const formatDate = (
       
     case 'medium':
     default:
-      return new Intl.DateTimeFormat('en-US', {
+      return new Intl.DateTimeFormat(locale, {
         ...baseOptions,
         year: 'numeric',
         month: 'short',
         day: 'numeric',
       }).format(dateObj);
+  }
+};
+
+// Simple date formatter that uses global date format preference
+export const formatSimpleDate = (
+  date: string | Date | null | undefined,
+  dateFormat: 'US' | 'INTL' = 'US'
+): string => {
+  if (!date) return '-';
+  
+  const dateObj = date instanceof Date ? date : new Date(date);
+  
+  if (isNaN(dateObj.getTime())) {
+    return '-';
+  }
+
+  if (dateFormat === 'US') {
+    return dateObj.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit', 
+      year: 'numeric'
+    });
+  } else {
+    return dateObj.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   }
 };
 
@@ -413,6 +446,7 @@ export const Formatters = {
   volume: formatVolume,
   quantity: formatQuantity,
   date: formatDate,
+  simpleDate: formatSimpleDate,
   relativeDate: formatRelativeDate,
   tradeDate: formatTradeDate,
   tradingTime: formatTradingTime,

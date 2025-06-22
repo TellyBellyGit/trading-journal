@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 // Navigation items matching your PyQt5 app
 const navigationItems = [
@@ -24,6 +25,7 @@ const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeNav, setActiveNav] = useState('dashboard');
+  const { isUSFormat, toggleDateFormat } = useDateFormat();
 
   return (
     <div className="h-screen bg-gray-900 flex overflow-hidden">
@@ -118,6 +120,16 @@ const AppShell: React.FC<AppShellProps> = ({
                 <span className="text-gray-400">🔍</span>
               </div>
             </div>
+
+            {/* Date Format Toggle */}
+            <button 
+              onClick={toggleDateFormat}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              title={`Current format: ${isUSFormat ? 'MM/DD/YYYY' : 'DD/MM/YYYY'}`}
+            >
+              <span className="text-xs">📅</span>
+              <span className="ml-1">{isUSFormat ? 'MM/DD/YYYY' : 'DD/MM/YYYY'}</span>
+            </button>
 
             {/* Action Buttons */}
             <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">

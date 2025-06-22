@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/trades'; // Import your API object
 import type { Trade, TradeFilters, TradeStats, Broker } from '../types/Trade'; // Import your types
 import TradeDetails from './TradeDetails'; // Import TradeDetails component
+import { formatSimpleDate } from '../utils/formatters';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 interface AllTradesProps {
   loading?: boolean;
@@ -20,9 +22,11 @@ const AllTrades: React.FC<AllTradesProps> = ({
   onTradeAdd,
   onExport,
 }) => {
+  const { dateFormat } = useDateFormat();
 
 console.log('🚀 AllTrades component rendered/re-rendered');
   console.log('📊 Props received:', { externalLoading, onTradeEdit: !!onTradeEdit, onTradeDelete: !!onTradeDelete });
+  console.log('📅 Current dateFormat from context:', dateFormat);
 
   // State management
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -207,13 +211,6 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    });
-  };
 
   const getSortIcon = (columnKey: keyof Trade) => {
     if (sortConfig.key !== columnKey) return '↕️';
@@ -638,7 +635,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                         {trade.status}
                       </span>
                     </td>
-                    <td className="p-4 text-gray-300">{formatDate(trade.entryDate)}</td>
+                    <td className="p-4 text-gray-300">{formatSimpleDate(trade.entryDate, dateFormat)}</td>
                     {/* <td className="p-4">
                       <div className="flex space-x-2">
                         <button
@@ -680,7 +677,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                     </div>
                     <div>
                       <h3 className="text-white font-semibold group-hover:text-blue-400">{trade.symbol}</h3>
-                      <p className="text-gray-400 text-sm">{formatDate(trade.entryDate)}</p>
+                      <p className="text-gray-400 text-sm">{formatSimpleDate(trade.entryDate, dateFormat)}</p>
                     </div>
                   </button>
                 </div>

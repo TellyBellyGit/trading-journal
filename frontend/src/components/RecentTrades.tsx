@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Trade } from '../types/Trade';
+import { formatTradeDate } from '../utils/formatters';
 
 export interface RecentTradesProps {
   trades: Trade[];
@@ -26,25 +27,6 @@ const RecentTrades: React.FC<RecentTradesProps> = ({
     }).format(value);
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return `Today ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return `Yesterday ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    }
-  };
 
   const getTradeStatus = (trade: Trade): { label: string; color: string; bgColor: string } => {
     if (trade.profitLoss === null || trade.profitLoss === undefined) {
@@ -174,7 +156,7 @@ const RecentTrades: React.FC<RecentTradesProps> = ({
                       </span>
                     </div>
                     <p className="text-sm text-gray-500">
-                      {formatDate(trade.entryDate)}
+                      {formatTradeDate(trade.entryDate)}
                     </p>
                   </div>
                 </div>

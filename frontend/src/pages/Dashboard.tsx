@@ -5,6 +5,7 @@ import QuickActions from '../components/QuickActions';
 import TradingCalendar from '../components/TradingCalendar';
 import useDashboardData from '../hooks/useDashboardData';
 import { Formatters } from '../utils/formatters';
+import { useDateFormat } from '../contexts/DateFormatContext';
 import type { Trade } from '../types/Trade';
 
 export interface DashboardProps {
@@ -26,6 +27,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onViewAllTrades,
   onTradeClick
 }) => {
+  const { dateFormat } = useDateFormat();
   const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   // Use the custom hook for dashboard data
@@ -265,12 +267,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b">
               <h3 className="text-xl font-semibold text-gray-900">
-                Trades for {new Date(selectedDate).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                Trades for {Formatters.date(new Date(selectedDate), { format: 'long', dateFormat })}
               </h3>
               <button
                 onClick={closeTradeModal}

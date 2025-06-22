@@ -5,6 +5,8 @@ import api from '../api/trades'; // Import your API object
 import type { Trade, TradeFilters, TradeStats, Broker } from '../types/Trade'; // Import your types
 import TradeDetails from './TradeDetails'; // Import TradeDetails component
 import EditTrade from './EditTrade'; // Import EditTrade component
+import { formatSimpleDate } from '../utils/formatters';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 interface AllTradesProps {
   loading?: boolean;
@@ -37,6 +39,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
   onTradeAdd,
   onExport,
 }) => {
+  const { dateFormat } = useDateFormat();
 
 console.log('🚀 AllTrades component rendered/re-rendered');
   console.log('📊 Props received:', { externalLoading, onTradeEdit: !!onTradeEdit, onTradeDelete: !!onTradeDelete });
@@ -236,13 +239,6 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    });
-  };
 
   // NEW: Format time function for entry/exit times
   const formatTime = (timeString: string | null | undefined) => {
@@ -749,14 +745,14 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                         {trade.status}
                       </span>
                     </td>
-                    <td className="p-4 text-gray-300">{formatDate(trade.entryDate)}</td>
+                    <td className="p-4 text-gray-300">{formatSimpleDate(trade.entryDate, dateFormat)}</td>
                     {/* NEW: Entry Time column */}
                     <td className="p-4 text-gray-300 font-mono text-sm">{formatTime(trade.entryTime)}</td>
                     <td className="p-4 text-gray-300">
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">Open</span>
                       ) : (
-                        formatDate(trade.exitDate)
+                        formatSimpleDate(trade.exitDate, dateFormat)
                       )}
                     </td>
                     {/* NEW: Exit Time column */}
@@ -803,7 +799,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                     </div>
                     <div>
                       <h3 className="text-white font-semibold group-hover:text-blue-400">{trade.symbol}</h3>
-                      <p className="text-gray-400 text-sm">{formatDate(trade.entryDate)}</p>
+                      <p className="text-gray-400 text-sm">{formatSimpleDate(trade.entryDate, dateFormat)}</p>
                     </div>
                   </button>
                 </div>
@@ -853,7 +849,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                     {trade.status === 'Open' ? (
                       <span className="text-orange-400 italic">Open</span>
                     ) : (
-                      formatDate(trade.exitDate)
+                      formatSimpleDate(trade.exitDate, dateFormat)
                     )}
                   </p>
                 </div>
