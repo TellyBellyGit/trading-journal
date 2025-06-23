@@ -10,7 +10,13 @@
       "Bash(npm start)",
       "Bash(pkill:*)",
       "Bash(true)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(ls:*)",
+      "Bash(npx vite:*)",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }

@@ -64,3 +64,14 @@ model Trade {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+// 5. Define the Note model
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   // Rich text content (HTML format from Tiptap)
+  category  String?  // Optional category for organization
+  tags      String?  // Comma-separated tags for categorization
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

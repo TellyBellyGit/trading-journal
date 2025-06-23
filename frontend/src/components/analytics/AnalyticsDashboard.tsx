@@ -204,25 +204,20 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ loading = false
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Trading Analytics</h1>
-            <p className="text-gray-400 text-sm mt-1">
-              Comprehensive performance analysis for {analyticsData.totalTrades} trades
-            </p>
-          </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={loadAnalyticsData}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              disabled={isLoading}
-            >
-              {isLoading ? '🔄 Loading...' : '🔄 Refresh'}
-            </button>
-          </div>
+      {/* Controls Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="text-gray-400 text-sm">
+          Comprehensive performance analysis for {analyticsData.totalTrades} trades
+        </div>
+        
+        <div className="flex gap-3">
+          <button
+            onClick={loadAnalyticsData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={isLoading}
+          >
+            {isLoading ? '🔄 Loading...' : '🔄 Refresh'}
+          </button>
         </div>
       </div>
 

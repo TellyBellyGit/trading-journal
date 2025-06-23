@@ -92,3 +92,182 @@
     opacity: 1;
   }
 }
+
+/* Tiptap Editor Dark Theme Styles */
+.ProseMirror {
+  background-color: #1f2937 !important;
+  color: #f9fafb !important;
+  border: none !important;
+  outline: none !important;
+  padding: 1rem !important;
+  min-height: 400px !important;
+  line-height: 1.6 !important;
+}
+
+.ProseMirror p {
+  margin: 0.75rem 0 !important;
+  color: #f9fafb !important;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem !important;
+  font-weight: bold !important;
+  margin: 1.5rem 0 1rem 0 !important;
+  color: #ffffff !important;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  margin: 1.25rem 0 0.75rem 0 !important;
+  color: #ffffff !important;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem !important;
+  font-weight: bold !important;
+  margin: 1rem 0 0.5rem 0 !important;
+  color: #ffffff !important;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem !important;
+  margin: 0.75rem 0 !important;
+}
+
+.ProseMirror li {
+  margin: 0.25rem 0 !important;
+  color: #f9fafb !important;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #6b7280 !important;
+  margin: 1rem 0 !important;
+  padding-left: 1rem !important;
+  font-style: italic !important;
+  color: #d1d5db !important;
+  background-color: #374151 !important;
+  border-radius: 0 4px 4px 0 !important;
+}
+
+.ProseMirror hr {
+  border: none !important;
+  border-top: 2px solid #6b7280 !important;
+  margin: 2rem 0 !important;
+}
+
+.ProseMirror strong {
+  font-weight: bold !important;
+  color: #ffffff !important;
+}
+
+.ProseMirror em {
+  font-style: italic !important;
+  color: #f3f4f6 !important;
+}
+
+.ProseMirror code {
+  background-color: #374151 !important;
+  color: #fbbf24 !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 4px !important;
+  font-family: 'Courier New', monospace !important;
+}
+
+.ProseMirror pre {
+  background-color: #1f2937 !important;
+  border: 1px solid #4b5563 !important;
+  border-radius: 6px !important;
+  padding: 1rem !important;
+  margin: 1rem 0 !important;
+  overflow-x: auto !important;
+}
+
+.ProseMirror pre code {
+  background: none !important;
+  padding: 0 !important;
+  color: #f9fafb !important;
+}
+
+/* Image styles */
+.ProseMirror img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 6px !important;
+  margin: 1rem 0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.ProseMirror .editor-image {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 6px !important;
+  margin: 1rem 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.ProseMirror .editor-image:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Placeholder text */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder) !important;
+  float: left !important;
+  color: #9ca3af !important;
+  pointer-events: none !important;
+  height: 0 !important;
+}
+
+/* Focus styles */
+.ProseMirror:focus {
+  outline: none !important;
+  border: none !important;
+}
+
+/* Selection styles */
+.ProseMirror ::selection {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+/* Table styles (if using table extension) */
+.ProseMirror table {
+  border-collapse: collapse !important;
+  table-layout: auto !important;
+  width: 100% !important;
+  margin: 1rem 0 !important;
+  background-color: #374151 !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  border: 1px solid #6b7280 !important;
+  padding: 0.75rem !important;
+  text-align: left !important;
+  color: #f9fafb !important;
+}
+
+.ProseMirror th {
+  background-color: #4b5563 !important;
+  font-weight: bold !important;
+  color: #ffffff !important;
+}
+
+/* Custom resizable image container */
+.resizable-image-container {
+  position: relative !important;
+  display: inline-block !important;
+  margin: 1rem 0 !important;
+}
+
+.resizable-image-container img {
+  display: block !important;
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+}

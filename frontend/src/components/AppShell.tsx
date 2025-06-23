@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDateFormat } from '../contexts/DateFormatContext';
 
 // Navigation items matching your PyQt5 app
@@ -7,6 +7,7 @@ const navigationItems = [
   { id: 'trades', label: 'All Trades', icon: '📈', active: false },
   { id: 'analytics', label: 'Analytics', icon: '📊', active: false },
   { id: 'calendar', label: 'Calendar', icon: '📅', active: false },
+  { id: 'notes', label: 'Notes', icon: '📝', active: false },
   { id: 'playbook', label: 'PlayBook', icon: '📚', active: false },
   { id: 'import', label: 'Import', icon: '📤', active: false },
   { id: 'settings', label: 'Settings', icon: '⚙️', active: false },
@@ -16,16 +17,54 @@ interface AppShellProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  currentView?: string;
+  onViewChange?: (view: string) => void;
 }
 
 const AppShell: React.FC<AppShellProps> = ({ 
   children, 
   title = "Trading Journal",
-  subtitle = "Professional Trading Management System"
+  subtitle = "Professional Trading Management System",
+  currentView = 'original',
+  onViewChange
 }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeNav, setActiveNav] = useState('dashboard');
+  // Auto-collapse sidebar for notes view
+  const shouldCollapse = currentView === 'notes';
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(shouldCollapse);
   const { isUSFormat, toggleDateFormat } = useDateFormat();
+
+  // Update sidebar state when view changes
+  useEffect(() => {
+    if (currentView === 'notes') {
+      setSidebarCollapsed(true);
+    }
+  }, [currentView]);
+
+  // Map current view to navigation ID
+  const getNavIdFromView = (view: string) => {
+    switch(view) {
+      case 'original': return 'dashboard';
+      case 'analytics': return 'analytics';
+      case 'all-trades': return 'trades';
+      case 'notes': return 'notes';
+      case 'import': return 'import';
+      default: return 'dashboard';
+    }
+  };
+
+  // Map navigation ID to view
+  const getViewFromNavId = (navId: string) => {
+    switch(navId) {
+      case 'dashboard': return 'original';
+      case 'analytics': return 'analytics';
+      case 'trades': return 'all-trades';
+      case 'notes': return 'notes';
+      case 'import': return 'import';
+      default: return 'original';
+    }
+  };
+
+  const activeNav = getNavIdFromView(currentView);
 
   return (
     <div className="h-screen bg-gray-900 flex overflow-hidden">
@@ -58,7 +97,10 @@ const AppShell: React.FC<AppShellProps> = ({
           {navigationItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => {
+                const newView = getViewFromNavId(item.id);
+                onViewChange?.(newView);
+              }}
               className={`
                 w-full flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200
                 ${activeNav === item.id 

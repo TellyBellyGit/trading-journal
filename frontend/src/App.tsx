@@ -5,6 +5,7 @@ import AnalyticsDashboard from './components/analytics/AnalyticsDashboard'; // N
 import AllTrades from './components/AllTrades';
 import ImportTrades from './components/ImportTrades';
 import TradingCalendar from './components/TradingCalendar';
+import Notes from './components/Notes';
 import './index.css';
 
 // API configuration
@@ -463,72 +464,6 @@ const OriginalDashboard = () => {
   );
 };
 
-const DashboardSelector = ({ currentView, onViewChange }: { 
-  currentView: string; 
-  onViewChange: (view: string) => void; 
-}) => {
-  console.log("🔥 DASHBOARD SELECTOR IS RENDERING!", currentView);
-  return (
-    <div className="p-6 border-b border-gray-700">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">Dashboard View</h2>
-          <p className="text-gray-400 text-sm">Choose your preferred dashboard layout</p>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => onViewChange('original')}
-            className={`
-              px-4 py-2 rounded-lg font-medium transition-all duration-200
-              ${currentView === 'original'
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-              }
-            `}
-          >
-            📊 Dashboard
-          </button>
-          <button
-            onClick={() => onViewChange('analytics')}
-            className={`
-              px-4 py-2 rounded-lg font-medium transition-all duration-200
-              ${currentView === 'analytics'
-                ? 'bg-purple-600 text-white shadow-lg'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-              }
-            `}
-          >
-            ⚡ Analytics
-          </button>
-          <button
-            onClick={() => onViewChange('all-trades')}
-            className={`
-              px-4 py-2 rounded-lg font-medium transition-all duration-200
-              ${currentView === 'all-trades'
-                ? 'bg-green-600 text-white shadow-lg'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-              }
-            `}
-          >
-            📋 Trades
-          </button>
-          <button
-            onClick={() => onViewChange('import')}
-            className={`
-              px-4 py-2 rounded-lg font-medium transition-all duration-200
-              ${currentView === 'import'
-                ? 'bg-orange-600 text-white shadow-lg'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
-              }
-            `}
-          >
-            📤 Import
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Main App Component
 function App() {
@@ -542,38 +477,32 @@ function App() {
   const renderContent = () => {
     console.log("🔥 Current view is:", currentView); 
     return (
-      <div>
-        <DashboardSelector 
-          currentView={currentView} 
-          onViewChange={handleViewChange} 
-        />
-        
-        <div className="transition-all duration-300">
-          {currentView === 'original' && <OriginalDashboard />}
-          {currentView === 'analytics' && <AnalyticsDashboard />}
-          {currentView === 'enhanced' && <MetricsDashboard />}
-          {currentView === 'all-trades' && (
-            <AllTrades
-              onTradeAdd={() => {
-                console.log('Add new trade');
-                // TODO: Navigate to add trade form or open modal
-              }}
-              onTradeEdit={(trade) => {
-                console.log('Edit trade:', trade);
-                // TODO: Handle trade editing
-              }}
-              onTradeDelete={(tradeId) => {
-                console.log('Delete trade:', tradeId);
-                // TODO: Handle trade deletion
-              }}
-              onExport={() => {
-                console.log('Export trades');
-                // TODO: Export trades to CSV/Excel
-              }}
-            />
-          )}
-          {currentView === 'import' && <ImportTrades />}
-        </div>
+      <div className="transition-all duration-300">
+        {currentView === 'original' && <OriginalDashboard />}
+        {currentView === 'analytics' && <AnalyticsDashboard />}
+        {currentView === 'enhanced' && <MetricsDashboard />}
+        {currentView === 'all-trades' && (
+          <AllTrades
+            onTradeAdd={() => {
+              console.log('Add new trade');
+              // TODO: Navigate to add trade form or open modal
+            }}
+            onTradeEdit={(trade) => {
+              console.log('Edit trade:', trade);
+              // TODO: Handle trade editing
+            }}
+            onTradeDelete={(tradeId) => {
+              console.log('Delete trade:', tradeId);
+              // TODO: Handle trade deletion
+            }}
+            onExport={() => {
+              console.log('Export trades');
+              // TODO: Export trades to CSV/Excel
+            }}
+          />
+        )}
+        {currentView === 'import' && <ImportTrades />}
+        {currentView === 'notes' && <Notes />}
       </div>
     );
   };
@@ -587,6 +516,8 @@ function App() {
       ? 'Trade List'
       : currentView === 'import'
       ? 'Import Trades'
+      : currentView === 'notes'
+      ? 'Trading Notes'
       : 'Trading Dashboard';
   };
 
@@ -599,11 +530,18 @@ function App() {
       ? 'Complete trading history with advanced filtering'
       : currentView === 'import'
       ? 'Upload broker statements to automatically import trades'
+      : currentView === 'notes'
+      ? 'Journal entries and trade reflections with rich text editing'
       : 'Real-time trading performance';
   };
 
   return (
-    <AppShell title={getTitle()} subtitle={getSubtitle()}>
+    <AppShell 
+      title={getTitle()} 
+      subtitle={getSubtitle()}
+      currentView={currentView}
+      onViewChange={handleViewChange}
+    >
       {renderContent()}
     </AppShell>
   );

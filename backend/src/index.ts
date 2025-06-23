@@ -11,7 +11,8 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import tradesRouter from './routes/trades';
 import brokersRouter from './routes/brokers';
-import importRoutes from './routes/import'; 
+import importRoutes from './routes/import';
+import notesRouter from './routes/notes'; 
 
 dotenv.config();
 
@@ -30,7 +31,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Routes
 app.use('/api/trades', tradesRouter);
 app.use('/api/brokers', brokersRouter);
-app.use('/api/trades/import', importRoutes); 
+app.use('/api/trades/import', importRoutes);
+app.use('/api/notes', notesRouter); 
 
 // Health check
 app.get('/api/health', (req, res) => {
