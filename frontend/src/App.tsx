@@ -8,7 +8,7 @@ import TradingCalendar from './components/TradingCalendar';
 import './index.css';
 
 // API configuration
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:3002/api';
 
 // Types matching your Prisma schema
 interface Trade {
@@ -74,7 +74,9 @@ const api = {
   // Fetch recent trades (limit to last 10)
   getRecentTrades: async (limit: number = 4): Promise<Trade[]> => {
     try {
-      const trades = await api.getTrades();
+      const response = await api.getTrades();
+      // Handle paginated response format
+      const trades = response.trades || response;
       return trades
         .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
         .slice(0, limit);

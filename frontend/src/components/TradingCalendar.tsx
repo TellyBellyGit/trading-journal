@@ -50,7 +50,7 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
       const lastDay = new Date(currentYear, currentMonth + 1, 0);
       
       // Fetch all trades for the month
-      const trades = await api.trades.getAll();
+      const trades = await api.trades.getAllLegacy();
       
       // Filter trades for current month
       const monthTrades = trades.filter(trade => {
@@ -195,7 +195,7 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
     console.log(`Clicked day ${day}, formatted as: ${dateKey}`);
     
     try {
-      const trades = await api.trades.getAll();
+      const trades = await api.trades.getAllLegacy();
       const dayTrades = trades.filter(trade => {
         // Use consistent date formatting for comparison
         const tradeDate = new Date(trade.entryDate);

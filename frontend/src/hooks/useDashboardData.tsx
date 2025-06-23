@@ -73,12 +73,12 @@ const useDashboardData = (refreshInterval?: number) => {
   // Calculate comprehensive metrics from trades
   const calculateMetrics = useCallback((trades: Trade[]): DashboardMetrics => {
     const totalTrades = trades.length;
-    const closedTrades = trades.filter(t => t.profitLoss !== null && t.profitLoss !== undefined);
-    const openTrades = trades.filter(t => t.profitLoss === null || t.profitLoss === undefined);
+    const closedTrades = trades.filter(t => t.pnl !== null && t.pnl !== undefined);
+    const openTrades = trades.filter(t => t.pnl === null || t.pnl === undefined);
     
-    const totalPnL = closedTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
-    const winningTrades = closedTrades.filter(t => (t.profitLoss || 0) > 0);
-    const losingTrades = closedTrades.filter(t => (t.profitLoss || 0) < 0);
+    const totalPnL = closedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+    const winningTrades = closedTrades.filter(t => (t.pnl || 0) > 0);
+    const losingTrades = closedTrades.filter(t => (t.pnl || 0) < 0);
     
     const winCount = winningTrades.length;
     const lossCount = losingTrades.length;
@@ -87,8 +87,8 @@ const useDashboardData = (refreshInterval?: number) => {
     const winRate = closedCount > 0 ? (winCount / closedCount) * 100 : 0;
     const lossRate = closedCount > 0 ? (lossCount / closedCount) * 100 : 0;
     
-    const totalWins = winningTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
-    const totalLosses = Math.abs(losingTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0));
+    const totalWins = winningTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+    const totalLosses = Math.abs(losingTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0));
     
     const avgWin = winCount > 0 ? totalWins / winCount : 0;
     const avgLoss = lossCount > 0 ? totalLosses / lossCount : 0;
@@ -97,10 +97,10 @@ const useDashboardData = (refreshInterval?: number) => {
     const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
     
     const largestWin = winningTrades.length > 0 
-      ? Math.max(...winningTrades.map(t => t.profitLoss || 0)) 
+      ? Math.max(...winningTrades.map(t => t.pnl || 0)) 
       : 0;
     const largestLoss = losingTrades.length > 0 
-      ? Math.min(...losingTrades.map(t => t.profitLoss || 0)) 
+      ? Math.min(...losingTrades.map(t => t.pnl || 0)) 
       : 0;
     
     const totalVolume = trades.reduce((sum, trade) => {
@@ -110,7 +110,7 @@ const useDashboardData = (refreshInterval?: number) => {
     // Calculate average hold time (simplified - in hours)
     const tradesWithDuration = trades.filter(t => t.duration !== null && t.duration !== undefined);
     const avgHoldTime = tradesWithDuration.length > 0
-      ? tradesWithDuration.reduce((sum, trade) => sum + (trade.duration || 0), 0) / tradesWithDuration.length
+      ? tradesWithDuration.reduce((sum, trade) => sum + (parseInt(trade.duration) || 0), 0) / tradesWithDuration.length
       : 0;
 
     return {
@@ -141,7 +141,7 @@ const useDashboardData = (refreshInterval?: number) => {
       const current = symbolMap.get(trade.symbol) || { trades: 0, pnl: 0 };
       symbolMap.set(trade.symbol, {
         trades: current.trades + 1,
-        pnl: current.pnl + (trade.profitLoss || 0)
+        pnl: current.pnl + (trade.pnl || 0)
       });
     });
 
@@ -175,9 +175,9 @@ const useDashboardData = (refreshInterval?: number) => {
         return tradeDate >= periodStart && tradeDate <= periodEnd;
       });
       
-      const pnl = periodTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0);
-      const closedTrades = periodTrades.filter(t => t.profitLoss !== null && t.profitLoss !== undefined);
-      const winningTrades = closedTrades.filter(t => (t.profitLoss || 0) > 0);
+      const pnl = periodTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+      const closedTrades = periodTrades.filter(t => t.pnl !== null && t.pnl !== undefined);
+      const winningTrades = closedTrades.filter(t => (t.pnl || 0) > 0);
       const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0;
       
       periods.unshift({
@@ -198,7 +198,7 @@ const useDashboardData = (refreshInterval?: number) => {
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
       
-      const trades = await tradesApi.getAll();
+      const trades = await tradesApi.getAllLegacy();
       const metrics = calculateMetrics(trades);
       const recentTrades = trades.slice(0, 10); // Last 10 trades
       const topSymbols = calculateTopSymbols(trades);

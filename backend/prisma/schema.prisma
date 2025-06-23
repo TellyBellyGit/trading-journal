@@ -7,7 +7,8 @@ datasource db {
 
 // 2. Set generator for Prisma Client
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 // 3. Define the Broker model

@@ -42,12 +42,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     symbol: '',
     direction: undefined,
     status: undefined,
-    assessment: '',
     brokerId: undefined,
-    startDate: '',
-    endDate: '',
-    minProfitLoss: undefined,
-    maxProfitLoss: undefined,
   });
 
   // Sorting state
@@ -83,7 +78,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
 
       // Load trades, brokers, and stats in parallel
       const [tradesData, brokersData, statsData] = await Promise.all([
-        api.trades.getAll(),
+        api.trades.getAllLegacy(),
         api.brokers.getAll(),
         api.trades.getStats(),
       ]);
@@ -112,7 +107,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
       }
 
       // Use the search API for filtering
-      const searchResults = await api.trades.search(filters);
+      const searchResults = await api.trades.searchLegacy(filters);
       setFilteredTrades(searchResults);
     } catch (err) {
       console.error('Error applying filters:', err);
@@ -227,12 +222,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
       symbol: '',
       direction: undefined,
       status: undefined,
-      assessment: '',
       brokerId: undefined,
-      startDate: '',
-      endDate: '',
-      minProfitLoss: undefined,
-      maxProfitLoss: undefined,
     });
   };
 
@@ -330,8 +320,8 @@ console.log('🚀 AllTrades component rendered/re-rendered');
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total P&L</p>
-                <p className={`text-xl font-bold ${stats.totalProfitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatCurrency(stats.totalProfitLoss)}
+                <p className={`text-xl font-bold ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCurrency(stats.totalPnL)}
                 </p>
               </div>
               <div className="text-2xl">💰</div>
@@ -467,16 +457,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
             />
           </div>
 
-          <div>
-            <label className="block text-gray-400 text-sm mb-2">Max P&L</label>
-            <input
-              type="number"
-              value={filters.maxProfitLoss || ''}
-              onChange={(e) => handleFilterChange('maxProfitLoss', e.target.value ? parseFloat(e.target.value) : undefined)}
-              placeholder="0.00"
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-            />
-          </div>
+          {/* Max P&L filter temporarily disabled - field not in TradeFilters interface */}
         </div>
       </div>
 

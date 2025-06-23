@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(rg:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npm start)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

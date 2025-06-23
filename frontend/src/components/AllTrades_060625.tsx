@@ -96,7 +96,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
 
       // Load trades, brokers, and stats in parallel
       const [tradesData, brokersData, statsData] = await Promise.all([
-        api.trades.getAll(),
+        api.trades.getAllLegacy(),
         api.brokers.getAll(),
         api.trades.getStats(),
       ]);
@@ -125,7 +125,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
       }
 
       // Use the search API for filtering
-      const searchResults = await api.trades.search(filters);
+      const searchResults = await api.trades.searchLegacy(filters);
       setFilteredTrades(searchResults);
     } catch (err) {
       console.error('Error applying filters:', err);

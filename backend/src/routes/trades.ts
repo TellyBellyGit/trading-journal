@@ -67,12 +67,19 @@ interface AnalyzedTrade {
   status: 'Open' | 'Closed';
 }
 
-// 🔥 ENHANCED: Get all trades with broker information
+// 🔥 ENHANCED: Get all trades with broker information and pagination
 router.get('/', async (req, res) => {
   try {
-    const { brokerId } = req.query;
+    const { brokerId, page = '1', limit = '20' } = req.query;
+    
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
     
     const whereClause = brokerId ? { brokerId: parseInt(brokerId as string) } : {};
+    
+    // Get total count for pagination metadata
+    const totalCount = await prisma.trade.count({ where: whereClause });
     
     const trades = await prisma.trade.findMany({
       where: whereClause,
@@ -86,9 +93,21 @@ router.get('/', async (req, res) => {
           }
         }
       },
-      orderBy: { entryDate: 'desc' }
+      orderBy: { entryDate: 'desc' },
+      skip,
+      take: limitNum
     });
-    res.json(trades);
+
+    res.json({
+      trades,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalCount,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPreviousPage: pageNum > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching trades:', error);
     res.status(500).json({ error: 'Failed to fetch trades' });
@@ -134,7 +153,7 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// 🔥 UPDATED: Get trades with filtering and search
+// 🔥 UPDATED: Get trades with filtering and search with pagination
 router.get('/search', async (req, res) => {
   try {
     const { 
@@ -146,8 +165,14 @@ router.get('/search', async (req, res) => {
       brokerId,
       status,
       hasNotes,
-      hasAssessment
+      hasAssessment,
+      page = '1',
+      limit = '20'
     } = req.query;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
 
     const where: any = {};
 
@@ -223,6 +248,9 @@ router.get('/search', async (req, res) => {
 
     console.log('🔍 Search filters applied:', where);
 
+    // Get total count for pagination metadata
+    const totalCount = await prisma.trade.count({ where });
+
     const trades = await prisma.trade.findMany({
       where,
       include: {
@@ -235,11 +263,22 @@ router.get('/search', async (req, res) => {
           }
         }
       },
-      orderBy: { entryDate: 'desc' }
+      orderBy: { entryDate: 'desc' },
+      skip,
+      take: limitNum
     });
 
-    console.log(`🔍 Found ${trades.length} trades matching filters`);
-    res.json(trades);
+    console.log(`🔍 Found ${trades.length} trades matching filters (page ${pageNum}/${Math.ceil(totalCount / limitNum)})`);
+    res.json({
+      trades,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
+        totalCount,
+        hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
+        hasPreviousPage: pageNum > 1
+      }
+    });
     
   } catch (error) {
     console.error('Error searching trades:', error);

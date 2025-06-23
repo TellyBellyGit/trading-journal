@@ -1,6 +1,19 @@
 import axios from 'axios';
 import type { Trade, NewTrade, TradeFilters, TradeStats, Broker, BrokerStats } from '../types/Trade';
 
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+interface PaginatedResponse<T> {
+  trades: T[];
+  pagination: PaginationInfo;
+}
+
 interface ImportSummary {
   totalImported: number;
   duplicatesRejected: number;
@@ -49,7 +62,7 @@ interface ImportSaveResponse {
 
 
 
-const API_BASE_URL = 'http://localhost:3001/api'; // Updated to match your new port
+const API_BASE_URL = 'http://localhost:3002/api'; // Updated to match your backend port
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -60,11 +73,19 @@ const api = axios.create({
 
 // Enhanced Trades API
 export const tradesApi = {
-  // Get all trades (with optional broker filter)
-  getAll: async (brokerId?: number): Promise<Trade[]> => {
-    const params = brokerId ? { brokerId } : {};
+  // Get all trades (with optional broker filter and pagination)
+  getAll: async (brokerId?: number, page: number = 1, limit: number = 20): Promise<PaginatedResponse<Trade>> => {
+    const params: any = { page, limit };
+    if (brokerId) params.brokerId = brokerId;
     const response = await api.get('/trades', { params });
     return response.data;
+  },
+
+  // Legacy method for backward compatibility (returns all trades without pagination)
+  getAllLegacy: async (brokerId?: number): Promise<Trade[]> => {
+    const params = brokerId ? { brokerId, limit: 10000 } : { limit: 10000 };
+    const response = await api.get('/trades', { params });
+    return response.data.trades || response.data;
   },
 
   // Get single trade with full details
@@ -91,10 +112,18 @@ export const tradesApi = {
     return response.data;
   },
 
-  // 🔥 NEW: Search trades with advanced filtering
-  search: async (filters: TradeFilters): Promise<Trade[]> => {
-    const response = await api.get('/trades/search', { params: filters });
+  // 🔥 NEW: Search trades with advanced filtering and pagination
+  search: async (filters: TradeFilters, page: number = 1, limit: number = 20): Promise<PaginatedResponse<Trade>> => {
+    const params = { ...filters, page, limit };
+    const response = await api.get('/trades/search', { params });
     return response.data;
+  },
+
+  // Legacy search method for backward compatibility
+  searchLegacy: async (filters: TradeFilters): Promise<Trade[]> => {
+    const params = { ...filters, limit: 10000 };
+    const response = await api.get('/trades/search', { params });
+    return response.data.trades || response.data;
   },
 
   // 🔥 NEW: Get trade statistics
@@ -204,6 +233,9 @@ export const healthApi = {
     return response.data;
   },
 };
+
+// Export types
+export type { PaginationInfo, PaginatedResponse };
 
 // Export default API object for convenience
 export default {

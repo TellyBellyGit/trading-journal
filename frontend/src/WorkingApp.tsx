@@ -5,7 +5,7 @@ import AllTradesDemo from './components/AllTradesDemo';
 import './index.css';
 
 // API configuration
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:3002/api';
 
 // Types matching your Prisma schema
 interface Trade {

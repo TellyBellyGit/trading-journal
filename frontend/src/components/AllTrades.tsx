@@ -3,8 +3,10 @@ console.log("In ALLTRADES Proper!!!.TSX");
 import React, { useState, useEffect } from 'react';
 import api from '../api/trades'; // Import your API object
 import type { Trade, TradeFilters, TradeStats, Broker } from '../types/Trade'; // Import your types
+import type { PaginationInfo } from '../api/trades'; // Import pagination type
 import TradeDetails from './TradeDetails'; // Import TradeDetails component
 import EditTrade from './EditTrade'; // Import EditTrade component
+import Pagination from './Pagination'; // Import Pagination component
 import { formatSimpleDate } from '../utils/formatters';
 import { useDateFormat } from '../contexts/DateFormatContext';
 
@@ -54,6 +56,11 @@ console.log('🚀 AllTrades component rendered/re-rendered');
   const [selectedTrades, setSelectedTrades] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [itemsPerPage] = useState(20);
+  
   // NEW: Trade details navigation state
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
   
@@ -85,28 +92,33 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     loadInitialData();
   }, []);
 
-  // Apply filters when they change
+  // Apply filters when they change (reset to page 1)
   useEffect(() => {
-    applyFilters();
-  }, [filters, trades]);
+    applyFilters(1);
+  }, [filters]);
 
   
 
-  const loadInitialData = async () => {
+  const loadInitialData = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load trades, brokers, and stats in parallel
-      const [tradesData, brokersData, statsData] = await Promise.all([
-        api.trades.getAll(),
+      // Load trades with pagination, brokers, and stats in parallel
+      const [tradesResponse, brokersData, statsData] = await Promise.all([
+        api.trades.getAll(undefined, page, itemsPerPage),
         api.brokers.getAll(),
         api.trades.getStats(),
       ]);
 
-      setTrades(tradesData);
+      setTrades(tradesResponse.trades);
+      setPagination(tradesResponse.pagination);
+      setCurrentPage(page);
       setBrokers(brokersData);
       setStats(statsData);
+      
+      // Set filtered trades to current page trades initially
+      setFilteredTrades(tradesResponse.trades);
     } catch (err) {
       console.error('Error loading data:', err);
       setError('Failed to load trades data. Please check your connection.');
@@ -115,25 +127,32 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     }
   };
 
-  const applyFilters = async () => {
+  const applyFilters = async (page: number = 1) => {
     try {
-      // If no filters are applied, use all trades
+      // If no filters are applied, load paginated trades normally
       const hasFilters = Object.values(filters).some(value => 
         value !== undefined && value !== '' && value !== null
       );
 
       if (!hasFilters) {
-        setFilteredTrades(trades);
+        // Load normal paginated data
+        const tradesResponse = await api.trades.getAll(undefined, page, itemsPerPage);
+        setTrades(tradesResponse.trades);
+        setFilteredTrades(tradesResponse.trades);
+        setPagination(tradesResponse.pagination);
+        setCurrentPage(page);
         return;
       }
 
-      // Use the search API for filtering
-      const searchResults = await api.trades.search(filters);
-      setFilteredTrades(searchResults);
+      // Use the search API for filtering with pagination
+      const searchResponse = await api.trades.search(filters, page, itemsPerPage);
+      setTrades(searchResponse.trades);
+      setFilteredTrades(searchResponse.trades);
+      setPagination(searchResponse.pagination);
+      setCurrentPage(page);
     } catch (err) {
       console.error('Error applying filters:', err);
-      // Fallback to client-side filtering if API fails
-      setFilteredTrades(trades);
+      setError('Failed to apply filters. Please try again.');
     }
   };
 
@@ -192,8 +211,17 @@ console.log('🚀 AllTrades component rendered/re-rendered');
   const handleTradeDeleteWithRefresh = async (tradeId: number) => {
     try {
       await api.trades.delete(tradeId);
-      // Refresh data after deletion
-      await loadInitialData();
+      // Refresh data after deletion - stay on current page if possible
+      const hasFilters = Object.values(filters).some(value => 
+        value !== undefined && value !== '' && value !== null
+      );
+      
+      if (hasFilters) {
+        await applyFilters(currentPage);
+      } else {
+        await loadInitialData(currentPage);
+      }
+      
       onTradeDelete(tradeId);
     } catch (err) {
       console.error('Error deleting trade:', err);
@@ -202,7 +230,21 @@ console.log('🚀 AllTrades component rendered/re-rendered');
   };
 
   const handleRefresh = () => {
-    loadInitialData();
+    loadInitialData(currentPage);
+  };
+
+  // Handle page changes
+  const handlePageChange = (page: number) => {
+    // Check if we have active filters
+    const hasFilters = Object.values(filters).some(value => 
+      value !== undefined && value !== '' && value !== null
+    );
+    
+    if (hasFilters) {
+      applyFilters(page);
+    } else {
+      loadInitialData(page);
+    }
   };
 
   const handleSelectAll = () => {
@@ -905,6 +947,15 @@ console.log('🚀 AllTrades component rendered/re-rendered');
         </div>
       )}
 
+      {/* Pagination */}
+      {pagination && (
+        <Pagination 
+          pagination={pagination} 
+          onPageChange={handlePageChange} 
+          className="mt-6"
+        />
+      )}
+
       {/* Bulk Actions */}
       {selectedTrades.size > 0 && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4">
@@ -940,7 +991,15 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                       Array.from(selectedTrades).map(id => api.trades.delete(id))
                     ).then(() => {
                       setSelectedTrades(new Set());
-                      loadInitialData();
+                      // Refresh current page after bulk deletion
+                      const hasFilters = Object.values(filters).some(value => 
+                        value !== undefined && value !== '' && value !== null
+                      );
+                      if (hasFilters) {
+                        applyFilters(currentPage);
+                      } else {
+                        loadInitialData(currentPage);
+                      }
                     }).catch(err => {
                       console.error('Error deleting trades:', err);
                       alert('Failed to delete some trades. Please try again.');
