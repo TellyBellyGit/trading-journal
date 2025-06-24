@@ -9,6 +9,7 @@ import TextStyle from '@tiptap/extension-text-style';
 import Image from '@tiptap/extension-image';
 import { notesApi } from '../api/notes';
 import type { Note, CreateNoteData, UpdateNoteData, SaveStatus } from '../types/notes';
+import { sanitizeForJSON } from '../utils/jsonSanitizer';
 
 // Custom ResizableImage extension
 const ResizableImage = Image.extend({
@@ -387,13 +388,13 @@ const Notes: React.FC = () => {
         const updateData: UpdateNoteData = {};
         
         if (data.title !== undefined && data.title !== selectedNote.title) {
-          updateData.title = data.title;
+          updateData.title = sanitizeForJSON(data.title);
         }
         if (data.content !== undefined && data.content !== selectedNote.content) {
-          updateData.content = data.content;
+          updateData.content = sanitizeForJSON(data.content);
         }
         if (data.category !== undefined && data.category !== selectedNote.category) {
-          updateData.category = data.category;
+          updateData.category = sanitizeForJSON(data.category);
         }
         if (data.tags !== undefined && JSON.stringify(data.tags) !== JSON.stringify(selectedNote.tags)) {
           updateData.tags = data.tags;
@@ -467,9 +468,9 @@ const Notes: React.FC = () => {
   const handleNewNote = async () => {
     try {
       const newNote: CreateNoteData = {
-        title: 'New Note',
-        content: '<p>Start writing your note...</p>',
-        category: '',
+        title: sanitizeForJSON('New Note'),
+        content: sanitizeForJSON('<p>Start writing your note...</p>'),
+        category: sanitizeForJSON(''),
         tags: []
       };
       

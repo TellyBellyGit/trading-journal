@@ -8,7 +8,7 @@ const navigationItems = [
   { id: 'analytics', label: 'Analytics', icon: '📊', active: false },
   { id: 'calendar', label: 'Calendar', icon: '📅', active: false },
   { id: 'notes', label: 'Notes', icon: '📝', active: false },
-  { id: 'playbook', label: 'PlayBook', icon: '📚', active: false },
+  { id: 'playbook', label: 'Performance Indicators', icon: '🎯', active: false },
   { id: 'import', label: 'Import', icon: '📤', active: false },
   { id: 'settings', label: 'Settings', icon: '⚙️', active: false },
 ];
@@ -48,6 +48,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'all-trades': return 'trades';
       case 'notes': return 'notes';
       case 'import': return 'import';
+      case 'performance-indicators': return 'playbook';
       default: return 'dashboard';
     }
   };
@@ -60,6 +61,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'trades': return 'all-trades';
       case 'notes': return 'notes';
       case 'import': return 'import';
+      case 'playbook': return 'performance-indicators';
       default: return 'original';
     }
   };

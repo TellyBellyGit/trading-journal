@@ -24,7 +24,33 @@ const PORT = process.env.PORT || 3002; // 🔥 CHANGED: Use 3002 instead of 3001
 app.use(cors());
 //app.use(express.json());
 
-app.use(express.json({ limit: '10mb' })); // Increase from default 1mb
+// Enhanced JSON parsing with better error handling
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req: any, res: any, buf: Buffer) => {
+    try {
+      // Attempt to parse the buffer to validate JSON format
+      const body = buf.toString('utf8');
+      
+      // Check for common Unicode surrogate issues that break JSON parsing
+      if (body.includes('\uD800') || body.includes('\uDFFF')) {
+        console.warn('Request contains potentially problematic Unicode surrogates');
+      }
+      
+      JSON.parse(body);
+    } catch (error: any) {
+      console.error('JSON parsing validation failed:', {
+        error: error.message,
+        url: req.url,
+        method: req.method,
+        contentLength: buf.length,
+        contentPreview: buf.toString('utf8').substring(0, 200) + '...'
+      });
+      throw new Error(`Invalid JSON format: ${error.message}`);
+    }
+  }
+}));
+
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 
@@ -37,6 +63,35 @@ app.use('/api/notes', notesRouter);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Trading Journal API is running' });
+});
+
+// Global error handler for JSON parsing and other errors
+app.use((error: any, req: any, res: any, next: any) => {
+  console.error('Global error handler:', {
+    error: error.message,
+    stack: error.stack,
+    url: req.url,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+
+  if (error.type === 'entity.parse.failed' || error.message.includes('JSON')) {
+    return res.status(400).json({
+      type: 'error',
+      error: {
+        type: 'invalid_request_error',
+        message: 'Invalid JSON format. Please check for special characters or encoding issues.'
+      }
+    });
+  }
+
+  res.status(500).json({
+    type: 'error',
+    error: {
+      type: 'internal_server_error',
+      message: 'An internal server error occurred'
+    }
+  });
 });
 
 // Start server with error handling

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Note, CreateNoteData, UpdateNoteData, NotesSearchParams } from '../types/notes';
+import { sanitizeJsonPayload } from '../utils/jsonSanitizer';
 
 const API_BASE_URL = 'http://localhost:3002/api';
 
@@ -25,13 +26,15 @@ export const notesApi = {
 
   // Create new note
   create: async (noteData: CreateNoteData): Promise<Note> => {
-    const response = await api.post('/notes', noteData);
+    const sanitizedData = sanitizeJsonPayload(noteData);
+    const response = await api.post('/notes', sanitizedData);
     return response.data;
   },
 
   // Update existing note (for auto-save)
   update: async (id: string, noteData: UpdateNoteData): Promise<Note> => {
-    const response = await api.put(`/notes/${id}`, noteData);
+    const sanitizedData = sanitizeJsonPayload(noteData);
+    const response = await api.put(`/notes/${id}`, sanitizedData);
     return response.data;
   },
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AppShell from './components/AppShell';
 import MetricsDashboard from './components/MetricsDashboard'; // Your existing placeholder
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard'; // NEW analytics dashboard
+import PerformanceIndicatorsDashboard from './components/PerformanceIndicatorsDashboard'; // NEW performance indicators dashboard
 import AllTrades from './components/AllTrades';
 import ImportTrades from './components/ImportTrades';
 import TradingCalendar from './components/TradingCalendar';
@@ -481,6 +482,7 @@ function App() {
         {currentView === 'original' && <OriginalDashboard />}
         {currentView === 'analytics' && <AnalyticsDashboard />}
         {currentView === 'enhanced' && <MetricsDashboard />}
+        {currentView === 'performance-indicators' && <PerformanceIndicatorsDashboard />}
         {currentView === 'all-trades' && (
           <AllTrades
             onTradeAdd={() => {

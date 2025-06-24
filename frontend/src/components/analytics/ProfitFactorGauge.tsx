@@ -41,18 +41,18 @@ const ProfitFactorGauge: React.FC<ProfitFactorGaugeProps> = ({
     const radius = 80;
     const strokeWidth = 12;
 
-    // Create arc segments with different colors
+    // Create arc segments with different colors - FIXED
     const createArcPath = (startAngle: number, endAngle: number) => {
-      const start = (startAngle * Math.PI) / 180;
-      const end = (endAngle * Math.PI) / 180;
-      
-      const x1 = centerX + radius * Math.cos(Math.PI - start);
-      const y1 = centerY + radius * Math.sin(Math.PI - start);
-      const x2 = centerX + radius * Math.cos(Math.PI - end);
-      const y2 = centerY + radius * Math.sin(Math.PI - end);
-      
+      const startRad = (startAngle * Math.PI) / 180;
+      const endRad = (endAngle * Math.PI) / 180;
+
+      const x1 = centerX - radius * Math.cos(startRad);
+      const y1 = centerY - radius * Math.sin(startRad);
+      const x2 = centerX - radius * Math.cos(endRad);
+      const y2 = centerY - radius * Math.sin(endRad);
+
       const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-      
+
       return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`;
     };
 
@@ -68,12 +68,12 @@ const ProfitFactorGauge: React.FC<ProfitFactorGaugeProps> = ({
       { start: 108, end: 180, color: '#004C00' }   // 3.0-5.0: Darker green
     ];
 
-    // Needle calculation (fixed coordinate system)
-    const needleRadians = (180 - needleAngle) * Math.PI / 180;
+    // Needle calculation - FIXED
+    const needleRadians = (needleAngle * Math.PI) / 180;
     const needleLength = radius - 10;
-    const needleX = centerX + needleLength * Math.cos(needleRadians);
+    const needleX = centerX - needleLength * Math.cos(needleRadians);
     const needleY = centerY - needleLength * Math.sin(needleRadians);
-    const needleEndX = centerX + (radius - 20) * Math.cos(needleRadians);
+    const needleEndX = centerX - (radius - 20) * Math.cos(needleRadians);
     const needleEndY = centerY - (radius - 20) * Math.sin(needleRadians);
 
     return (
@@ -118,18 +118,18 @@ const ProfitFactorGauge: React.FC<ProfitFactorGaugeProps> = ({
           fill="#D8DEE9"
         />
         
-        {/* Scale markers */}
+        {/* Scale markers - FIXED */}
         {[0, 1, 2, 3, 4, 5].map((value) => {
           const angle = (value / 5) * 180;
-          const markerRadians = (180 - angle) * Math.PI / 180;
+          const angleRad = (angle * Math.PI) / 180;
           const innerRadius = radius - 15;
           const outerRadius = radius - 5;
-          
-          const x1 = centerX + innerRadius * Math.cos(markerRadians);
-          const y1 = centerY - innerRadius * Math.sin(markerRadians);
-          const x2 = centerX + outerRadius * Math.cos(markerRadians);
-          const y2 = centerY - outerRadius * Math.sin(markerRadians);
-          
+
+          const x1 = centerX - innerRadius * Math.cos(angleRad);
+          const y1 = centerY - innerRadius * Math.sin(angleRad);
+          const x2 = centerX - outerRadius * Math.cos(angleRad);
+          const y2 = centerY - outerRadius * Math.sin(angleRad);
+
           return (
             <g key={value}>
               <line
@@ -141,8 +141,8 @@ const ProfitFactorGauge: React.FC<ProfitFactorGaugeProps> = ({
                 strokeWidth="2"
               />
               <text
-                x={centerX + (radius + 15) * Math.cos(markerRadians)}
-                y={centerY - (radius + 15) * Math.sin(markerRadians) + 4}
+                x={centerX - (radius + 15) * Math.cos(angleRad)}
+                y={centerY - (radius + 15) * Math.sin(angleRad) + 4}
                 fill="#ECEFF4"
                 fontSize="12"
                 textAnchor="middle"

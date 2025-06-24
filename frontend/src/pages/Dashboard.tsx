@@ -8,6 +8,15 @@ import { Formatters } from '../utils/formatters';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import type { Trade } from '../types/Trade';
 
+// Enhanced chart components
+import DonutChart from '../components/charts/DonutChart';
+import GaugeChart from '../components/charts/GaugeChart';
+import AnimatedCounter from '../components/charts/AnimatedCounter';
+import SparklineChart from '../components/charts/SparklineChart';
+import RadarChart from '../components/charts/RadarChart';
+import RiskHeatmap from '../components/charts/RiskHeatmap';
+import HorizontalBarChart from '../components/charts/HorizontalBarChart';
+
 export interface DashboardProps {
   onNewTrade: () => void;
   onAnalytics?: () => void;
@@ -112,40 +121,160 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Primary Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <MetricsCard
-            title="Total Trades"
-            value={metrics.totalTrades}
-            icon="📊"
-            color="#3B82F6"
-            subtitle={`${metrics.openTrades} open, ${metrics.closedTrades} closed`}
-            loading={loading}
-          />
-          <MetricsCard
-            title="Total P/L"
-            value={Formatters.currency(metrics.totalPnL)}
-            icon={metrics.totalPnL >= 0 ? "📈" : "📉"}
-            color={metrics.totalPnL >= 0 ? "#10B981" : "#EF4444"}
-            subtitle={derivedData.isProftable ? "Profitable" : "Needs improvement"}
-            loading={loading}
-          />
-          <MetricsCard
-            title="Win Rate"
-            value={Formatters.winRate(metrics.winRate)}
-            icon="🎯"
-            color="#8B5CF6"
-            subtitle={`${metrics.winningTrades}W / ${metrics.losingTrades}L`}
-            loading={loading}
-          />
-          <MetricsCard
-            title="Avg Trade"
-            value={Formatters.currency(metrics.avgTrade)}
-            icon="💰"
-            color="#F59E0B"
-            subtitle={`Best: ${Formatters.compactCurrency(metrics.largestWin)}`}
-            loading={loading}
-          />
+        {/* Key Performance Indicators */}
+        <div className="mb-8">
+          <div className="flex items-center mb-6">
+            <div className="w-1 h-8 bg-blue-500 rounded-full mr-4"></div>
+            <h2 className="text-2xl font-bold text-gray-900">Key Performance Indicators</h2>
+            <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+              Live Metrics
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total P/L with Animated Counter */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Total P/L</h3>
+                  <p className="text-gray-500 text-xs mt-1">Cumulative profit/loss</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">{metrics.totalPnL >= 0 ? '📈' : '📉'}</span>
+                </div>
+              </div>
+              <div className="mb-4">
+                <AnimatedCounter
+                  to={metrics.totalPnL}
+                  formatter="currency"
+                  color={metrics.totalPnL >= 0 ? 'green' : 'red'}
+                  size="xl"
+                  loading={loading}
+                />
+                <div className="flex items-center mt-2 space-x-2">
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    metrics.totalPnL >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {metrics.totalPnL >= 0 ? '↗️ Profitable' : '↘️ Loss'}
+                  </div>
+                </div>
+              </div>
+              {/* Mini sparkline for recent performance */}
+              <div className="mt-4">
+                <SparklineChart
+                  data={data.weeklyPerformance.map((week, i) => ({ value: week.pnl, date: week.period }))}
+                  color={metrics.totalPnL >= 0 ? '#10B981' : '#EF4444'}
+                  height={30}
+                  animate={true}
+                />
+              </div>
+            </div>
+
+            {/* Win Rate with Donut Chart */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Win Rate</h3>
+                  <p className="text-gray-500 text-xs mt-1">Success percentage</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">🎯</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold text-purple-600">
+                    {metrics.winRate.toFixed(1)}%
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {metrics.winningTrades}W / {metrics.losingTrades}L
+                  </div>
+                </div>
+                <DonutChart
+                  data={[
+                    { name: 'Wins', value: metrics.winningTrades, color: '#10B981' },
+                    { name: 'Losses', value: metrics.losingTrades, color: '#EF4444' }
+                  ]}
+                  size={80}
+                  innerRadius={25}
+                  outerRadius={35}
+                  showLabels={false}
+                />
+              </div>
+            </div>
+
+            {/* Profit Factor with Gauge Chart */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Profit Factor</h3>
+                  <p className="text-gray-500 text-xs mt-1">Gross profit / Gross loss</p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">⚖️</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <GaugeChart
+                  value={metrics.profitFactor === Infinity ? 3 : metrics.profitFactor}
+                  min={0}
+                  max={3}
+                  target={2.0}
+                  label=""
+                  color={metrics.profitFactor >= 1.5 ? 'green' : metrics.profitFactor >= 1.0 ? 'orange' : 'red'}
+                  size={100}
+                />
+                <div className="text-sm text-center mt-2">
+                  <span className={`font-medium ${
+                    metrics.profitFactor >= 1.5 ? 'text-green-600' : 
+                    metrics.profitFactor >= 1.0 ? 'text-orange-600' : 'text-red-600'
+                  }`}>
+                    {metrics.profitFactor >= 1.5 ? 'Excellent' : 
+                     metrics.profitFactor >= 1.0 ? 'Good' : 'Poor'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Trades with Counter */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Total Trades</h3>
+                  <p className="text-gray-500 text-xs mt-1">Executed positions</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">📊</span>
+                </div>
+              </div>
+              <div className="mb-4">
+                <AnimatedCounter
+                  to={metrics.totalTrades}
+                  formatter="number"
+                  color="blue"
+                  size="xl"
+                  decimals={0}
+                  loading={loading}
+                />
+                <div className="text-sm text-gray-500 mt-2">
+                  {metrics.openTrades} open • {metrics.closedTrades} closed
+                </div>
+              </div>
+              {/* Progress bar for target */}
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Monthly Target</span>
+                  <span>{Math.min((metrics.totalTrades / 100) * 100, 100).toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
+                    style={{ width: `${Math.min((metrics.totalTrades / 100) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Secondary Metrics Row */}

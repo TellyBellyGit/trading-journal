@@ -9,6 +9,7 @@ import TextStyle from '@tiptap/extension-text-style';
 import Image from '@tiptap/extension-image';
 import { formatSimpleDate, formatTradingTime } from '../utils/formatters';
 import { useDateFormat } from '../contexts/DateFormatContext';
+import { sanitizeForJSON } from '../utils/jsonSanitizer';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:3002/api';
@@ -62,7 +63,7 @@ const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ notes }), // Changed from commentary to notes
+        body: JSON.stringify({ notes: sanitizeForJSON(notes) }), // Changed from commentary to notes
       });
       return response.ok;
     } catch (error) {
