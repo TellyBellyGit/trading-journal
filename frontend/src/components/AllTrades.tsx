@@ -1,9 +1,9 @@
-console.log("In ALLTRADES Proper!!!.TSX");
+// AllTrades component with enhanced date filtering
 
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/trades'; // Import your API object
 import type { Trade, TradeFilters, TradeStats, Broker } from '../types/Trade'; // Import your types
-import type { PaginationInfo } from '../api/trades'; // Import pagination type
+import type { PaginationInfo, DateContext } from '../api/trades'; // Import pagination type
 import TradeDetails from './TradeDetails'; // Import TradeDetails component
 import EditTrade from './EditTrade'; // Import EditTrade component
 import Pagination from './Pagination'; // Import Pagination component
@@ -45,8 +45,8 @@ const AllTrades: React.FC<AllTradesProps> = ({
 }) => {
   const { dateFormat } = useDateFormat();
 
-console.log('🚀 AllTrades component rendered/re-rendered');
-  console.log('📊 Props received:', { externalLoading, onTradeEdit: !!onTradeEdit, onTradeDelete: !!onTradeDelete });
+// Debug logging (can be removed in production)
+  // console.log('🚀 AllTrades component rendered/re-rendered');
 
   // State management
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -61,6 +61,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [dateContext, setDateContext] = useState<DateContext | undefined>(undefined);
   const [itemsPerPage] = useState(20);
   
   // NEW: Trade details navigation state
@@ -157,6 +158,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
 
       setTrades(tradesResponse.trades);
       setPagination(tradesResponse.pagination);
+      setDateContext(tradesResponse.dateContext);
       setCurrentPage(page);
       setBrokers(brokersData);
       setStats(statsData);
@@ -184,6 +186,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
         setTrades(tradesResponse.trades);
         setFilteredTrades(tradesResponse.trades);
         setPagination(tradesResponse.pagination);
+        setDateContext(undefined); // Clear date context when no filters
         setCurrentPage(page);
         return;
       }
@@ -193,6 +196,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
       setTrades(searchResponse.trades);
       setFilteredTrades(searchResponse.trades);
       setPagination(searchResponse.pagination);
+      setDateContext(searchResponse.dateContext);
       setCurrentPage(page);
     } catch (err) {
       console.error('Error applying filters:', err);
@@ -447,6 +451,20 @@ console.log('🚀 AllTrades component rendered/re-rendered');
               {selectedTrades.size > 0 && ` • ${selectedTrades.size} selected`}
               <span className="ml-2 text-blue-400">• Click any symbol to view details & add notes</span>
             </p>
+            {dateContext?.isDateFiltered && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-md">
+                  📅 Date Filtered
+                </span>
+                <span className="text-xs text-gray-500">
+                  Starting from {new Date(filters.fromDate!).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })} • Sorted oldest first
+                </span>
+              </div>
+            )}
           </div>
           
           <div className="flex flex-wrap gap-3">
@@ -619,6 +637,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
         <div ref={topPaginationRef}>
           <Pagination 
             pagination={pagination} 
+            dateContext={dateContext}
             onPageChange={handlePageChange} 
           />
         </div>
@@ -976,6 +995,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
       {pagination && filteredTrades.length > 0 && (
         <Pagination 
           pagination={pagination} 
+          dateContext={dateContext}
           onPageChange={handlePageChange} 
           className="mt-6"
         />

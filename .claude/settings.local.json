@@ -16,7 +16,10 @@
       "Bash(npm install:*)",
       "Bash(ls:*)",
       "Bash(npx vite:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(kill:*)",
+      "Bash(node:*)",
+      "Bash(ss:*)"
     ],
     "deny": []
   }

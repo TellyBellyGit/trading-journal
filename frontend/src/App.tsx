@@ -904,63 +904,21 @@ function App() {
     const endDateObj = new Date(endDate);
 
     try {
-      // Fetch ALL trades (not just recent ones) - add large limit to get all trades
-      const response = await fetch(`${API_BASE_URL}/trades?limit=10000`);
-      if (!response.ok) throw new Error('Failed to fetch trades');
-      const tradesResponse = await response.json();
+      // Use the new efficient export API endpoint that filters at the database level
+      const response = await fetch(`${API_BASE_URL}/trades/export?startDate=${startDate}&endDate=${endDate}&status=Closed`);
+      if (!response.ok) throw new Error('Failed to fetch trades for export');
+      const exportResponse = await response.json();
       
-      // Handle different API response formats
-      const allTrades = Array.isArray(tradesResponse) ? tradesResponse : (tradesResponse.trades || []);
+      const closedTrades = exportResponse.trades || [];
       
-      console.log('🔍 Fetched trades:', allTrades.length, allTrades.slice(0, 3));
-      
-      // Simple filter: trades with entry date in range AND status is Closed
-      const closedTrades = allTrades.filter((trade: Trade) => {
-        // Must be closed
-        if (trade.status !== 'Closed') {
-          return false;
-        }
-        
-        // Check entry date (every trade has this)
-        const entryDate = new Date(trade.entryDate);
-        
-        // Normalize dates to start of day for comparison
-        const entryDateNorm = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
-        const startDateNorm = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate());
-        const endDateNorm = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate());
-        
-        const inRange = entryDateNorm >= startDateNorm && entryDateNorm <= endDateNorm;
-        
-        console.log('🔍 Trade check:', { 
-          symbol: trade.symbol,
-          status: trade.status,
-          entryDate: entryDateNorm.toISOString().split('T')[0], 
-          startDate: startDateNorm.toISOString().split('T')[0], 
-          endDate: endDateNorm.toISOString().split('T')[0], 
-          inRange 
-        });
-        
-        return inRange;
-      });
-
-      console.log('🔍 Filter results:', {
-        totalTrades: allTrades.length,
-        closedTrades: closedTrades.length,
-        startDate,
-        endDate
+      console.log('🔍 Export API response:', {
+        totalTrades: closedTrades.length,
+        dateRange: exportResponse.summary?.dateRange,
+        sampleTrades: closedTrades.slice(0, 3)
       });
 
       if (closedTrades.length === 0) {
-        // More detailed debugging info
-        const closedTradesCount = allTrades.filter(t => t.status === 'Closed').length;
-        const tradesWithExitDate = allTrades.filter(t => t.exitDate).length;
-        console.log('🔍 Debug info:', {
-          totalTrades: allTrades.length,
-          closedTradesCount,
-          tradesWithExitDate,
-          sampleTrade: allTrades[0]
-        });
-        alert(`No closed trades found between ${startDate} and ${endDate}.\n\nDebug: ${allTrades.length} total trades, ${closedTradesCount} closed trades, ${tradesWithExitDate} with exit dates.\n\nCheck console for details.`);
+        alert(`No closed trades found between ${startDate} and ${endDate}.`);
         return;
       }
 

@@ -186,7 +186,16 @@ router.get('/search', async (req, res) => {
       where.strategy = { contains: strategy as string };
     }
     if (fromDate) {
-      where.entryDate = { gte: new Date(fromDate as string) };
+      const fromDateObj = new Date(fromDate as string);
+      if (isNaN(fromDateObj.getTime())) {
+        console.warn('🔍 Invalid fromDate format:', fromDate);
+        return res.status(400).json({ 
+          error: 'Invalid fromDate format. Use YYYY-MM-DD format',
+          received: fromDate 
+        });
+      }
+      console.log('🔍 FromDate filter applied:', fromDate, '→', fromDateObj);
+      where.entryDate = { gte: fromDateObj };
     }
     if (tags) {
       where.tags = { contains: tags as string };
@@ -248,6 +257,11 @@ router.get('/search', async (req, res) => {
 
     console.log('🔍 Search filters applied:', where);
 
+    // Smart sorting: if date filtering is active, sort by entryDate ASC (oldest first)
+    // This ensures users see trades starting from their selected date
+    const hasDateFilter = fromDate;
+    const orderBy = hasDateFilter ? { entryDate: 'asc' as const } : { entryDate: 'desc' as const };
+
     // Get total count for pagination metadata
     const totalCount = await prisma.trade.count({ where });
 
@@ -263,12 +277,29 @@ router.get('/search', async (req, res) => {
           }
         }
       },
-      orderBy: { entryDate: 'desc' },
+      orderBy,
       skip,
       take: limitNum
     });
 
+    // Calculate date context for enhanced pagination
+    let dateContext = undefined;
+    if (hasDateFilter && trades.length > 0) {
+      const pageStartDate = trades[0].entryDate;
+      const pageEndDate = trades[trades.length - 1].entryDate;
+      dateContext = {
+        pageStartDate: pageStartDate.toISOString().split('T')[0],
+        pageEndDate: pageEndDate.toISOString().split('T')[0],
+        totalInRange: totalCount,
+        isDateFiltered: true
+      };
+    }
+
     console.log(`🔍 Found ${trades.length} trades matching filters (page ${pageNum}/${Math.ceil(totalCount / limitNum)})`);
+    if (dateContext) {
+      console.log(`🔍 Date context: Page shows ${dateContext.pageStartDate} to ${dateContext.pageEndDate}`);
+    }
+
     res.json({
       trades,
       pagination: {
@@ -277,12 +308,89 @@ router.get('/search', async (req, res) => {
         totalCount,
         hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
         hasPreviousPage: pageNum > 1
-      }
+      },
+      dateContext
     });
     
   } catch (error) {
     console.error('Error searching trades:', error);
     res.status(500).json({ error: 'Failed to search trades' });
+  }
+});
+
+// 🔥 NEW: Export trades for AI analysis - optimized with date range filtering
+router.get('/export', async (req, res) => {
+  try {
+    const { startDate, endDate, status } = req.query;
+    
+    // Validate required parameters
+    if (!startDate || !endDate) {
+      return res.status(400).json({ 
+        error: 'startDate and endDate are required',
+        example: '/api/trades/export?startDate=2025-05-01&endDate=2025-05-31&status=Closed'
+      });
+    }
+
+    // Validate and parse dates
+    const startDateObj = new Date(startDate as string);
+    const endDateObj = new Date(endDate as string);
+    
+    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+      return res.status(400).json({ 
+        error: 'Invalid date format. Use YYYY-MM-DD format',
+        received: { startDate, endDate }
+      });
+    }
+
+    // Build where clause for database filtering
+    const where: any = {};
+    
+    // Filter by entry date range
+    where.entryDate = {
+      gte: startDateObj,
+      lte: endDateObj
+    };
+    
+    // Filter by status if provided
+    if (status) {
+      where.status = status as string;
+    }
+
+    console.log('🔍 Export query filters:', where);
+
+    // Fetch trades from database with filters applied
+    const trades = await prisma.trade.findMany({
+      where,
+      include: {
+        broker: {
+          select: {
+            id: true,
+            name: true,
+            displayName: true
+          }
+        }
+      },
+      orderBy: { entryDate: 'desc' }
+    });
+
+    console.log(`🔍 Found ${trades.length} trades for export between ${startDate} and ${endDate}`);
+
+    // Return filtered trades
+    res.json({
+      trades,
+      summary: {
+        totalTrades: trades.length,
+        dateRange: {
+          startDate,
+          endDate
+        },
+        filters: { status }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error exporting trades:', error);
+    res.status(500).json({ error: 'Failed to export trades' });
   }
 });
 

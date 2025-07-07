@@ -1,18 +1,30 @@
 import React from 'react';
-import type { PaginationInfo } from '../api/trades';
+import type { PaginationInfo, DateContext } from '../api/trades';
 
 interface PaginationProps {
   pagination: PaginationInfo;
+  dateContext?: DateContext;
   onPageChange: (page: number) => void;
   className?: string;
 }
 
 const Pagination: React.FC<PaginationProps> = ({ 
   pagination, 
+  dateContext,
   onPageChange, 
   className = '' 
 }) => {
   const { currentPage, totalPages, totalCount, hasNextPage, hasPreviousPage } = pagination;
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
   // Generate page numbers to show
   const getVisiblePages = () => {
@@ -82,8 +94,16 @@ const Pagination: React.FC<PaginationProps> = ({
             </span>{' '}
             of{' '}
             <span className="font-medium text-white">{totalCount}</span>{' '}
-            results
+            {dateContext?.isDateFiltered ? 'filtered ' : ''}results
           </p>
+          {dateContext?.isDateFiltered && (
+            <p className="text-xs text-blue-400 mt-1">
+              📅 Page {currentPage}: {formatDate(dateContext.pageStartDate)} to {formatDate(dateContext.pageEndDate)}
+              {dateContext.totalInRange > 0 && (
+                <span className="text-gray-500"> • {dateContext.totalInRange} total in date range</span>
+              )}
+            </p>
+          )}
         </div>
         <div>
           <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">

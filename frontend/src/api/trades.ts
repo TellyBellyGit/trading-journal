@@ -9,9 +9,17 @@ interface PaginationInfo {
   hasPreviousPage: boolean;
 }
 
+interface DateContext {
+  pageStartDate: string;
+  pageEndDate: string;
+  totalInRange: number;
+  isDateFiltered: boolean;
+}
+
 interface PaginatedResponse<T> {
   trades: T[];
   pagination: PaginationInfo;
+  dateContext?: DateContext;
 }
 
 interface ImportSummary {
@@ -241,7 +249,7 @@ export const healthApi = {
 };
 
 // Export types
-export type { PaginationInfo, PaginatedResponse };
+export type { PaginationInfo, PaginatedResponse, DateContext };
 
 // Export default API object for convenience
 export default {
