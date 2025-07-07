@@ -89,6 +89,253 @@ const api = {
   }
 };
 
+// Calendar Component - Dashboard without Recent Trades and Quick Actions
+const CalendarView = () => {
+  console.log("🔥 CALENDAR VIEW IS RENDERING!"); 
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+
+  console.log("🔥 CALENDAR STATE:", { loading, stats });
+
+  // Load dashboard data
+  const loadDashboardData = async () => {
+    try {
+      console.log("🔥 STARTING TO LOAD CALENDAR DATA"); 
+      setLoading(true);
+      setError(null);
+      
+      console.log("🔥 CALLING STATS API"); 
+      const statsData = await api.getStats();
+      
+      console.log("🔥 CALENDAR API RESPONSE:", { statsData });
+      setStats(statsData);
+    } catch (error) {
+      console.error('🔥 ERROR LOADING CALENDAR:', error);
+      setError('Failed to load calendar data');
+    } finally {
+      console.log("🔥 FINISHED LOADING CALENDAR");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  // Handle calendar date clicks
+  const handleCalendarDateClick = (date: string, trades: Trade[]) => {
+    setSelectedDate(date);
+    setSelectedDateTrades(trades);
+  };
+
+  const closeTradeModal = () => {
+    setSelectedDateTrades(null);
+    setSelectedDate('');
+  };
+
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(value);
+  };
+
+  // Loading state
+  if (loading) {
+    console.log("🔥 SHOWING CALENDAR LOADING STATE! Loading value:", loading);
+    return (
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-6 animate-pulse">
+              <div className="flex items-center justify-between mb-2">
+                <div className="h-4 bg-gray-700 rounded w-20"></div>
+                <div className="w-8 h-8 bg-gray-700 rounded"></div>
+              </div>
+              <div className="h-8 bg-gray-700 rounded w-24"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h3 className="text-xl font-semibold text-red-400 mb-2">Error Loading Calendar</h3>
+          <p className="text-gray-300 mb-4">{error}</p>
+          <button
+            onClick={loadDashboardData}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate metrics for display
+  const metrics = [
+    { 
+      title: 'Total Trades', 
+      value: stats?.totalTrades?.toString() || '0', 
+      color: 'blue', 
+      icon: '📊' 
+    },
+    { 
+      title: 'Total P/L', 
+      value: stats?.totalPnL ? formatCurrency(stats.totalPnL) : '$0.00', 
+      color: stats?.totalPnL && stats.totalPnL >= 0 ? 'green' : 'red', 
+      icon: '💰' 
+    },
+    { 
+      title: 'Win Rate', 
+      value: stats?.winRate ? `${stats.winRate.toFixed(1)}%` : '0%', 
+      color: 'purple', 
+      icon: '🎯' 
+    },
+    { 
+      title: 'Avg Trade', 
+      value: stats?.avgTrade ? formatCurrency(stats.avgTrade) : '$0.00', 
+      color: 'orange', 
+      icon: '📈' 
+    }
+  ];
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Real-time Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {metrics.map((metric, index) => (
+          <div key={index} className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-gray-600 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-400 text-sm font-medium">{metric.title}</h3>
+              <span className="text-2xl">{metric.icon}</span>
+            </div>
+            <p className={`text-2xl font-bold ${
+              metric.color === 'blue' ? 'text-blue-400' :
+              metric.color === 'green' ? 'text-green-400' :
+              metric.color === 'red' ? 'text-red-400' :
+              metric.color === 'purple' ? 'text-purple-400' :
+              'text-orange-400'
+            }`}>
+              {metric.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Trading Calendar */}
+      <div className="bg-gray-800 border border-gray-700 rounded-lg">
+        <TradingCalendar onDateClick={handleCalendarDateClick} />
+      </div>
+
+      {/* Trade Details Modal */}
+      {selectedDateTrades && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-700">
+              <h3 className="text-xl font-semibold text-white">
+                Trades for {new Date(selectedDate).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              <button
+                onClick={closeTradeModal}
+                className="text-gray-400 hover:text-gray-200 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {selectedDateTrades.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-4xl mb-4">📅</div>
+                  <p>No trades found for this date</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedDateTrades.map((trade) => (
+                    <div
+                      key={trade.id}
+                      className="border border-gray-700 rounded-lg p-4 hover:bg-gray-700/30 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="font-semibold text-lg text-white">
+                            {trade.symbol}
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                            trade.direction === 'Long' 
+                              ? 'bg-green-600 text-white' 
+                              : 'bg-red-600 text-white'
+                          }`}>
+                            {trade.direction}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                            trade.status === 'Open' 
+                              ? 'bg-orange-600 text-white' 
+                              : 'bg-gray-600 text-white'
+                          }`}>
+                            {trade.status}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-lg font-bold ${
+                            (trade.profitLoss || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {trade.profitLoss ? formatCurrency(trade.profitLoss) : '$0.00'}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            {trade.percentChange ? `${trade.percentChange > 0 ? '+' : ''}${trade.percentChange.toFixed(2)}%` : '0%'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-300">
+                        <div>
+                          <div className="font-medium text-gray-400">Quantity</div>
+                          <div>{trade.quantity?.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-400">Entry Price</div>
+                          <div>{formatCurrency(trade.entryPrice || 0)}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-400">Exit Price</div>
+                          <div>{trade.exitPrice ? formatCurrency(trade.exitPrice) : 'Open'}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-400">Duration</div>
+                          <div>{trade.duration || 0} days</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Enhanced Dashboard Content Component with Real Data
 const OriginalDashboard = () => {
   console.log("🔥 ORIGINAL DASHBOARD IS RENDERING!"); 
@@ -491,6 +738,7 @@ function App() {
     return (
       <div className="transition-all duration-300">
         {currentView === 'original' && <OriginalDashboard />}
+        {currentView === 'calendar' && <CalendarView />}
         {currentView === 'analytics' && <AnalyticsDashboard />}
         {currentView === 'enhanced' && <MetricsDashboard />}
         {currentView === 'performance-indicators' && <PerformanceIndicatorsDashboard />}
@@ -531,6 +779,8 @@ function App() {
       ? 'Import Trades'
       : currentView === 'notes'
       ? 'Trading Notes'
+      : currentView === 'calendar'
+      ? 'Trading Calendar'
       : 'Trading Dashboard';
   };
 
@@ -545,6 +795,8 @@ function App() {
       ? 'Upload broker statements to automatically import trades'
       : currentView === 'notes'
       ? 'Journal entries and trade reflections with rich text editing'
+      : currentView === 'calendar'
+      ? 'Visual calendar view of your trading activity'
       : 'Real-time trading performance';
   };
 

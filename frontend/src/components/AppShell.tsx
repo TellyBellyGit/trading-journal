@@ -46,6 +46,7 @@ const AppShell: React.FC<AppShellProps> = ({
   const getNavIdFromView = (view: string) => {
     switch(view) {
       case 'original': return 'dashboard';
+      case 'calendar': return 'calendar';
       case 'analytics': return 'analytics';
       case 'all-trades': return 'trades';
       case 'notes': return 'notes';
@@ -59,6 +60,7 @@ const AppShell: React.FC<AppShellProps> = ({
   const getViewFromNavId = (navId: string) => {
     switch(navId) {
       case 'dashboard': return 'original';
+      case 'calendar': return 'calendar';
       case 'analytics': return 'analytics';
       case 'trades': return 'all-trades';
       case 'notes': return 'notes';

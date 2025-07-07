@@ -809,7 +809,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                     </td>
                     <td className="p-2 text-gray-300">{formatSimpleDate(trade.entryDate, dateFormat)}</td>
                     {/* NEW: Entry Time column */}
-                    <td className="p-2 text-gray-300 font-mono text-sm">{formatTime(trade.entryTime)}</td>
+                    <td className="p-2 text-gray-300">{formatTime(trade.entryTime)}</td>
                     <td className="p-2 text-gray-300">
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">Open</span>
@@ -818,7 +818,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                       )}
                     </td>
                     {/* NEW: Exit Time column */}
-                    <td className="p-2 text-gray-300 font-mono text-sm">
+                    <td className="p-2 text-gray-300">
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">—</span>
                       ) : (
@@ -903,7 +903,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                 {/* NEW: Entry Time in cards */}
                 <div>
                   <p className="text-gray-400 text-sm">Entry Time</p>
-                  <p className="text-white font-medium font-mono text-sm">{formatTime(trade.entryTime)}</p>
+                  <p className="text-white font-medium">{formatTime(trade.entryTime)}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Exit Date</p>
@@ -918,7 +918,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                 {/* NEW: Exit Time in cards */}
                 <div>
                   <p className="text-gray-400 text-sm">Exit Time</p>
-                  <p className="text-white font-medium font-mono text-sm">
+                  <p className="text-white font-medium">
                     {trade.status === 'Open' ? (
                       <span className="text-orange-400 italic">—</span>
                     ) : (

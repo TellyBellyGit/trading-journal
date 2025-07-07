@@ -290,7 +290,7 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
       <div className="grid grid-cols-7 gap-1">
         {days.map((day, index) => {
           if (!day) {
-            return <div key={index} className="h-24"></div>;
+            return <div key={index} className="h-28"></div>;
           }
 
           const dateKey = formatDateKey(day);
@@ -316,7 +316,7 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
             <div
               key={`${currentYear}-${currentMonth}-${day}`}
               className={`
-                h-24 p-1 border rounded cursor-pointer transition-all hover:shadow-md
+                h-28 p-1 border rounded cursor-pointer transition-all hover:shadow-md
                 ${isToday(day) ? 'border-blue-500 bg-blue-900/30' : 'border-gray-600 bg-gray-700/50 hover:bg-gray-600/50'}
               `}
               onDoubleClick={() => handleDateDoubleClick(day)}
@@ -329,24 +329,27 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                 
                 {loading ? (
                   <div className="animate-pulse">
-                    <div className="h-2 bg-gray-200 rounded mb-1"></div>
-                    <div className="h-2 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-2 bg-gray-700/50 rounded mb-1"></div>
+                    <div className="h-2 bg-gray-700/50 rounded w-3/4"></div>
                   </div>
                 ) : isWeeklyCell && weekData ? (
                   // Weekly totals display
                   <div className="flex-1 grid grid-cols-2 gap-1 text-orange-400">
                     <div>
-                      <div className="font-semibold text-[10px] mb-1">WEEK TOTAL</div>
-                      <div className={`font-bold text-[10px] ${weekData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className="font-semibold text-xs mb-1">WEEK TOTAL</div>
+                      <div className={`font-bold text-sm ${weekData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {Formatters.compactCurrency(weekData.pnl)}
                       </div>
-                      <div className="text-[9px] text-gray-300">
-                        {weekData.trades}T | {weekData.winRate.toFixed(0)}%
+                      <div className="text-xs text-gray-300">
+                        {weekData.trades} trades
+                      </div>
+                      <div className="text-xs text-gray-300">
+                        <span className="text-green-400">{weekData.wins}W</span> | <span className="text-red-400">{weekData.losses}L</span> | <span className="font-semibold text-orange-400">{weekData.winRate.toFixed(0)}%</span>
                       </div>
                     </div>
                     <div>
                       <div 
-                        className="text-[8px] text-blue-400 cursor-help relative group"
+                        className="text-[11px] text-blue-400 cursor-help relative group"
                       >
                         <span>Payoff Ratio: {weekData.riskReward > 0 ? weekData.riskReward.toFixed(1) : '-'}</span>
                         <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 w-48 p-2 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs">
@@ -355,7 +358,7 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                           <div className="text-gray-400 mt-1">Shows weekly trading efficiency. Higher is better.</div>
                         </div>
                       </div>
-                      <div className="text-[8px] text-purple-400">
+                      <div className="text-[11px] text-purple-400">
                         Cap. Deployed: {Formatters.compactCurrency(weekData.capitalDeployed)}
                       </div>
                     </div>
@@ -364,22 +367,22 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                   // Daily data display
                   <div className="flex-1 grid grid-cols-2 gap-1">
                     <div>
-                      <div className={`font-bold text-[10px] mb-1 ${dayData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className={`font-bold text-sm mb-1 ${dayData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {Formatters.compactCurrency(dayData.pnl)}
                       </div>
-                      <div className="text-[9px] text-gray-300">
+                      <div className="text-xs text-gray-300">
                         {dayData.trades} trades
                       </div>
-                      <div className="text-[9px] text-gray-300">
+                      <div className="text-xs text-gray-300">
                         <span className="text-green-400">{dayData.wins}W</span> | <span className="text-red-400">{dayData.losses}L</span>
                       </div>
-                      <div className="text-[9px] font-semibold text-orange-400">
+                      <div className="text-xs font-semibold text-orange-400">
                         {dayData.winRate.toFixed(0)}%
                       </div>
                     </div>
                     <div>
                       <div 
-                        className="text-[8px] text-blue-400 cursor-help relative group"
+                        className="text-[11px] text-blue-400 cursor-help relative group"
                       >
                         <span>Payoff Ratio: {dayData.riskReward > 0 ? dayData.riskReward.toFixed(1) : '-'}</span>
                         <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 w-48 p-2 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs">
@@ -388,7 +391,7 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                           <div className="text-gray-400 mt-1">Shows how much you typically make versus lose per trade. Higher is better.</div>
                         </div>
                       </div>
-                      <div className="text-[8px] text-purple-400">
+                      <div className="text-[11px] text-purple-400">
                         Cap. Deployed: {Formatters.compactCurrency(dayData.capitalDeployed)}
                       </div>
                     </div>

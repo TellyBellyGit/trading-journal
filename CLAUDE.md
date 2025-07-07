@@ -54,19 +54,26 @@ trading-journal/
 
 **Core Models:**
 - **Broker**: Trading broker accounts with commission structures
-- **Trade**: Complete trade lifecycle with entry/exit data, P&L calculations, and rich journaling fields
+- **Trade**: Complete trade lifecycle with entry/exit data, P&L calculations, rich journaling fields, and assessment system
 
 **Key Relationships:**
 - Trades belong to Brokers (foreign key relationship)
-- Each trade includes comprehensive metadata (strategy, notes, risk/reward, tags)
+- Each trade includes comprehensive metadata (strategy, notes, risk/reward, tags, assessment)
+
+**Assessment System:**
+- Brief trade assessments editable in TradeDetails with auto-save
+- Assessment display in AllTrades with truncated view and hover tooltips
+- Dedicated API endpoints: `PATCH /api/trades/:id/assessment`
 
 ## Frontend Architecture
 
 **Main Components:**
-- `App.tsx` - Multi-view dashboard with state-based navigation
-- `AppShell.tsx` - Layout wrapper with sidebar navigation
-- `AllTrades.tsx` - Trade listing with filtering and search
-- `Dashboard.tsx` - Original metrics and overview
+- `App.tsx` - Multi-view dashboard with state-based navigation and unified Add Trade workflow
+- `AppShell.tsx` - Layout wrapper with sidebar navigation and "+ Add Trade" header button
+- `AllTrades.tsx` - Trade listing with filtering, search, and assessment display
+- `TradeDetails.tsx` - Rich text editor for notes, assessment input, and trade analysis
+- `EditTrade.tsx` - Trade editing with smart content detection for rich vs plain text
+- `AnalyticsDashboard.tsx` - Comprehensive analytics with collapsible sections
 - `TradingCalendar.tsx` - Calendar-based trade visualization
 
 **State Management:**
@@ -75,10 +82,13 @@ trading-journal/
 - API calls centralized in `/api/trades.ts`
 
 **Key Features:**
-- CSV import system with duplicate detection
-- Rich text editor (Tiptap) for trade notes
-- Multiple dashboard views with comprehensive analytics
-- Multi-broker support with commission tracking
+- **Assessment System**: Brief trade evaluations with auto-save and display integration
+- **Smart Content Handling**: EditTrade detects rich content (images/HTML) and provides appropriate editing experience
+- **Unified Add Trade**: Single "+ Add Trade" button in header that works across all pages
+- **Collapsible Analytics**: Trading Analytics Dashboard with grouped expand/collapse controls
+- **Rich Text Editor**: Tiptap-based editor for detailed trade notes with image support
+- **CSV Import System**: Sophisticated duplicate detection and trade import capabilities
+- **Multi-broker Support**: Complete broker management with commission tracking
 
 ## Backend Architecture
 
@@ -92,6 +102,8 @@ trading-journal/
 - `POST /api/trades` - Create new trade
 - `GET /api/trades/stats` - Trading statistics and metrics
 - `POST /api/trades/import/*` - CSV import and processing
+- `PATCH /api/trades/:id/notes` - Update trade notes (auto-save)
+- `PATCH /api/trades/:id/assessment` - Update trade assessment (auto-save)
 
 **Utility Classes:**
 - `DuplicateDetection` - Sophisticated duplicate trade detection algorithms
@@ -110,10 +122,29 @@ trading-journal/
 - Seeding scripts available in `backend/scripts/`
 - SQLite database file located at `backend/dev.db`
 
+## User Workflow
+
+**Adding Trades:**
+- Click "+ Add Trade" button in header (available on all pages)
+- Automatically navigates to AllTrades view and opens EditTrade form
+- Complete trade entry with all required fields
+
+**Trade Analysis:**
+- Click any symbol in AllTrades to open TradeDetails view
+- Add detailed notes using rich text editor (supports images, formatting)
+- Add brief assessment in header input box with auto-save
+- Assessment appears in AllTrades with hover tooltips for full text
+
+**Analytics Review:**
+- Navigate to Trading Analytics Dashboard
+- Use Expand/Collapse button (next to Refresh) to show/hide all metric sections
+- Collapsible sections: Key Performance Indicators, Detailed Analytics, Capital & Trading Volume
+
 ## Important Notes
 
 - The application uses SQLite for simplicity - no external database setup required
 - Multiple App.tsx variants exist (App_Wed.tsx, App_backup.tsx) indicating active development
 - Archive components contain previous implementations for reference
 - No authentication system currently implemented
-- Rich journaling capabilities with strategy notes, risk/reward analysis, and tagging system
+- **Rich Content Detection**: EditTrade automatically detects notes with images/HTML and provides appropriate editing guidance
+- **Auto-save Functionality**: Notes and assessments save automatically with debounced API calls
