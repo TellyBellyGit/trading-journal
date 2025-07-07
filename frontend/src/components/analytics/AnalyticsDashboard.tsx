@@ -49,6 +49,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ loading = false
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sectionsCollapsed, setSectionsCollapsed] = useState(true);
+
+  // Toggle function for all sections together
+  const toggleAllSections = () => {
+    setSectionsCollapsed(prev => !prev);
+  };
 
   // Load analytics data based on selected period
   const loadAnalyticsData = async () => {
@@ -218,6 +224,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ loading = false
           >
             {isLoading ? '🔄 Loading...' : '🔄 Refresh'}
           </button>
+          <button
+            onClick={toggleAllSections}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            {sectionsCollapsed ? '▼ Expand' : '▲ Collapse'}
+          </button>
         </div>
       </div>
 
@@ -229,7 +241,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ loading = false
       />
 
       {/* Performance Metrics KPI Cards */}
-      <PerformanceMetrics data={analyticsData} />
+      <PerformanceMetrics data={analyticsData} isCollapsed={sectionsCollapsed} />
 
       {/* Main Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

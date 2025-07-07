@@ -1,9 +1,10 @@
 // components/analytics/PerformanceMetrics.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import type { AnalyticsData } from './AnalyticsDashboard';
 
 interface PerformanceMetricsProps {
   data: AnalyticsData;
+  isCollapsed: boolean;
 }
 
 interface MetricCardProps {
@@ -75,14 +76,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
-const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data }) => {
-  // State for managing collapsed/expanded sections as a group
-  const [sectionsCollapsed, setSectionsCollapsed] = useState(false);
-
-  // Toggle function for all sections together
-  const toggleAllSections = () => {
-    setSectionsCollapsed(prev => !prev);
-  };
+const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, isCollapsed }) => {
 
   // Helper function to format currency
   const formatCurrency = (value: number): string => {
@@ -203,21 +197,11 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data }) => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Single Collapse/Expand Button for All Sections */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={toggleAllSections}
-          className="flex items-center space-x-2 px-4 py-2 text-sm bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
-        >
-          <span>{sectionsCollapsed ? '▼ Expand' : '▲ Collapse'}</span>
-        </button>
-      </div>
-
-      {/* Key Performance Indicators */}
-      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-        sectionsCollapsed ? 'max-h-0 opacity-0' : 'max-h-none opacity-100'
-      }`}>
+    <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+      isCollapsed ? 'max-h-0 opacity-0' : 'max-h-none opacity-100'
+    }`}>
+      <div className="space-y-6">
+        {/* Key Performance Indicators */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
             <span>📊</span>
