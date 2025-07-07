@@ -30,17 +30,39 @@ const AppShell: React.FC<AppShellProps> = ({
   onViewChange,
   onNewTrade
 }) => {
-  // Auto-collapse sidebar for notes view
-  const shouldCollapse = currentView === 'notes';
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(shouldCollapse);
+  // Initialize sidebar state - start collapsed for dashboard, preserve user choice afterwards
+  const getInitialCollapsedState = () => {
+    // Check if user has a saved preference
+    const savedState = localStorage.getItem('sidebarCollapsed');
+    if (savedState !== null) {
+      return JSON.parse(savedState);
+    }
+    // If no saved state, start collapsed for dashboard
+    return currentView === 'original';
+  };
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialCollapsedState);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const { isUSFormat, toggleDateFormat } = useDateFormat();
 
-  // Update sidebar state when view changes
+  // Update sidebar state when view changes, but only for notes view or if user hasn't interacted
   useEffect(() => {
     if (currentView === 'notes') {
       setSidebarCollapsed(true);
+    } else if (!hasUserInteracted && currentView === 'original') {
+      // Only auto-collapse for dashboard if user hasn't manually changed the state
+      setSidebarCollapsed(true);
     }
-  }, [currentView]);
+  }, [currentView, hasUserInteracted]);
+
+  // Handle manual sidebar toggle
+  const handleSidebarToggle = () => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    setHasUserInteracted(true);
+    // Save user preference
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(newState));
+  };
 
   // Map current view to navigation ID
   const getNavIdFromView = (view: string) => {
@@ -91,7 +113,7 @@ const AppShell: React.FC<AppShellProps> = ({
             </div>
           )}
           <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onClick={handleSidebarToggle}
             className="text-gray-400 hover:text-white p-1 rounded transition-colors"
           >
             {sidebarCollapsed ? '→' : '←'}

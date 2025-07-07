@@ -337,7 +337,7 @@ const CalendarView = () => {
 };
 
 // Enhanced Dashboard Content Component with Real Data
-const OriginalDashboard = () => {
+const OriginalDashboard = ({ onViewChange }: { onViewChange?: (view: string) => void }) => {
   console.log("🔥 ORIGINAL DASHBOARD IS RENDERING!"); 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
@@ -590,19 +590,23 @@ const OriginalDashboard = () => {
           </div>
           <div className="p-6 space-y-4">
             {[
-              { label: 'New Trade', icon: '📝', color: 'blue' },
-              { label: 'Analytics', icon: '📊', color: 'purple' },
-              { label: 'Import Data', icon: '📤', color: 'green' },
-              { label: 'Export Report', icon: '📄', color: 'orange' }
+              { label: 'List Trades', icon: '📝', color: 'blue', action: () => onViewChange?.('all-trades') },
+              { label: 'Analytics', icon: '📊', color: 'purple', action: () => onViewChange?.('analytics') },
+              { label: 'Import Data', icon: '📤', color: 'green', action: () => onViewChange?.('import') },
+              { label: 'Export to AI', icon: '📄', color: 'orange', action: () => console.log('Export to AI clicked') }
             ].map((action, index) => (
-              <button key={index} className={`
-                w-full flex items-center space-x-3 p-3 rounded-lg border transition-colors
-                ${action.color === 'blue' ? 'border-blue-600 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400' :
-                  action.color === 'purple' ? 'border-purple-600 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400' :
-                  action.color === 'green' ? 'border-green-600 bg-green-600/10 hover:bg-green-600/20 text-green-400' :
-                  'border-orange-600 bg-orange-600/10 hover:bg-orange-600/20 text-orange-400'
-                }
-              `}>
+              <button 
+                key={index} 
+                onClick={action.action}
+                className={`
+                  w-full flex items-center space-x-3 p-3 rounded-lg border transition-colors
+                  ${action.color === 'blue' ? 'border-blue-600 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400' :
+                    action.color === 'purple' ? 'border-purple-600 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400' :
+                    action.color === 'green' ? 'border-green-600 bg-green-600/10 hover:bg-green-600/20 text-green-400' :
+                    'border-orange-600 bg-orange-600/10 hover:bg-orange-600/20 text-orange-400'
+                  }
+                `}
+              >
                 <span className="text-lg">{action.icon}</span>
                 <span className="font-medium">{action.label}</span>
               </button>
@@ -737,7 +741,7 @@ function App() {
     console.log("🔥 Current view is:", currentView); 
     return (
       <div className="transition-all duration-300">
-        {currentView === 'original' && <OriginalDashboard />}
+        {currentView === 'original' && <OriginalDashboard onViewChange={handleViewChange} />}
         {currentView === 'calendar' && <CalendarView />}
         {currentView === 'analytics' && <AnalyticsDashboard />}
         {currentView === 'enhanced' && <MetricsDashboard />}

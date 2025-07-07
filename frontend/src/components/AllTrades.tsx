@@ -1,6 +1,6 @@
 console.log("In ALLTRADES Proper!!!.TSX");
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/trades'; // Import your API object
 import type { Trade, TradeFilters, TradeStats, Broker } from '../types/Trade'; // Import your types
 import type { PaginationInfo } from '../api/trades'; // Import pagination type
@@ -69,6 +69,9 @@ console.log('🚀 AllTrades component rendered/re-rendered');
   // NEW: Edit trade navigation state
   const [editingTradeId, setEditingTradeId] = useState<number | 'new' | null>(null);
 
+  // Ref for top pagination to scroll to
+  const topPaginationRef = useRef<HTMLDivElement>(null);
+
   // Filter states - UPDATED
   const [filters, setFilters] = useState<TradeFilters>({
     symbol: '',
@@ -111,6 +114,32 @@ console.log('🚀 AllTrades component rendered/re-rendered');
       window.removeEventListener('triggerAddTrade', handleAddTradeEvent);
     };
   }, []);
+
+  // Auto-scroll to top pagination when component first mounts (only once)
+  const hasInitiallyScrolled = useRef(false);
+  
+  useEffect(() => {
+    if (!hasInitiallyScrolled.current) {
+      const scrollToTopPagination = () => {
+        if (topPaginationRef.current) {
+          topPaginationRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+          hasInitiallyScrolled.current = true;
+        }
+      };
+
+      // Wait for pagination to be available and component to be fully rendered
+      const timeoutId = setTimeout(() => {
+        if (topPaginationRef.current) {
+          scrollToTopPagination();
+        }
+      }, 200);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, []); // Empty dependency array - only runs once on mount
 
   
 
@@ -255,11 +284,25 @@ console.log('🚀 AllTrades component rendered/re-rendered');
       value !== undefined && value !== '' && value !== null
     );
     
-    if (hasFilters) {
-      applyFilters(page);
-    } else {
-      loadInitialData(page);
-    }
+    const loadData = async () => {
+      if (hasFilters) {
+        await applyFilters(page);
+      } else {
+        await loadInitialData(page);
+      }
+      
+      // Scroll back to top pagination after new data loads
+      setTimeout(() => {
+        if (topPaginationRef.current) {
+          topPaginationRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100);
+    };
+    
+    loadData();
   };
 
 
@@ -444,54 +487,6 @@ console.log('🚀 AllTrades component rendered/re-rendered');
         </div>
       </div>
 
-      {/* Statistics Summary */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Total P&L</p>
-                <p className={`text-xl font-bold ${stats.totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatCurrency(stats.totalPnL)}
-                </p>
-              </div>
-              <div className="text-2xl">💰</div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Win Rate</p>
-                <p className="text-xl font-bold text-white">
-                  {((stats.winningTrades / stats.totalTrades) * 100).toFixed(1)}%
-                </p>
-              </div>
-              <div className="text-2xl">🎯</div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Total Trades</p>
-                <p className="text-xl font-bold text-white">{stats.totalTrades}</p>
-              </div>
-              <div className="text-2xl">📈</div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Open Trades</p>
-                <p className="text-xl font-bold text-orange-400">{stats.openTrades}</p>
-              </div>
-              <div className="text-2xl">⏳</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* UPDATED Filters with Collapse/Expand */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg">
@@ -618,6 +613,16 @@ console.log('🚀 AllTrades component rendered/re-rendered');
           </div>
         </div>
       </div>
+
+      {/* Top Pagination */}
+      {pagination && filteredTrades.length > 0 && (
+        <div ref={topPaginationRef}>
+          <Pagination 
+            pagination={pagination} 
+            onPageChange={handlePageChange} 
+          />
+        </div>
+      )}
 
       {/* Empty State */}
       {filteredTrades.length === 0 && !loading && (
@@ -967,8 +972,8 @@ console.log('🚀 AllTrades component rendered/re-rendered');
         </div>
       )}
 
-      {/* Pagination */}
-      {pagination && (
+      {/* Bottom Pagination */}
+      {pagination && filteredTrades.length > 0 && (
         <Pagination 
           pagination={pagination} 
           onPageChange={handlePageChange} 
