@@ -1,5 +1,5 @@
 // components/analytics/PerformanceMetrics.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import type { AnalyticsData } from './AnalyticsDashboard';
 
 interface PerformanceMetricsProps {
@@ -76,6 +76,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
 };
 
 const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data }) => {
+  // State for managing collapsed/expanded sections as a group
+  const [sectionsCollapsed, setSectionsCollapsed] = useState(false);
+
+  // Toggle function for all sections together
+  const toggleAllSections = () => {
+    setSectionsCollapsed(prev => !prev);
+  };
+
   // Helper function to format currency
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -196,42 +204,56 @@ const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data }) => {
 
   return (
     <div className="space-y-6">
-      {/* Main Performance Metrics */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-          <span>📊</span>
-          <span>Key Performance Indicators</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metrics.slice(0, 4).map((metric, index) => (
-            <MetricCard key={index} {...metric} />
-          ))}
-        </div>
+      {/* Single Collapse/Expand Button for All Sections */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={toggleAllSections}
+          className="flex items-center space-x-2 px-4 py-2 text-sm bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          <span>{sectionsCollapsed ? '▼ Expand' : '▲ Collapse'}</span>
+        </button>
       </div>
 
-      {/* Secondary Metrics */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-          <span>📈</span>
-          <span>Detailed Analytics</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metrics.slice(4, 8).map((metric, index) => (
-            <MetricCard key={index + 4} {...metric} />
-          ))}
+      {/* Key Performance Indicators */}
+      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+        sectionsCollapsed ? 'max-h-0 opacity-0' : 'max-h-none opacity-100'
+      }`}>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+            <span>📊</span>
+            <span>Key Performance Indicators</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {metrics.slice(0, 4).map((metric, index) => (
+              <MetricCard key={index} {...metric} />
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Capital & Trading Metrics */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-          <span>💼</span>
-          <span>Capital & Trading Volume</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metrics.slice(8).map((metric, index) => (
-            <MetricCard key={index + 8} {...metric} />
-          ))}
+        {/* Detailed Analytics */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+            <span>📈</span>
+            <span>Detailed Analytics</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {metrics.slice(4, 8).map((metric, index) => (
+              <MetricCard key={index + 4} {...metric} />
+            ))}
+          </div>
+        </div>
+
+        {/* Capital & Trading Volume */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+            <span>💼</span>
+            <span>Capital & Trading Volume</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {metrics.slice(8).map((metric, index) => (
+              <MetricCard key={index + 8} {...metric} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
