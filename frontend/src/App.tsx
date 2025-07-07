@@ -337,7 +337,10 @@ const CalendarView = () => {
 };
 
 // Enhanced Dashboard Content Component with Real Data
-const OriginalDashboard = ({ onViewChange }: { onViewChange?: (view: string) => void }) => {
+const OriginalDashboard = ({ onViewChange, onExportToAI }: { 
+  onViewChange?: (view: string) => void;
+  onExportToAI?: () => void;
+}) => {
   console.log("🔥 ORIGINAL DASHBOARD IS RENDERING!"); 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
@@ -593,7 +596,7 @@ const OriginalDashboard = ({ onViewChange }: { onViewChange?: (view: string) => 
               { label: 'List Trades', icon: '📝', color: 'blue', action: () => onViewChange?.('all-trades') },
               { label: 'Analytics', icon: '📊', color: 'purple', action: () => onViewChange?.('analytics') },
               { label: 'Import Data', icon: '📤', color: 'green', action: () => onViewChange?.('import') },
-              { label: 'Export to AI', icon: '📄', color: 'orange', action: () => console.log('Export to AI clicked') }
+              { label: 'Export to AI', icon: '📄', color: 'orange', action: () => onExportToAI?.() }
             ].map((action, index) => (
               <button 
                 key={index} 
@@ -717,10 +720,163 @@ const OriginalDashboard = ({ onViewChange }: { onViewChange?: (view: string) => 
 };
 
 
+// Date Picker Modal Component
+const DatePickerModal = ({ isOpen, onClose, onExport }: {
+  isOpen: boolean;
+  onClose: () => void;
+  onExport: (startDate: string, endDate: string) => void;
+}) => {
+  const [startMonth, setStartMonth] = useState(new Date().getMonth() + 1);
+  const [startYear, setStartYear] = useState(new Date().getFullYear());
+  const [startDay, setStartDay] = useState(1);
+  const [endMonth, setEndMonth] = useState(new Date().getMonth() + 1);
+  const [endYear, setEndYear] = useState(new Date().getFullYear());
+  const [endDay, setEndDay] = useState(new Date().getDate());
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month, 0).getDate();
+  };
+
+  const handleExport = () => {
+    const startDate = `${startYear}-${startMonth.toString().padStart(2, '0')}-${startDay.toString().padStart(2, '0')}`;
+    const endDate = `${endYear}-${endMonth.toString().padStart(2, '0')}-${endDay.toString().padStart(2, '0')}`;
+    
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    
+    if (startDateObj > endDateObj) {
+      alert('Start date must be before end date.');
+      return;
+    }
+    
+    onExport(startDate, endDate);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="p-6 border-b border-gray-700">
+          <h3 className="text-xl font-semibold text-white">Export Trades for AI Analysis</h3>
+          <p className="text-gray-400 text-sm mt-1">Select date range for closed trades</p>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* Start Date */}
+          <div>
+            <label className="block text-gray-300 font-medium mb-3">Start Date</label>
+            <div className="grid grid-cols-3 gap-3">
+              <select
+                value={startMonth}
+                onChange={(e) => {
+                  const newMonth = Number(e.target.value);
+                  setStartMonth(newMonth);
+                  // Auto-copy to end date
+                  setEndMonth(newMonth);
+                }}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              >
+                {months.map((month, index) => (
+                  <option key={month} value={index + 1}>{month}</option>
+                ))}
+              </select>
+              <select
+                value={startDay}
+                onChange={(e) => {
+                  const newDay = Number(e.target.value);
+                  setStartDay(newDay);
+                  // Auto-copy to end date
+                  setEndDay(newDay);
+                }}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              >
+                {Array.from({ length: getDaysInMonth(startMonth, startYear) }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                ))}
+              </select>
+              <select
+                value={startYear}
+                onChange={(e) => {
+                  const newYear = Number(e.target.value);
+                  setStartYear(newYear);
+                  // Auto-copy to end date
+                  setEndYear(newYear);
+                }}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              >
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* End Date */}
+          <div>
+            <label className="block text-gray-300 font-medium mb-3">End Date</label>
+            <div className="grid grid-cols-3 gap-3">
+              <select
+                value={endMonth}
+                onChange={(e) => setEndMonth(Number(e.target.value))}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              >
+                {months.map((month, index) => (
+                  <option key={month} value={index + 1}>{month}</option>
+                ))}
+              </select>
+              <select
+                value={endDay}
+                onChange={(e) => setEndDay(Number(e.target.value))}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              >
+                {Array.from({ length: getDaysInMonth(endMonth, endYear) }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                ))}
+              </select>
+              <select
+                value={endYear}
+                onChange={(e) => setEndYear(Number(e.target.value))}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+              >
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-gray-700 flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Export to AI
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main App Component
 function App() {
   console.log("🔥 NEW APP COMPONENT IS RUNNING!"); 
   const [currentView, setCurrentView] = useState('original');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
@@ -737,11 +893,134 @@ function App() {
     }, 100);
   };
 
+  // Show date picker modal for export
+  const handleExportToAI = () => {
+    setShowDatePicker(true);
+  };
+
+  // Actual export function called from date picker modal
+  const performExportToAI = async (startDate: string, endDate: string) => {
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+
+    try {
+      // Fetch all trades
+      const response = await fetch(`${API_BASE_URL}/trades`);
+      if (!response.ok) throw new Error('Failed to fetch trades');
+      const tradesResponse = await response.json();
+      
+      // Handle different API response formats
+      const allTrades = Array.isArray(tradesResponse) ? tradesResponse : (tradesResponse.trades || []);
+      
+      console.log('🔍 Fetched trades:', allTrades.length, allTrades.slice(0, 3));
+      
+      // Filter for closed trades within date range
+      const closedTrades = allTrades.filter((trade: Trade) => {
+        console.log('🔍 Checking trade:', { 
+          symbol: trade.symbol, 
+          status: trade.status, 
+          exitDate: trade.exitDate,
+          exitPrice: trade.exitPrice,
+          pnl: trade.pnl || trade.profitLoss
+        });
+        
+        if (trade.status !== 'Closed' || !trade.exitDate) {
+          return false;
+        }
+        
+        const tradeExitDate = new Date(trade.exitDate);
+        const inRange = tradeExitDate >= startDateObj && tradeExitDate <= endDateObj;
+        console.log('🔍 Date check:', { tradeExitDate, startDateObj, endDateObj, inRange });
+        return inRange;
+      });
+
+      if (closedTrades.length === 0) {
+        alert(`No closed trades found between ${startDate} and ${endDate}.`);
+        return;
+      }
+
+      // Define CSV headers for AI analysis
+      const headers = [
+        'Symbol',
+        'Direction', 
+        'Quantity',
+        'Status',
+        'Entry Date',
+        'Entry Time',
+        'Exit Date', 
+        'Exit Time',
+        'Entry Price',
+        'Exit Price',
+        'Profit/Loss',
+        'Chg(%)',
+        'Capital Deployed'
+      ];
+
+      // Helper function to format numbers to 4 decimal places
+      const formatNumber = (value: any): string => {
+        if (value === null || value === undefined || value === '') return '';
+        const num = Number(value);
+        return isNaN(num) ? String(value) : num.toFixed(4);
+      };
+
+      // Convert trades to CSV rows
+      const csvRows = closedTrades.map((trade: Trade) => [
+        trade.symbol,
+        trade.direction,
+        trade.quantity,
+        trade.status,
+        new Date(trade.entryDate).toLocaleDateString('en-US'),
+        trade.entryTime || '',
+        trade.exitDate ? new Date(trade.exitDate).toLocaleDateString('en-US') : '',
+        trade.exitTime || '',
+        formatNumber(trade.entryPrice),
+        formatNumber(trade.exitPrice),
+        formatNumber(trade.profitLoss || trade.pnl),
+        formatNumber(trade.percentChange),
+        formatNumber(trade.capitalDeployed || trade.capital)
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...csvRows.map(row => 
+          row.map(field => {
+            // Handle fields that might contain commas by wrapping in quotes
+            const stringField = String(field);
+            return stringField.includes(',') ? `"${stringField}"` : stringField;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with date range
+      link.setAttribute('download', `closed-trades-for-ai-${startDate}_to_${endDate}.csv`);
+      
+      // Trigger download
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Show success message
+      alert(`Successfully exported ${closedTrades.length} closed trades from ${startDate} to ${endDate} for AI analysis!`);
+
+    } catch (error) {
+      console.error('Error exporting trades:', error);
+      alert('Failed to export trades. Please try again.');
+    }
+  };
+
   const renderContent = () => {
     console.log("🔥 Current view is:", currentView); 
     return (
       <div className="transition-all duration-300">
-        {currentView === 'original' && <OriginalDashboard onViewChange={handleViewChange} />}
+        {currentView === 'original' && <OriginalDashboard onViewChange={handleViewChange} onExportToAI={handleExportToAI} />}
         {currentView === 'calendar' && <CalendarView />}
         {currentView === 'analytics' && <AnalyticsDashboard />}
         {currentView === 'enhanced' && <MetricsDashboard />}
@@ -805,15 +1084,24 @@ function App() {
   };
 
   return (
-    <AppShell 
-      title={getTitle()} 
-      subtitle={getSubtitle()}
-      currentView={currentView}
-      onViewChange={handleViewChange}
-      onNewTrade={handleNewTrade}
-    >
-      {renderContent()}
-    </AppShell>
+    <>
+      <AppShell 
+        title={getTitle()} 
+        subtitle={getSubtitle()}
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        onNewTrade={handleNewTrade}
+      >
+        {renderContent()}
+      </AppShell>
+      
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        isOpen={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onExport={performExportToAI}
+      />
+    </>
   );
 }
 

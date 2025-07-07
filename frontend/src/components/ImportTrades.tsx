@@ -540,12 +540,24 @@ const ImportTrades: React.FC = () => {
               onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
               className="hidden"
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {selectedFile ? 'Select Different File' : 'Browse Files'}
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {selectedFile ? 'Select Different File' : 'Browse Files'}
+              </button>
+              
+              {selectedFile && (
+                <button
+                  onClick={processFile}
+                  disabled={loading}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Validating...' : 'Validate File'}
+                </button>
+              )}
+            </div>
           </div>
 
           {error?.type === 'file' && (
@@ -593,18 +605,6 @@ const ImportTrades: React.FC = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      {selectedFile && (
-        <div className="flex justify-end">
-          <button
-            onClick={processFile}
-            disabled={loading}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Processing...' : 'Process File'}
-          </button>
-        </div>
-      )}
     </div>
   );
 
