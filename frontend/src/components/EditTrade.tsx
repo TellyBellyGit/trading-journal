@@ -2,6 +2,39 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/trades';
 import type { Trade, NewTrade, Broker } from '../types/Trade';
 
+// Helper function to detect if notes contain rich content (HTML tags, images)
+const hasRichContent = (notes: string | null | undefined): boolean => {
+  if (!notes) return false;
+  
+  // Check for common rich content indicators
+  const richContentPatterns = [
+    /<img[^>]*>/i,           // Images
+    /<h[1-6][^>]*>/i,        // Headers
+    /<strong[^>]*>/i,        // Bold
+    /<em[^>]*>/i,            // Italic
+    /<ul[^>]*>/i,            // Unordered lists
+    /<ol[^>]*>/i,            // Ordered lists
+    /<blockquote[^>]*>/i,    // Blockquotes
+    /data:image/i,           // Base64 images
+    /<p[^>]*>/i,             // Paragraphs (if multiple)
+    /<br\s*\/?>/i,           // Line breaks
+  ];
+  
+  return richContentPatterns.some(pattern => pattern.test(notes));
+};
+
+// Helper function to convert HTML to plain text
+const htmlToPlainText = (html: string | null | undefined): string => {
+  if (!html) return '';
+  
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  // Extract text content and clean up whitespace
+  return tempDiv.textContent || tempDiv.innerText || '';
+};
+
 interface EditTradeProps {
   tradeId: number | 'new';
   onBack: () => void;
@@ -511,13 +544,55 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
           {/* Notes */}
           <div>
             <label className="block text-gray-400 text-sm mb-2">Notes</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Additional trade notes, market conditions, etc."
-              rows={4}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-            />
+            
+            {/* Check if notes contain rich content */}
+            {hasRichContent(formData.notes) ? (
+              <div className="space-y-3">
+                {/* Warning Message */}
+                <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-amber-400">⚠️</span>
+                    <div>
+                      <p className="text-amber-200 text-sm font-medium">
+                        Notes contain rich content (images, formatting)
+                      </p>
+                      <p className="text-amber-300 text-xs mt-1">
+                        Edit full notes with images in Trade Details view to preserve formatting
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Plain Text Preview */}
+                <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3">
+                  <p className="text-gray-400 text-xs mb-2">Plain text preview:</p>
+                  <div className="text-gray-300 text-sm max-h-24 overflow-y-auto">
+                    {htmlToPlainText(formData.notes) || 'No text content found'}
+                  </div>
+                </div>
+                
+                {/* Disabled textarea with message */}
+                <div className="relative">
+                  <textarea
+                    value=""
+                    readOnly
+                    disabled
+                    placeholder="Notes editing disabled - contains rich content"
+                    rows={3}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-gray-500 placeholder-gray-500 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Regular textarea for plain text notes */
+              <textarea
+                value={formData.notes || ''}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Additional trade notes, market conditions, etc."
+                rows={4}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            )}
           </div>
 
           {/* Calculated Metrics Preview (for closed trades) */}

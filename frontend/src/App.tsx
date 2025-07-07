@@ -475,6 +475,17 @@ function App() {
     setCurrentView(view);
   };
 
+  const handleNewTrade = () => {
+    setCurrentView('all-trades');
+    // Use setTimeout to ensure AllTrades component is mounted before triggering
+    setTimeout(() => {
+      // This will trigger the AllTrades add trade functionality
+      // The AllTrades component will handle opening the EditTrade form
+      const event = new CustomEvent('triggerAddTrade');
+      window.dispatchEvent(event);
+    }, 100);
+  };
+
   const renderContent = () => {
     console.log("🔥 Current view is:", currentView); 
     return (
@@ -543,6 +554,7 @@ function App() {
       subtitle={getSubtitle()}
       currentView={currentView}
       onViewChange={handleViewChange}
+      onNewTrade={handleNewTrade}
     >
       {renderContent()}
     </AppShell>

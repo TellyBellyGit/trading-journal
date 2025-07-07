@@ -19,6 +19,7 @@ interface AppShellProps {
   subtitle?: string;
   currentView?: string;
   onViewChange?: (view: string) => void;
+  onNewTrade?: () => void;
 }
 
 const AppShell: React.FC<AppShellProps> = ({ 
@@ -26,7 +27,8 @@ const AppShell: React.FC<AppShellProps> = ({
   title = "Trading Journal",
   subtitle = "Professional Trading Management System",
   currentView = 'original',
-  onViewChange
+  onViewChange,
+  onNewTrade
 }) => {
   // Auto-collapse sidebar for notes view
   const shouldCollapse = currentView === 'notes';
@@ -176,8 +178,11 @@ const AppShell: React.FC<AppShellProps> = ({
             </button>
 
             {/* Action Buttons */}
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-              + New Trade
+            <button 
+              onClick={onNewTrade}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              + Add Trade
             </button>
             
             {/* Notifications */}

@@ -99,6 +99,19 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     applyFilters(1);
   }, [filters]);
 
+  // Listen for add trade event from AppShell button
+  useEffect(() => {
+    const handleAddTradeEvent = () => {
+      handleAddTrade();
+    };
+
+    window.addEventListener('triggerAddTrade', handleAddTradeEvent);
+    
+    return () => {
+      window.removeEventListener('triggerAddTrade', handleAddTradeEvent);
+    };
+  }, []);
+
   
 
   const loadInitialData = async (page: number = 1) => {
@@ -400,13 +413,6 @@ console.log('🚀 AllTrades component rendered/re-rendered');
               disabled={loading}
             >
               {loading ? '🔄 Loading...' : '🔄 Refresh'}
-            </button>
-            
-            <button
-              onClick={handleAddTrade}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              + Add Trade
             </button>
             
             <button
