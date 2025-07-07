@@ -488,6 +488,27 @@ router.patch('/:id/notes', async (req, res) => {
   }
 });
 
+// 🔥 NEW: Update only trade assessment (for auto-save)
+router.patch('/:id/assessment', async (req, res) => {
+  try {
+    const tradeId = parseInt(req.params.id);
+    const { assessment } = req.body;
+
+    const trade = await prisma.trade.update({
+      where: { id: tradeId },
+      data: { 
+        assessment: assessment || null,
+        updatedAt: new Date()
+      }
+    });
+
+    res.json({ success: true, updatedAt: trade.updatedAt });
+  } catch (error) {
+    console.error('Error updating trade assessment:', error);
+    res.status(500).json({ error: 'Failed to update assessment' });
+  }
+});
+
 // Delete trade
 router.delete('/:id', async (req, res) => {
   try {

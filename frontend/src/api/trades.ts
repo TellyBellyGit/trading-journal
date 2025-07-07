@@ -112,6 +112,12 @@ export const tradesApi = {
     return response.data;
   },
 
+  // 🔥 NEW: Update only trade assessment (for auto-save)
+  updateAssessment: async (id: number, assessment: string): Promise<{ success: boolean; updatedAt: string }> => {
+    const response = await api.patch(`/trades/${id}/assessment`, { assessment });
+    return response.data;
+  },
+
   // 🔥 NEW: Search trades with advanced filtering and pagination
   search: async (filters: TradeFilters, page: number = 1, limit: number = 20): Promise<PaginatedResponse<Trade>> => {
     const params = { ...filters, page, limit };

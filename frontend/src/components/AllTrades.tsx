@@ -20,9 +20,11 @@ interface AllTradesProps {
 
 // Truncated Assessment Component
 const TruncatedAssessment: React.FC<{ assessment: string | null | undefined }> = ({ assessment }) => {
-  if (!assessment) return <span className="text-gray-500">—</span>;
+  if (!assessment || assessment.trim() === '') {
+    return <span className="text-gray-500">-</span>;
+  }
   
-  const truncated = assessment.length > 50 ? assessment.substring(0, 50) + '...' : assessment;
+  const truncated = assessment.length > 40 ? assessment.substring(0, 40) + '...' : assessment;
   
   return (
     <span 
@@ -247,6 +249,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     }
   };
 
+
   const handleSelectAll = () => {
     if (selectedTrades.size === filteredTrades.length) {
       setSelectedTrades(new Set());
@@ -343,7 +346,18 @@ console.log('🚀 AllTrades component rendered/re-rendered');
     return (
       <TradeDetails 
         tradeId={selectedTradeId} 
-        onBack={() => setSelectedTradeId(null)}
+        onBack={() => {
+          setSelectedTradeId(null);
+          // Refresh data - respect current filters if any
+          const hasFilters = Object.values(filters).some(value => 
+            value !== undefined && value !== '' && value !== null
+          );
+          if (hasFilters) {
+            applyFilters(currentPage);
+          } else {
+            loadInitialData(currentPage);
+          }
+        }}
       />
     );
   }
@@ -637,7 +651,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
             <table className="w-full">
               <thead className="bg-gray-700">
                 <tr>
-                  <th className="p-4 text-left">
+                  <th className="p-2 text-left">
                     <input
                       type="checkbox"
                       checked={selectedTrades.size === filteredTrades.length && filteredTrades.length > 0}
@@ -646,86 +660,86 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                     />
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('symbol')}
                   >
                     Symbol {getSortIcon('symbol')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('direction')}
                   >
                     Direction {getSortIcon('direction')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('quantity')}
                   >
                     Quantity {getSortIcon('quantity')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('entryPrice')}
                   >
                     Entry Price {getSortIcon('entryPrice')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('exitPrice')}
                   >
                     Exit Price {getSortIcon('exitPrice')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('pnl')}
                   >
                     P&L {getSortIcon('pnl')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('percentChange')}
                   >
                     % Change {getSortIcon('percentChange')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('status')}
                   >
                     Status {getSortIcon('status')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('entryDate')}
                   >
                     Entry Date {getSortIcon('entryDate')}
                   </th>
                   {/* NEW: Entry Time column */}
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('entryTime')}
                   >
                     Entry Time {getSortIcon('entryTime')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('exitDate')}
                   >
                     Exit Date {getSortIcon('exitDate')}
                   </th>
                   {/* NEW: Exit Time column */}
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('exitTime')}
                   >
                     Exit Time {getSortIcon('exitTime')}
                   </th>
                   <th 
-                    className="p-4 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
+                    className="p-2 text-left text-gray-300 font-medium cursor-pointer hover:text-white transition-colors"
                     onClick={() => handleSort('assessment')}
                   >
                     Assessment {getSortIcon('assessment')}
                   </th>
-                  <th className="p-4 text-left text-gray-300 font-medium">Actions</th>
+                  <th className="p-2 text-left text-gray-300 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
@@ -734,7 +748,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                     key={trade.id} 
                     className="hover:bg-gray-700/50 transition-colors"
                   >
-                    <td className="p-4">
+                    <td className="p-2">
                       <input
                         type="checkbox"
                         checked={selectedTrades.has(trade.id)}
@@ -742,7 +756,7 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                         className="rounded border-gray-500 text-blue-600 focus:ring-blue-500"
                       />
                     </td>
-                    <td className="p-4">
+                    <td className="p-2">
                       {/* NEW: Clickable symbol for trade details */}
                       <button
                         onClick={() => handleSymbolClick(trade.id)}
@@ -756,41 +770,41 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                         <span className="text-white font-medium group-hover:text-blue-400">{trade.symbol}</span>
                       </button>
                     </td>
-                    <td className="p-4">
+                    <td className="p-2">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${
                         trade.direction === 'Long' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
                       }`}>
                         {trade.direction}
                       </span>
                     </td>
-                    <td className="p-4 text-gray-300">{trade.quantity}</td>
-                    <td className="p-4 text-gray-300">{formatCurrency(trade.entryPrice)}</td>
-                    <td className="p-4 text-gray-300">{formatCurrency(trade.exitPrice)}</td>
-                    <td className="p-4">
+                    <td className="p-2 text-gray-300">{trade.quantity}</td>
+                    <td className="p-2 text-gray-300">{formatCurrency(trade.entryPrice)}</td>
+                    <td className="p-2 text-gray-300">{formatCurrency(trade.exitPrice)}</td>
+                    <td className="p-2">
                       <span className={`font-medium ${
                         (trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'
                       }`}>
                         {formatCurrency(trade.pnl)}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-2">
                       <span className={`font-medium ${
                         (trade.percentChange || 0) >= 0 ? 'text-green-400' : 'text-red-400'
                       }`}>
                         {formatPercentage(trade.percentChange)}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-2">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${
                         trade.status === 'Open' ? 'bg-orange-600 text-white' : 'bg-gray-600 text-white'
                       }`}>
                         {trade.status}
                       </span>
                     </td>
-                    <td className="p-4 text-gray-300">{formatSimpleDate(trade.entryDate, dateFormat)}</td>
+                    <td className="p-2 text-gray-300">{formatSimpleDate(trade.entryDate, dateFormat)}</td>
                     {/* NEW: Entry Time column */}
-                    <td className="p-4 text-gray-300 font-mono text-sm">{formatTime(trade.entryTime)}</td>
-                    <td className="p-4 text-gray-300">
+                    <td className="p-2 text-gray-300 font-mono text-sm">{formatTime(trade.entryTime)}</td>
+                    <td className="p-2 text-gray-300">
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">Open</span>
                       ) : (
@@ -798,17 +812,17 @@ console.log('🚀 AllTrades component rendered/re-rendered');
                       )}
                     </td>
                     {/* NEW: Exit Time column */}
-                    <td className="p-4 text-gray-300 font-mono text-sm">
+                    <td className="p-2 text-gray-300 font-mono text-sm">
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">—</span>
                       ) : (
                         formatTime(trade.exitTime)
                       )}
                     </td>
-                    <td className="p-4">
+                    <td className="p-2">
                       <TruncatedAssessment assessment={trade.assessment} />
                     </td>
-                    <td className="p-4">
+                    <td className="p-2">
                       <button
                         onClick={() => handleEditTrade(trade.id)}
                         className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"

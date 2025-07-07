@@ -14,6 +14,13 @@ import { sanitizeForJSON } from '../utils/jsonSanitizer';
 // API configuration
 const API_BASE_URL = 'http://localhost:3002/api';
 
+// Extend window object for timeout
+declare global {
+  interface Window {
+    assessmentTimeout: NodeJS.Timeout;
+  }
+}
+
 // Types matching your Prisma schema
 interface Trade {
   id: number;
@@ -68,6 +75,22 @@ const api = {
       return response.ok;
     } catch (error) {
       console.error('Error updating trade notes:', error);
+      return false;
+    }
+  },
+
+  updateTradeAssessment: async (tradeId: number, assessment: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/trades/${tradeId}/assessment`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ assessment }),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error updating trade assessment:', error);
       return false;
     }
   }
@@ -610,6 +633,15 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
     loadTradeData();
   }, [tradeId, editor]);
 
+  // Cleanup assessment timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (window.assessmentTimeout) {
+        clearTimeout(window.assessmentTimeout);
+      }
+    };
+  }, []);
+
   // Auto-save functionality
   const triggerAutoSave = async (content: string) => {
     if (!trade) return;
@@ -626,6 +658,31 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
     } finally {
       setIsAutoSaving(false);
     }
+  };
+
+  // Handle assessment change with debouncing
+  const handleAssessmentChange = (assessment: string) => {
+    if (!trade) return;
+
+    // Update local state immediately for responsive UI
+    setTrade(prev => prev ? { ...prev, assessment } : null);
+
+    // Debounce the API call
+    clearTimeout(window.assessmentTimeout);
+    window.assessmentTimeout = setTimeout(async () => {
+      try {
+        setIsAutoSaving(true);
+        const success = await api.updateTradeAssessment(trade.id, assessment);
+        if (success) {
+          setLastSaved(new Date());
+        }
+      } catch (error) {
+        console.error('Error updating assessment:', error);
+        // Optionally revert the change or show an error message
+      } finally {
+        setIsAutoSaving(false);
+      }
+    }, 500); // Wait 500ms after user stops typing
   };
 
   if (loading) {
@@ -701,35 +758,45 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
       {/* Trade Summary Card */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-4 border-b border-gray-600">
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-3 border-b border-gray-600">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">{trade.symbol.slice(0, 2)}</span>
+            <div className="flex items-center space-x-6">
+              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-base">{trade.symbol.slice(0, 2)}</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">{trade.symbol}</h1>
+                <h1 className="text-xl font-bold text-white">{trade.symbol}</h1>
                 <div className="flex items-center space-x-3 mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${
                     trade.direction === 'Long' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
                   }`}>
                     {trade.direction}
                   </span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${
                     trade.status === 'Open' ? 'bg-orange-600 text-white' : 'bg-gray-600 text-white'
                   }`}>
                     {trade.status}
                   </span>
                   <span className="text-gray-400 text-sm">{trade.orderType}</span>
-                  {trade.assessment && (
-                    <span className="text-gray-400 text-sm">• {trade.assessment}</span>
-                  )}
                 </div>
+              </div>
+              
+              {/* Assessment Input - Moved to Left */}
+              <div className="flex flex-col">
+                <label className="text-gray-400 text-xs mb-1">Assessment</label>
+                <input
+                  type="text"
+                  value={trade.assessment || ''}
+                  onChange={(e) => handleAssessmentChange(e.target.value)}
+                  className="w-96 px-3 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  placeholder="Brief assessment of this trade..."
+                />
               </div>
             </div>
             
+            {/* P&L Display - Stays on Right */}
             <div className="text-right">
-              <div className={`text-2xl font-bold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`text-xl font-bold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {formatCurrency(netPnL)}
               </div>
               <div className="text-gray-400 text-sm">P&L</div>
