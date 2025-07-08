@@ -324,7 +324,6 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
               <div className="h-full flex flex-col text-xs">
                 <div className={`font-semibold mb-1 ${isToday(day) ? 'text-blue-400' : 'text-white'}`}>
                   {day}
-                  {isWeeklyCell && <span className="ml-1 text-orange-400">W</span>}
                 </div>
                 
                 {loading ? (
@@ -336,15 +335,14 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                   // Weekly totals display
                   <div className="flex-1 grid grid-cols-2 gap-1 text-orange-400">
                     <div>
-                      <div className="font-semibold text-xs mb-1">WEEK TOTAL</div>
-                      <div className={`font-bold text-sm ${weekData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className="font-semibold text-xs mb-1 text-blue-400">WEEK TOTAL</div>
+                      <div className={`font-bold text-lg ${weekData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {Formatters.compactCurrency(weekData.pnl)}
                       </div>
-                      <div className="text-xs text-gray-300">
-                        {weekData.trades} trades
-                      </div>
-                      <div className="text-xs text-gray-300">
-                        <span className="text-green-400">{weekData.wins}W</span> | <span className="text-red-400">{weekData.losses}L</span> | <span className="font-semibold text-orange-400">{weekData.winRate.toFixed(0)}%</span>
+                      <div className="mb-1"></div>
+                      <div className="mb-1"></div>
+                      <div className="text-xs text-gray-500">
+                        {weekData.trades}T {weekData.wins}W {weekData.losses}L {weekData.winRate.toFixed(0)}% WR
                       </div>
                     </div>
                     <div>
@@ -367,17 +365,15 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                   // Daily data display
                   <div className="flex-1 grid grid-cols-2 gap-1">
                     <div>
-                      <div className={`font-bold text-sm mb-1 ${dayData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className={`font-bold text-lg mb-1 ${dayData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {Formatters.compactCurrency(dayData.pnl)}
                       </div>
-                      <div className="text-xs text-gray-300">
-                        {dayData.trades} trades
-                      </div>
-                      <div className="text-xs text-gray-300">
-                        <span className="text-green-400">{dayData.wins}W</span> | <span className="text-red-400">{dayData.losses}L</span>
-                      </div>
-                      <div className="text-xs font-semibold text-orange-400">
-                        {dayData.winRate.toFixed(0)}%
+                      <div className="mb-1"></div>
+                      <div className="mb-1"></div>
+                      <div className="mb-1"></div>
+                      <div className="mb-1"></div>
+                      <div className="text-xs text-gray-500">
+                        {dayData.trades}T {dayData.wins}W {dayData.losses}L {dayData.winRate.toFixed(0)}% WR
                       </div>
                     </div>
                     <div>

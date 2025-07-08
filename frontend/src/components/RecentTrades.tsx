@@ -29,11 +29,11 @@ const RecentTrades: React.FC<RecentTradesProps> = ({
 
 
   const getTradeStatus = (trade: Trade): { label: string; color: string; bgColor: string } => {
-    if (trade.profitLoss === null || trade.profitLoss === undefined) {
+    if (trade.pnl === null || trade.pnl === undefined) {
       return { label: 'Open', color: 'text-blue-700', bgColor: 'bg-blue-100' };
-    } else if (trade.profitLoss > 0) {
+    } else if (trade.pnl > 0) {
       return { label: 'Profit', color: 'text-green-700', bgColor: 'bg-green-100' };
-    } else if (trade.profitLoss < 0) {
+    } else if (trade.pnl < 0) {
       return { label: 'Loss', color: 'text-red-700', bgColor: 'bg-red-100' };
     } else {
       return { label: 'Break Even', color: 'text-gray-700', bgColor: 'bg-gray-100' };
@@ -41,12 +41,12 @@ const RecentTrades: React.FC<RecentTradesProps> = ({
   };
 
   const getProfitLossDisplay = (trade: Trade) => {
-    if (trade.profitLoss === null || trade.profitLoss === undefined) {
+    if (trade.pnl === null || trade.pnl === undefined) {
       return { value: '-', color: 'text-gray-400' };
     }
     
-    const color = trade.profitLoss >= 0 ? 'text-green-600' : 'text-red-600';
-    const value = formatCurrency(trade.profitLoss);
+    const color = trade.pnl >= 0 ? 'text-green-600' : 'text-red-600';
+    const value = formatCurrency(trade.pnl);
     return { value, color };
   };
 

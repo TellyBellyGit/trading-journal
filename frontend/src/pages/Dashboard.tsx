@@ -1,3 +1,16 @@
+// ⚠️ ⚠️ ⚠️ UNUSED COMPONENT - DO NOT EDIT ⚠️ ⚠️ ⚠️
+// 
+// THIS FILE IS NOT BEING USED IN THE APPLICATION!
+// 
+// The actual dashboard is the inline "OriginalDashboard" component 
+// defined within /frontend/src/App.tsx (lines 340-720)
+// 
+// This file contains an advanced dashboard implementation that was
+// evaluated but not adopted. It should NOT be modified as it's not
+// part of the active codebase.
+// 
+// ⚠️ ⚠️ ⚠️ UNUSED COMPONENT - DO NOT EDIT ⚠️ ⚠️ ⚠️
+
 import React, { useState } from 'react';
 import MetricsCard from '../components/MetricsCard';
 import RecentTrades from '../components/RecentTrades';
@@ -49,7 +62,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     error,
     lastUpdated,
     refresh,
-    derivedData
+    derivedData,
+    weeklyPerformance
   } = useDashboardData(30000); // Refresh every 30 seconds
 
   const handleCalendarDateClick = (date: string, trades: Trade[]) => {
@@ -162,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               {/* Mini sparkline for recent performance */}
               <div className="mt-4">
                 <SparklineChart
-                  data={data.weeklyPerformance.map((week, i) => ({ value: week.pnl, date: week.period }))}
+                  data={weeklyPerformance.map((week, i) => ({ value: week.pnl, date: week.period }))}
                   color={metrics.totalPnL >= 0 ? '#10B981' : '#EF4444'}
                   height={30}
                   animate={true}
@@ -314,10 +328,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-8">
           
           {/* Left Column - Recent Trades */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <RecentTrades 
               trades={recentTrades} 
               loading={loading}

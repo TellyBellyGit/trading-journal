@@ -54,7 +54,9 @@ const api = {
     try {
       const response = await fetch(`${API_BASE_URL}/trades`);
       if (!response.ok) throw new Error('Failed to fetch trades');
-      return await response.json();
+      const data = await response.json();
+      // Handle paginated response format
+      return data.trades || data || [];
     } catch (error) {
       console.error('Error fetching trades:', error);
       return [];
@@ -93,6 +95,7 @@ const api = {
 const CalendarView = () => {
   console.log("🔥 CALENDAR VIEW IS RENDERING!"); 
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
@@ -107,11 +110,15 @@ const CalendarView = () => {
       setLoading(true);
       setError(null);
       
-      console.log("🔥 CALLING STATS API"); 
-      const statsData = await api.getStats();
+      console.log("🔥 CALLING STATS AND TRADES API"); 
+      const [statsData, allTradesData] = await Promise.all([
+        api.getStats(),
+        api.getTrades() // Get all trades for streak calculation
+      ]);
       
-      console.log("🔥 CALENDAR API RESPONSE:", { statsData });
+      console.log("🔥 CALENDAR API RESPONSE:", { statsData, allTradesData });
       setStats(statsData);
+      setAllTrades(allTradesData);
     } catch (error) {
       console.error('🔥 ERROR LOADING CALENDAR:', error);
       setError('Failed to load calendar data');
@@ -184,6 +191,9 @@ const CalendarView = () => {
     );
   }
 
+  // Calculate current streak
+  const currentStreak = calculateCurrentStreak(allTrades);
+
   // Calculate metrics for display
   const metrics = [
     { 
@@ -205,9 +215,9 @@ const CalendarView = () => {
       icon: '🎯' 
     },
     { 
-      title: 'Avg Trade', 
-      value: stats?.avgTrade ? formatCurrency(stats.avgTrade) : '$0.00', 
-      color: 'orange', 
+      title: 'Current Streak', 
+      value: currentStreak.display, 
+      color: currentStreak.type === 'win' ? 'green' : currentStreak.type === 'loss' ? 'red' : 'gray', 
       icon: '📈' 
     }
   ];
@@ -222,15 +232,33 @@ const CalendarView = () => {
               <h3 className="text-gray-400 text-sm font-medium">{metric.title}</h3>
               <span className="text-2xl">{metric.icon}</span>
             </div>
-            <p className={`text-2xl font-bold ${
-              metric.color === 'blue' ? 'text-blue-400' :
-              metric.color === 'green' ? 'text-green-400' :
-              metric.color === 'red' ? 'text-red-400' :
-              metric.color === 'purple' ? 'text-purple-400' :
-              'text-orange-400'
-            }`}>
-              {metric.value}
-            </p>
+            {metric.title === 'Current Streak' ? (
+              <div className={`${
+                metric.color === 'blue' ? 'text-blue-400' :
+                metric.color === 'green' ? 'text-green-400' :
+                metric.color === 'red' ? 'text-red-400' :
+                metric.color === 'purple' ? 'text-purple-400' :
+                metric.color === 'gray' ? 'text-gray-400' :
+                'text-orange-400'
+              }`}>
+                {metric.value.split('\n').map((line, lineIndex) => (
+                  <div key={lineIndex} className={lineIndex === 0 ? 'text-sm font-medium' : 'text-sm font-bold mt-1'}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={`text-2xl font-bold ${
+                metric.color === 'blue' ? 'text-blue-400' :
+                metric.color === 'green' ? 'text-green-400' :
+                metric.color === 'red' ? 'text-red-400' :
+                metric.color === 'purple' ? 'text-purple-400' :
+                metric.color === 'gray' ? 'text-gray-400' :
+                'text-orange-400'
+              }`}>
+                {metric.value}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -336,6 +364,92 @@ const CalendarView = () => {
   );
 };
 
+// Calculate longest consecutive streak in recent trades - shared utility function
+const calculateCurrentStreak = (trades: Trade[]) => {
+  // Add validation to ensure trades is an array
+  if (!trades || !Array.isArray(trades) || trades.length === 0) {
+    return { type: 'none', count: 0, display: 'No Trades' };
+  }
+  
+  // Filter only closed trades with P&L data, sorted by most recent first
+  // Handle both 'pnl' and 'profitLoss' field names for compatibility
+  const closedTrades = trades
+    .filter(trade => {
+      const pnl = trade.pnl !== undefined ? trade.pnl : trade.profitLoss;
+      return pnl !== null && pnl !== undefined;
+    })
+    .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+  
+  if (closedTrades.length === 0) return { type: 'none', count: 0, display: 'No Closed Trades' };
+  
+  // Take last 10 trades for context
+  const last10Trades = closedTrades.slice(0, 10);
+  
+  // Count wins and losses in last 10
+  let wins = 0;
+  let losses = 0;
+  
+  for (const trade of last10Trades) {
+    const tradePnl = trade.pnl !== undefined ? trade.pnl : trade.profitLoss;
+    if (tradePnl > 0) {
+      wins++;
+    } else {
+      losses++;
+    }
+  }
+  
+  // Find longest consecutive streak in the last 10 trades
+  let longestStreak = 0;
+  let longestStreakType = 'win'; // 'win' or 'loss'
+  let currentStreak = 1;
+  let currentType = '';
+  
+  // Initialize with first trade
+  if (last10Trades.length > 0) {
+    const firstTradePnl = last10Trades[0].pnl !== undefined ? last10Trades[0].pnl : last10Trades[0].profitLoss;
+    currentType = firstTradePnl > 0 ? 'win' : 'loss';
+    longestStreak = 1;
+    longestStreakType = currentType;
+  }
+  
+  // Check each subsequent trade
+  for (let i = 1; i < last10Trades.length; i++) {
+    const tradePnl = last10Trades[i].pnl !== undefined ? last10Trades[i].pnl : last10Trades[i].profitLoss;
+    const tradeType = tradePnl > 0 ? 'win' : 'loss';
+    
+    if (tradeType === currentType) {
+      // Extend current streak
+      currentStreak++;
+    } else {
+      // Check if current streak is longest so far
+      if (currentStreak > longestStreak) {
+        longestStreak = currentStreak;
+        longestStreakType = currentType;
+      }
+      // Start new streak
+      currentStreak = 1;
+      currentType = tradeType;
+    }
+  }
+  
+  // Check final streak
+  if (currentStreak > longestStreak) {
+    longestStreak = currentStreak;
+    longestStreakType = currentType;
+  }
+  
+  // Format display with 2 lines
+  const line1 = `Last ${last10Trades.length} trades: ${wins} Wins ${losses} Losses`;
+  const line2 = `${longestStreak} consecutive ${longestStreakType}${longestStreak > 1 ? (longestStreakType === 'win' ? 's' : 'es') : ''}`;
+  const display = `${line1}\n${line2}`;
+  
+  return { 
+    type: longestStreakType, 
+    count: longestStreak, 
+    display: display 
+  };
+};
+
 // Enhanced Dashboard Content Component with Real Data
 const OriginalDashboard = ({ onViewChange, onExportToAI }: { 
   onViewChange?: (view: string) => void;
@@ -344,6 +458,7 @@ const OriginalDashboard = ({ onViewChange, onExportToAI }: {
   console.log("🔥 ORIGINAL DASHBOARD IS RENDERING!"); 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
@@ -359,14 +474,16 @@ const OriginalDashboard = ({ onViewChange, onExportToAI }: {
       setError(null);
       
       console.log("🔥 CALLING API ENDPOINTS"); 
-      const [statsData, tradesData] = await Promise.all([
+      const [statsData, tradesData, allTradesData] = await Promise.all([
         api.getStats(),
-        api.getRecentTrades(4)
+        api.getRecentTrades(4),
+        api.getTrades() // Get all trades for streak calculation
       ]);
       
-      console.log("🔥 API RESPONSES:", { statsData, tradesData });
+      console.log("🔥 API RESPONSES:", { statsData, tradesData, allTradesData });
       setStats(statsData);
       setRecentTrades(tradesData);
+      setAllTrades(allTradesData);
     } catch (error) {
       console.error('🔥 ERROR LOADING DASHBOARD:', error);
       setError('Failed to load dashboard data');
@@ -408,6 +525,7 @@ const OriginalDashboard = ({ onViewChange, onExportToAI }: {
     });
   };
 
+
   // Loading state
   if (loading) {
     console.log("🔥 SHOWING LOADING STATE! Loading value:", loading);
@@ -447,6 +565,9 @@ const OriginalDashboard = ({ onViewChange, onExportToAI }: {
     );
   }
 
+  // Calculate current streak
+  const currentStreak = calculateCurrentStreak(allTrades);
+
   // Calculate metrics for display
   const metrics = [
     { 
@@ -468,9 +589,9 @@ const OriginalDashboard = ({ onViewChange, onExportToAI }: {
       icon: '🎯' 
     },
     { 
-      title: 'Avg Trade', 
-      value: stats?.avgTrade ? formatCurrency(stats.avgTrade) : '$0.00', 
-      color: 'orange', 
+      title: 'Current Streak', 
+      value: currentStreak.display, 
+      color: currentStreak.type === 'win' ? 'green' : currentStreak.type === 'loss' ? 'red' : 'gray', 
       icon: '📈' 
     }
   ];
@@ -485,22 +606,40 @@ const OriginalDashboard = ({ onViewChange, onExportToAI }: {
               <h3 className="text-gray-400 text-sm font-medium">{metric.title}</h3>
               <span className="text-2xl">{metric.icon}</span>
             </div>
-            <p className={`text-2xl font-bold ${
-              metric.color === 'blue' ? 'text-blue-400' :
-              metric.color === 'green' ? 'text-green-400' :
-              metric.color === 'red' ? 'text-red-400' :
-              metric.color === 'purple' ? 'text-purple-400' :
-              'text-orange-400'
-            }`}>
-              {metric.value}
-            </p>
+            {metric.title === 'Current Streak' ? (
+              <div className={`${
+                metric.color === 'blue' ? 'text-blue-400' :
+                metric.color === 'green' ? 'text-green-400' :
+                metric.color === 'red' ? 'text-red-400' :
+                metric.color === 'purple' ? 'text-purple-400' :
+                metric.color === 'gray' ? 'text-gray-400' :
+                'text-orange-400'
+              }`}>
+                {metric.value.split('\n').map((line, lineIndex) => (
+                  <div key={lineIndex} className={lineIndex === 0 ? 'text-sm font-medium' : 'text-sm font-bold mt-1'}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={`text-2xl font-bold ${
+                metric.color === 'blue' ? 'text-blue-400' :
+                metric.color === 'green' ? 'text-green-400' :
+                metric.color === 'red' ? 'text-red-400' :
+                metric.color === 'purple' ? 'text-purple-400' :
+                metric.color === 'gray' ? 'text-gray-400' :
+                'text-orange-400'
+              }`}>
+                {metric.value}
+              </p>
+            )}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Recent Trades from Database */}
-        <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-lg">
+        <div className="lg:col-span-3 bg-gray-800 border border-gray-700 rounded-lg">
           <div className="p-6 border-b border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white">Recent Trades</h3>
             <button
@@ -559,9 +698,9 @@ const OriginalDashboard = ({ onViewChange, onExportToAI }: {
                           {trade.exitPrice ? formatCurrency(trade.exitPrice) : '-'}
                         </td>
                         <td className="py-3">
-                          <span className={`font-semibold ${(trade.profitLoss || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                          <span className={`font-semibold ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'
                             }`}>
-                            {trade.profitLoss !== null && trade.profitLoss !== undefined ? formatCurrency(trade.profitLoss) : '-'}
+                            {trade.pnl !== null && trade.pnl !== undefined ? formatCurrency(trade.pnl) : '-'}
                           </span>
                         </td>
                         <td className="py-3">
