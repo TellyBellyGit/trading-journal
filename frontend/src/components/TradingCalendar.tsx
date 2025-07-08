@@ -353,7 +353,8 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                           </div>
                         </div>
                         <div className="text-[11px] text-purple-400">
-                          Cap. Deployed: {Formatters.compactCurrency(weekData.capitalDeployed)}
+                          <div>Cap. Deployed:</div>
+                          <div>{Formatters.compactCurrency(weekData.capitalDeployed)}</div>
                         </div>
                       </div>
                     </div>
@@ -383,7 +384,8 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                           </div>
                         </div>
                         <div className="text-[11px] text-purple-400">
-                          Cap. Deployed: {Formatters.compactCurrency(dayData.capitalDeployed)}
+                          <div>Cap. Deployed:</div>
+                          <div>{Formatters.compactCurrency(dayData.capitalDeployed)}</div>
                         </div>
                       </div>
                     </div>

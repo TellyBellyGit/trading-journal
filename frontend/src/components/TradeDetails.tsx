@@ -29,11 +29,11 @@ interface Trade {
   quantity: number;
   entryPrice: number;
   exitPrice?: number;
-  profitLoss?: number;
+  pnl?: number;
   percentChange?: number;
   orderType: string;
   assessment?: string;
-  capitalDeployed: number;
+  capital: number;
   entryDate: string;
   exitDate?: string;
   duration?: number;
@@ -726,7 +726,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
 
   const totalCost = trade.entryPrice * trade.quantity;
   const totalReturn = trade.exitPrice ? (trade.exitPrice * trade.quantity) : 0;
-  const netPnL = trade.profitLoss || 0;
+  const netPnL = trade.pnl || 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -918,22 +918,53 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
               </div>
               <div className="space-y-2.5">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">P&L:</span>
+                  <span 
+                    className="text-gray-400 text-sm cursor-help relative group"
+                    title="ROI vs Capital Deployed"
+                  >
+                    ROI vs Capital:
+                    <div className="fixed z-50 w-80 p-4 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs hidden group-hover:block">
+                      <div className="font-semibold mb-2">ROI vs Capital Deployed</div>
+                      <div className="mb-2">Formula: P&L ÷ Capital Deployed × 100</div>
+                      <div className="text-gray-300 space-y-1">
+                        <div>• <span className="text-green-400">Positive return:</span> Your trade made money relative to capital used - means you're deploying capital effectively</div>
+                        <div>• <span className="text-red-400">Loss on trade:</span> Your trade lost money relative to capital used - impacts your account growth negatively</div>
+                        <div>• <span className="text-blue-400">5-15%:</span> Good short-term return</div>
+                        <div>• <span className="text-purple-400">20%+:</span> Excellent return</div>
+                      </div>
+                      <div className="text-gray-400 mt-2 text-[11px]">Impact: Higher ROI means better capital utilization and faster account growth</div>
+                    </div>
+                  </span>
                   <span className={`text-sm font-semibold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {formatCurrency(netPnL)}
+                    {trade.capital > 0 ? `${((netPnL / trade.capital) * 100).toFixed(2)}%` : '0.00%'}
                   </span>
                 </div>
-                {trade.percentChange && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-sm">Return %:</span>
-                    <span className={`text-sm font-semibold ${trade.percentChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {trade.percentChange > 0 ? '+' : ''}{trade.percentChange.toFixed(2)}%
-                    </span>
-                  </div>
-                )}
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Capital:</span>
-                  <span className="text-white text-sm font-medium">{formatCurrency(trade.capitalDeployed)}</span>
+                  <span 
+                    className="text-gray-400 text-sm cursor-help relative group"
+                    title="Capital Efficiency"
+                  >
+                    Capital Efficiency:
+                    <div className="fixed z-50 w-80 p-4 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs hidden group-hover:block">
+                      <div className="font-semibold mb-2">Capital Efficiency</div>
+                      <div className="mb-2">Shows dollar profit/loss per $1000 of capital deployed</div>
+                      <div className="mb-2">Formula: (P&L ÷ Capital) × 1000</div>
+                      <div className="text-gray-300 space-y-1">
+                        <div>• <span className="text-green-400">Positive:</span> Profit per $1K deployed</div>
+                        <div>• <span className="text-red-400">Negative:</span> Loss per $1K deployed</div>
+                        <div>• <span className="text-blue-400">$50-$100/1K:</span> Good efficiency</div>
+                        <div>• <span className="text-purple-400">$200+/1K:</span> Excellent efficiency</div>
+                      </div>
+                      <div className="text-gray-400 mt-2 text-[11px]">Compare across trades to find your most capital-efficient strategies</div>
+                    </div>
+                  </span>
+                  <span className={`text-sm font-semibold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {trade.capital > 0 ? `${netPnL >= 0 ? '' : '-'}$${Math.abs((netPnL / trade.capital) * 1000).toFixed(0)} / $1000` : '$0 / $1000'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-sm">Capital Deployed:</span>
+                  <span className="text-white text-sm font-medium">{formatCurrency(trade.capital)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Created:</span>
