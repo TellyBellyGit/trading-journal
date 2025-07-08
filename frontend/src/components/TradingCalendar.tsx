@@ -333,63 +333,63 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
                   </div>
                 ) : isWeeklyCell && weekData ? (
                   // Weekly totals display
-                  <div className="flex-1 grid grid-cols-2 gap-1 text-orange-400">
-                    <div>
-                      <div className="font-semibold text-xs mb-1 text-blue-400">WEEK TOTAL</div>
-                      <div className={`font-bold text-lg ${weekData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {Formatters.compactCurrency(weekData.pnl)}
-                      </div>
-                      <div className="mb-1"></div>
-                      <div className="mb-1"></div>
-                      <div className="text-xs text-gray-500">
-                        {weekData.trades}T {weekData.wins}W {weekData.losses}L {weekData.winRate.toFixed(0)}% WR
-                      </div>
-                    </div>
-                    <div>
-                      <div 
-                        className="text-[11px] text-blue-400 cursor-help relative group"
-                      >
-                        <span>Payoff Ratio: {weekData.riskReward > 0 ? weekData.riskReward.toFixed(1) : '-'}</span>
-                        <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 w-48 p-2 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs">
-                          <div className="font-semibold mb-1">Weekly Payoff Ratio</div>
-                          <div>Average Win ÷ Average Loss</div>
-                          <div className="text-gray-400 mt-1">Shows weekly trading efficiency. Higher is better.</div>
+                  <div className="flex-1 flex flex-col text-orange-400">
+                    <div className="grid grid-cols-2 gap-1">
+                      <div>
+                        <div className="font-semibold text-xs mb-1 text-blue-400">WEEK TOTAL</div>
+                        <div className={`font-bold text-lg ${weekData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {Formatters.compactCurrency(weekData.pnl)}
                         </div>
                       </div>
-                      <div className="text-[11px] text-purple-400">
-                        Cap. Deployed: {Formatters.compactCurrency(weekData.capitalDeployed)}
+                      <div>
+                        <div 
+                          className="text-[11px] text-blue-400 cursor-help relative group"
+                        >
+                          <span>Payoff Ratio: {weekData.riskReward > 0 ? weekData.riskReward.toFixed(1) : '-'}</span>
+                          <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 w-48 p-2 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs">
+                            <div className="font-semibold mb-1">Weekly Payoff Ratio</div>
+                            <div>Average Win ÷ Average Loss</div>
+                            <div className="text-gray-400 mt-1">Shows weekly trading efficiency. Higher is better.</div>
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-purple-400">
+                          Cap. Deployed: {Formatters.compactCurrency(weekData.capitalDeployed)}
+                        </div>
                       </div>
+                    </div>
+                    <div className="flex-1"></div>
+                    <div className="text-xs text-gray-500">
+                      {weekData.trades}T {weekData.wins}W {weekData.losses}L {weekData.winRate.toFixed(0)}% WR
                     </div>
                   </div>
                 ) : dayData ? (
                   // Daily data display
-                  <div className="flex-1 grid grid-cols-2 gap-1">
-                    <div>
-                      <div className={`font-bold text-lg mb-1 ${dayData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {Formatters.compactCurrency(dayData.pnl)}
-                      </div>
-                      <div className="mb-1"></div>
-                      <div className="mb-1"></div>
-                      <div className="mb-1"></div>
-                      <div className="mb-1"></div>
-                      <div className="text-xs text-gray-500">
-                        {dayData.trades}T {dayData.wins}W {dayData.losses}L {dayData.winRate.toFixed(0)}% WR
-                      </div>
-                    </div>
-                    <div>
-                      <div 
-                        className="text-[11px] text-blue-400 cursor-help relative group"
-                      >
-                        <span>Payoff Ratio: {dayData.riskReward > 0 ? dayData.riskReward.toFixed(1) : '-'}</span>
-                        <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 w-48 p-2 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs">
-                          <div className="font-semibold mb-1">Payoff Ratio</div>
-                          <div>Average Win ÷ Average Loss</div>
-                          <div className="text-gray-400 mt-1">Shows how much you typically make versus lose per trade. Higher is better.</div>
+                  <div className="flex-1 flex flex-col">
+                    <div className="grid grid-cols-2 gap-1">
+                      <div>
+                        <div className={`font-bold text-lg mb-1 ${dayData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {Formatters.compactCurrency(dayData.pnl)}
                         </div>
                       </div>
-                      <div className="text-[11px] text-purple-400">
-                        Cap. Deployed: {Formatters.compactCurrency(dayData.capitalDeployed)}
+                      <div>
+                        <div 
+                          className="text-[11px] text-blue-400 cursor-help relative group"
+                        >
+                          <span>Payoff Ratio: {dayData.riskReward > 0 ? dayData.riskReward.toFixed(1) : '-'}</span>
+                          <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block z-50 w-48 p-2 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs">
+                            <div className="font-semibold mb-1">Payoff Ratio</div>
+                            <div>Average Win ÷ Average Loss</div>
+                            <div className="text-gray-400 mt-1">Shows how much you typically make versus lose per trade. Higher is better.</div>
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-purple-400">
+                          Cap. Deployed: {Formatters.compactCurrency(dayData.capitalDeployed)}
+                        </div>
                       </div>
+                    </div>
+                    <div className="flex-1"></div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      {dayData.trades}T {dayData.wins}W {dayData.losses}L {dayData.winRate.toFixed(0)}% WR
                     </div>
                   </div>
                 ) : null}
