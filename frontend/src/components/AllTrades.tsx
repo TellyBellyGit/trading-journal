@@ -417,6 +417,16 @@ const AllTrades: React.FC<AllTradesProps> = ({
           } else {
             loadInitialData(currentPage);
           }
+          
+          // Trigger autoscroll when returning from TradeDetails
+          setTimeout(() => {
+            if (topPaginationRef.current) {
+              topPaginationRef.current.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+              });
+            }
+          }, 100);
         }}
       />
     );
