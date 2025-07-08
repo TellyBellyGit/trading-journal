@@ -74,6 +74,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'notes': return 'notes';
       case 'import': return 'import';
       case 'performance-indicators': return 'playbook';
+      case 'settings': return 'settings';
       default: return 'dashboard';
     }
   };
@@ -88,6 +89,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'notes': return 'notes';
       case 'import': return 'import';
       case 'playbook': return 'performance-indicators';
+      case 'settings': return 'settings';
       default: return 'original';
     }
   };

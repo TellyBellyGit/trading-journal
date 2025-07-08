@@ -10,6 +10,7 @@ import Image from '@tiptap/extension-image';
 import { formatSimpleDate, formatTradingTime } from '../utils/formatters';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { sanitizeForJSON } from '../utils/jsonSanitizer';
+import { useSettings } from '../contexts/SettingsContext';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:3002/api';
@@ -561,6 +562,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 
 const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
   const { dateFormat } = useDateFormat();
+  const { getRiskRewardRatio, calculatePlannedRisk, calculatePlannedReward, isRiskCompliant, getRiskManagementSettings } = useSettings();
   const [trade, setTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -917,28 +919,62 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 <div className={`w-2 h-2 rounded-full ${netPnL >= 0 ? 'bg-green-400' : 'bg-red-400'}`}></div>
               </div>
               <div className="space-y-2.5">
-                <div className="flex justify-between items-center">
-                  <span 
-                    className="text-gray-400 text-sm cursor-help relative group"
-                    title="ROI vs Capital Deployed"
-                  >
-                    ROI vs Capital:
-                    <div className="fixed z-50 w-80 p-4 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs hidden group-hover:block">
-                      <div className="font-semibold mb-2">ROI vs Capital Deployed</div>
-                      <div className="mb-2">Formula: P&L ÷ Capital Deployed × 100</div>
-                      <div className="text-gray-300 space-y-1">
-                        <div>• <span className="text-green-400">Positive return:</span> Your trade made money relative to capital used - means you're deploying capital effectively</div>
-                        <div>• <span className="text-red-400">Loss on trade:</span> Your trade lost money relative to capital used - impacts your account growth negatively</div>
-                        <div>• <span className="text-blue-400">5-15%:</span> Good short-term return</div>
-                        <div>• <span className="text-purple-400">20%+:</span> Excellent return</div>
+                {(() => {
+                  const settings = getRiskManagementSettings();
+                  const targetPrice = trade.entryPrice * (1 + settings.defaultTargetPercent / 100);
+                  const stopPrice = trade.entryPrice * (1 - settings.defaultStopLossPercent / 100);
+                  const actualExit = trade.exitPrice || trade.entryPrice;
+                  
+                  let complianceText = '';
+                  let complianceColor = '';
+                  
+                  if (trade.status === 'Open') {
+                    complianceText = 'Position Open';
+                    complianceColor = 'text-yellow-400';
+                  } else if (actualExit >= targetPrice) {
+                    complianceText = 'Hit Target';
+                    complianceColor = 'text-green-400';
+                  } else if (actualExit <= stopPrice) {
+                    complianceText = 'Broke Stop';
+                    complianceColor = 'text-red-400';
+                  } else {
+                    complianceText = 'Between';
+                    complianceColor = 'text-yellow-400';
+                  }
+                  
+                  return (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span 
+                          className="text-gray-400 text-sm cursor-help relative group"
+                          title="Trade Plan vs Actual"
+                        >
+                          R/R Plan Exit:
+                          <div className="fixed z-50 w-80 p-4 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs hidden group-hover:block">
+                            <div className="font-semibold mb-2">Trade Plan vs Actual</div>
+                            <div className="mb-2">Shows your planned target/stop prices vs actual exit</div>
+                            <div className="text-gray-300 space-y-1">
+                              <div>• <span className="text-green-400">Hit Target:</span> Exit price reached or exceeded target</div>
+                              <div>• <span className="text-red-400">Broke Stop:</span> Exit price fell below stop loss level</div>
+                              <div>• <span className="text-yellow-400">Between:</span> Exit between target and stop</div>
+                              <div>• <span className="text-blue-400">R/R Ratio:</span> Based on your settings ({getRiskRewardRatio().toFixed(1)}:1)</div>
+                            </div>
+                            <div className="text-gray-400 mt-2 text-[11px]">Helps evaluate if you followed your trading plan</div>
+                          </div>
+                        </span>
+                        <span className="text-sm text-white font-medium">
+                          Target {formatCurrency(targetPrice)} / Stop {formatCurrency(stopPrice)} (R/R {getRiskRewardRatio().toFixed(1)}:1)
+                        </span>
                       </div>
-                      <div className="text-gray-400 mt-2 text-[11px]">Impact: Higher ROI means better capital utilization and faster account growth</div>
-                    </div>
-                  </span>
-                  <span className={`text-sm font-semibold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {trade.capital > 0 ? `${((netPnL / trade.capital) * 100).toFixed(2)}%` : '0.00%'}
-                  </span>
-                </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">Actual Exit:</span>
+                        <span className={`text-sm font-medium ${complianceColor}`}>
+                          {formatCurrency(actualExit)} ({complianceText})
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
                 <div className="flex justify-between items-center">
                   <span 
                     className="text-gray-400 text-sm cursor-help relative group"

@@ -7,6 +7,7 @@ import AllTrades from './components/AllTrades';
 import ImportTrades from './components/ImportTrades';
 import TradingCalendar from './components/TradingCalendar';
 import Notes from './components/Notes';
+import Settings from './components/Settings';
 import './index.css';
 
 // API configuration
@@ -1169,6 +1170,7 @@ function App() {
         )}
         {currentView === 'import' && <ImportTrades />}
         {currentView === 'notes' && <Notes />}
+        {currentView === 'settings' && <Settings />}
       </div>
     );
   };
@@ -1186,6 +1188,8 @@ function App() {
       ? 'Trading Notes'
       : currentView === 'calendar'
       ? 'Trading Calendar'
+      : currentView === 'settings'
+      ? 'Settings'
       : 'Trading Dashboard';
   };
 
@@ -1202,6 +1206,8 @@ function App() {
       ? 'Journal entries and trade reflections with rich text editing'
       : currentView === 'calendar'
       ? 'Visual calendar view of your trading activity'
+      : currentView === 'settings'
+      ? 'Configure your trading journal preferences and risk management'
       : 'Real-time trading performance';
   };
 
