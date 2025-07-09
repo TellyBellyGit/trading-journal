@@ -617,6 +617,27 @@ router.patch('/:id/assessment', async (req, res) => {
   }
 });
 
+// 🔥 NEW: Update only trade strategy (for auto-save)
+router.patch('/:id/strategy', async (req, res) => {
+  try {
+    const tradeId = parseInt(req.params.id);
+    const { strategy } = req.body;
+
+    const trade = await prisma.trade.update({
+      where: { id: tradeId },
+      data: { 
+        strategy: strategy || null,
+        updatedAt: new Date()
+      }
+    });
+
+    res.json({ success: true, updatedAt: trade.updatedAt });
+  } catch (error) {
+    console.error('Error updating trade strategy:', error);
+    res.status(500).json({ error: 'Failed to update strategy' });
+  }
+});
+
 // Delete trade
 router.delete('/:id', async (req, res) => {
   try {

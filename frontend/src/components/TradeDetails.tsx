@@ -19,6 +19,7 @@ const API_BASE_URL = 'http://localhost:3002/api';
 declare global {
   interface Window {
     assessmentTimeout: NodeJS.Timeout;
+    strategyTimeout: NodeJS.Timeout;
   }
 }
 
@@ -34,6 +35,7 @@ interface Trade {
   percentChange?: number;
   orderType: string;
   assessment?: string;
+  strategy?: string;
   capital: number;
   entryDate: string;
   entryTime: string;
@@ -94,6 +96,22 @@ const api = {
       return response.ok;
     } catch (error) {
       console.error('Error updating trade assessment:', error);
+      return false;
+    }
+  },
+
+  updateTradeStrategy: async (tradeId: number, strategy: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/trades/${tradeId}/strategy`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ strategy }),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error updating trade strategy:', error);
       return false;
     }
   }
@@ -637,11 +655,14 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
     loadTradeData();
   }, [tradeId, editor]);
 
-  // Cleanup assessment timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (window.assessmentTimeout) {
         clearTimeout(window.assessmentTimeout);
+      }
+      if (window.strategyTimeout) {
+        clearTimeout(window.strategyTimeout);
       }
     };
   }, []);
@@ -682,6 +703,31 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         }
       } catch (error) {
         console.error('Error updating assessment:', error);
+        // Optionally revert the change or show an error message
+      } finally {
+        setIsAutoSaving(false);
+      }
+    }, 500); // Wait 500ms after user stops typing
+  };
+
+  // Handle strategy change with debouncing
+  const handleStrategyChange = (strategy: string) => {
+    if (!trade) return;
+
+    // Update local state immediately for responsive UI
+    setTrade(prev => prev ? { ...prev, strategy } : null);
+
+    // Debounce the API call
+    clearTimeout(window.strategyTimeout);
+    window.strategyTimeout = setTimeout(async () => {
+      try {
+        setIsAutoSaving(true);
+        const success = await api.updateTradeStrategy(trade.id, strategy);
+        if (success) {
+          setLastSaved(new Date());
+        }
+      } catch (error) {
+        console.error('Error updating strategy:', error);
         // Optionally revert the change or show an error message
       } finally {
         setIsAutoSaving(false);
@@ -737,7 +783,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
       {/* Trade Summary Card */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-2 border-b border-gray-600">
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 px-4 py-1.5 border-b border-gray-600">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
               {/* Back Button */}
@@ -761,24 +807,31 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                   }`}>
                     {trade.direction}
                   </span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${
-                    trade.status === 'Open' ? 'bg-orange-600 text-white' : 'bg-gray-600 text-white'
-                  }`}>
-                    {trade.status}
-                  </span>
                 </div>
               </div>
               
-              {/* Assessment Input - Moved to Left */}
-              <div className="flex flex-col">
-                <label className="text-gray-400 text-xs mb-1">Assessment</label>
-                <input
-                  type="text"
-                  value={trade.assessment || ''}
-                  onChange={(e) => handleAssessmentChange(e.target.value)}
-                  className="w-96 px-3 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="Brief assessment of this trade..."
-                />
+              {/* Assessment and Strategy Inputs - Horizontal Layout */}
+              <div className="flex space-x-4">
+                <div className="flex flex-col">
+                  <label className="text-gray-400 text-xs mb-1">Assessment</label>
+                  <input
+                    type="text"
+                    value={trade.assessment || ''}
+                    onChange={(e) => handleAssessmentChange(e.target.value)}
+                    className="w-72 px-3 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    placeholder="Brief assessment of this trade..."
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-gray-400 text-xs mb-1">Strategy</label>
+                  <input
+                    type="text"
+                    value={trade.strategy || ''}
+                    onChange={(e) => handleStrategyChange(e.target.value)}
+                    className="w-72 px-3 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    placeholder="Trading strategy used..."
+                  />
+                </div>
               </div>
             </div>
             
@@ -887,8 +940,8 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
               </div>
               <div className="space-y-2.5">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Order Type:</span>
-                  <span className="text-white text-sm font-medium">{trade.orderType}</span>
+                  <span className="text-gray-400 text-sm">Order Status:</span>
+                  <span className="text-white text-sm font-medium">{trade.status}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Market Session:</span>
@@ -925,7 +978,13 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Duration:</span>
                   <span className="text-white text-sm font-medium">
-                    {trade.duration ? `${Math.round(trade.duration / 60)} hours` : '—'}
+                    {(() => {
+                      if (!trade.duration) return '—';
+                      const hours = Math.floor(trade.duration / 60);
+                      const minutes = Math.floor(trade.duration % 60);
+                      const seconds = Math.floor((trade.duration % 1) * 60);
+                      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    })()} 
                   </span>
                 </div>
                 {trade.broker && (
@@ -952,23 +1011,53 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                   
                   let complianceText = '';
                   let complianceColor = '';
+                  let exitMessage = '';
                   
                   if (trade.status === 'Open') {
                     complianceText = 'Position Open';
                     complianceColor = 'text-yellow-400';
-                  } else if (actualExit >= targetPrice) {
-                    complianceText = 'Hit Target';
-                    complianceColor = 'text-green-400';
-                  } else if (actualExit <= stopPrice) {
-                    complianceText = 'Broke Stop';
-                    complianceColor = 'text-red-400';
+                    exitMessage = 'Position Open';
                   } else {
-                    complianceText = 'Between';
-                    complianceColor = 'text-yellow-400';
+                    // Determine if trade was winner or loser
+                    const isWinner = netPnL >= 0;
+                    
+                    if (isWinner) {
+                      if (actualExit < targetPrice) {
+                        exitMessage = `Exited Before TP ${formatCurrency(actualExit)}`;
+                        complianceText = 'Before Target';
+                        complianceColor = 'text-yellow-400';
+                      } else {
+                        exitMessage = `Exited at/above TP ${formatCurrency(actualExit)}`;
+                        complianceText = 'Hit Target';
+                        complianceColor = 'text-green-400';
+                      }
+                    } else {
+                      if (actualExit < stopPrice) {
+                        exitMessage = `Exit after SL ${formatCurrency(actualExit)}`;
+                        complianceText = 'After Stop';
+                        complianceColor = 'text-red-400';
+                      } else {
+                        exitMessage = `Exit before SL ${formatCurrency(actualExit)}`;
+                        complianceText = 'Before Stop';
+                        complianceColor = 'text-yellow-400';
+                      }
+                    }
+                    
+                    // Auto-fill assessment if it's empty or contains no alphanumeric characters
+                    if (!trade.assessment || !/[a-zA-Z0-9]/.test(trade.assessment)) {
+                      // Update assessment with exit message
+                      handleAssessmentChange(exitMessage);
+                    }
                   }
                   
                   return (
                     <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">Reward/Risk Plan:</span>
+                        <span className="text-white text-sm font-medium">
+                          {getRiskRewardRatio().toFixed(1)}:1
+                        </span>
+                      </div>
                       <div className="flex justify-between items-center">
                         <span 
                           className="text-gray-400 text-sm cursor-help relative group"
@@ -988,15 +1077,17 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                           </div>
                         </span>
                         <span className="text-sm text-white font-medium">
-                          Target {formatCurrency(targetPrice)} / Stop {formatCurrency(stopPrice)} (R/R {getRiskRewardRatio().toFixed(1)}:1)
+                          Target {formatCurrency(targetPrice)} / Stop {formatCurrency(stopPrice)}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-400 text-sm">Actual Exit:</span>
-                        <span className={`text-sm font-medium ${complianceColor}`}>
-                          {formatCurrency(actualExit)} ({complianceText})
-                        </span>
-                      </div>
+                      {trade.status === 'Closed' && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 text-sm">Actual Exit:</span>
+                          <span className={`text-base font-medium ${complianceColor}`}>
+                            {exitMessage}
+                          </span>
+                        </div>
+                      )}
                     </>
                   );
                 })()}
@@ -1022,10 +1113,6 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                   <span className={`text-sm font-semibold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {trade.capital > 0 ? `${netPnL >= 0 ? '' : '-'}$${Math.abs((netPnL / trade.capital) * 1000).toFixed(0)} / $1000` : '$0 / $1000'}
                   </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Capital Deployed:</span>
-                  <span className="text-white text-sm font-medium">{formatCurrency(trade.capital)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span 
