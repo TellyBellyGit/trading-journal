@@ -36,7 +36,9 @@ interface Trade {
   assessment?: string;
   capital: number;
   entryDate: string;
+  entryTime: string;
   exitDate?: string;
+  exitTime?: string;
   duration?: number;
   status: 'Open' | 'Closed';
   notes?: string; // Changed from commentary to notes
@@ -562,7 +564,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 
 const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
   const { dateFormat } = useDateFormat();
-  const { getRiskRewardRatio, calculatePlannedRisk, calculatePlannedReward, isRiskCompliant, getRiskManagementSettings } = useSettings();
+  const { getRiskRewardRatio, calculatePlannedRisk, calculatePlannedReward, isRiskCompliant, getRiskManagementSettings, formatTradeTime, getEasternTime } = useSettings();
   const [trade, setTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -731,38 +733,23 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
   const netPnL = trade.pnl || 0;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 hover:text-white transition-colors"
-        >
-          <span>←</span>
-          <span>Back to Trades</span>
-        </button>
-        
-        <div className="flex items-center space-x-4">
-          {isAutoSaving && (
-            <div className="flex items-center space-x-2 text-yellow-400">
-              <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm">Saving...</span>
-            </div>
-          )}
-          {lastSaved && !isAutoSaving && (
-            <span className="text-sm text-green-400">
-              Last saved: {formatTradingTime(lastSaved)}
-            </span>
-          )}
-        </div>
-      </div>
-
+    <div className="p-6 space-y-5">
       {/* Trade Summary Card */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-3 border-b border-gray-600">
+        <div className="bg-gradient-to-r from-gray-700 to-gray-800 px-6 py-2 border-b border-gray-600">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
+              {/* Back Button */}
+              <button
+                onClick={onBack}
+                className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+                title="Back to Trades"
+              >
+                <span className="text-xl">←</span>
+                <span className="text-sm">Back</span>
+              </button>
+              
               <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-base">{trade.symbol.slice(0, 2)}</span>
               </div>
@@ -779,7 +766,6 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                   }`}>
                     {trade.status}
                   </span>
-                  <span className="text-gray-400 text-sm">{trade.orderType}</span>
                 </div>
               </div>
               
@@ -796,8 +782,21 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
               </div>
             </div>
             
-            {/* P&L Display - Stays on Right */}
+            {/* P&L Display with Auto-save Status */}
             <div className="text-right">
+              <div className="flex items-center justify-end space-x-4 mb-2">
+                {isAutoSaving && (
+                  <div className="flex items-center space-x-2 text-yellow-400">
+                    <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm">Saving...</span>
+                  </div>
+                )}
+                {lastSaved && !isAutoSaving && (
+                  <span className="text-sm text-green-400">
+                    Last saved: {formatTradingTime(lastSaved)}
+                  </span>
+                )}
+              </div>
               <div className={`text-xl font-bold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {formatCurrency(netPnL)}
               </div>
@@ -827,7 +826,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Time:</span>
-                  <span className="text-white text-sm font-medium">{formatTradingTime(trade.entryDate)}</span>
+                  <span className="text-white text-sm font-medium">{formatTradeTime(trade.entryTime, trade.entryDate)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Price:</span>
@@ -859,9 +858,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Time:</span>
-                  <span className="text-white text-sm font-medium">
-                    {trade.exitDate ? formatTradingTime(trade.exitDate) : '—'}
-                  </span>
+                  <span className="text-white text-sm font-medium">{trade.exitTime ? formatTradeTime(trade.exitTime, trade.exitDate || trade.entryDate) : '—'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Price:</span>
@@ -892,6 +889,34 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Order Type:</span>
                   <span className="text-white text-sm font-medium">{trade.orderType}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-sm">Market Session:</span>
+                  <span className="text-white text-sm font-medium">
+                    {(() => {
+                      // Always use Eastern time for market session calculation (independent of display preference)
+                      const easternTimeString = getEasternTime(trade.entryTime, trade.entryDate);
+                      const [hours, minutes] = easternTimeString.split(':').map(Number);
+                      const timeInMinutes = hours * 60 + minutes;
+                      
+                      // Pre-market: 4:00 AM - 9:30 AM EST
+                      if (timeInMinutes >= 240 && timeInMinutes < 570) {
+                        return 'Pre-market';
+                      }
+                      // Regular hours: 9:30 AM - 4:00 PM EST
+                      else if (timeInMinutes >= 570 && timeInMinutes < 960) {
+                        return 'Regular hours';
+                      }
+                      // After hours: 4:00 PM - 8:00 PM EST
+                      else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
+                        return 'After hours';
+                      }
+                      // Extended after hours or overnight
+                      else {
+                        return 'Extended hours';
+                      }
+                    })()}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Assessment:</span>
@@ -1003,8 +1028,34 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                   <span className="text-white text-sm font-medium">{formatCurrency(trade.capital)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Created:</span>
-                  <span className="text-white text-sm font-medium">{formatSimpleDate(trade.createdAt, dateFormat)}</span>
+                  <span 
+                    className="text-gray-400 text-sm cursor-help relative group"
+                    title="Return on Risk"
+                  >
+                    Return on Risk:
+                    <div className="fixed z-50 w-80 p-4 bg-gray-900 border border-gray-600 rounded-lg shadow-lg text-white text-xs hidden group-hover:block">
+                      <div className="font-semibold mb-2">Return on Risk</div>
+                      <div className="mb-2">Shows your actual profit/loss compared to the maximum amount you risked</div>
+                      <div className="mb-2">Formula: P&L ÷ (Entry Price - Stop Price) × Quantity</div>
+                      <div className="text-gray-300 space-y-1">
+                        <div>• <span className="text-green-400">Positive:</span> You made money relative to risk taken</div>
+                        <div>• <span className="text-red-400">Negative:</span> You lost money relative to risk taken</div>
+                        <div>• <span className="text-blue-400">2:1 or higher:</span> Excellent risk-adjusted return</div>
+                        <div>• <span className="text-purple-400">1:1:</span> You made exactly what you risked</div>
+                      </div>
+                      <div className="text-gray-400 mt-2 text-[11px]">Helps evaluate if the reward justified the risk taken</div>
+                    </div>
+                  </span>
+                  <span className={`text-sm font-semibold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {(() => {
+                      const settings = getRiskManagementSettings();
+                      const stopPrice = trade.entryPrice * (1 - settings.defaultStopLossPercent / 100);
+                      const riskPerShare = trade.entryPrice - stopPrice;
+                      const totalRisk = riskPerShare * trade.quantity;
+                      const returnOnRisk = totalRisk > 0 ? (netPnL / totalRisk) : 0;
+                      return `${returnOnRisk >= 0 ? '' : '-'}${Math.abs(returnOnRisk).toFixed(2)}:1`;
+                    })()}
+                  </span>
                 </div>
               </div>
             </div>

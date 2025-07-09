@@ -9,6 +9,7 @@ import EditTrade from './EditTrade'; // Import EditTrade component
 import Pagination from './Pagination'; // Import Pagination component
 import { formatSimpleDate } from '../utils/formatters';
 import { useDateFormat } from '../contexts/DateFormatContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface AllTradesProps {
   loading?: boolean;
@@ -44,6 +45,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
   onExport,
 }) => {
   const { dateFormat } = useDateFormat();
+  const { formatTradeTime } = useSettings();
 
 // Debug logging (can be removed in production)
   // console.log('🚀 AllTrades component rendered/re-rendered');
@@ -345,15 +347,6 @@ const AllTrades: React.FC<AllTradesProps> = ({
   };
 
 
-  // NEW: Format time function for entry/exit times
-  const formatTime = (timeString: string | null | undefined) => {
-    if (!timeString) return '—';
-    // If it's already in HH:MM:SS format, just return first 5 chars (HH:MM)
-    if (timeString.includes(':')) {
-      return timeString.substring(0, 8); // HH:MM
-    }
-    return timeString;
-  };
 
   const getSortIcon = (columnKey: keyof Trade) => {
     if (sortConfig.key !== columnKey) return '↕️';
@@ -843,7 +836,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                     </td>
                     <td className="p-2 text-gray-300">{formatSimpleDate(trade.entryDate, dateFormat)}</td>
                     {/* NEW: Entry Time column */}
-                    <td className="p-2 text-gray-300">{formatTime(trade.entryTime)}</td>
+                    <td className="p-2 text-gray-300">{formatTradeTime(trade.entryTime, trade.entryDate)}</td>
                     <td className="p-2 text-gray-300">
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">Open</span>
@@ -856,7 +849,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">—</span>
                       ) : (
-                        formatTime(trade.exitTime)
+                        formatTradeTime(trade.exitTime, trade.exitDate)
                       )}
                     </td>
                     <td className="p-2">
@@ -937,7 +930,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                 {/* NEW: Entry Time in cards */}
                 <div>
                   <p className="text-gray-400 text-sm">Entry Time</p>
-                  <p className="text-white font-medium">{formatTime(trade.entryTime)}</p>
+                  <p className="text-white font-medium">{formatTradeTime(trade.entryTime, trade.entryDate)}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Exit Date</p>
@@ -956,7 +949,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                     {trade.status === 'Open' ? (
                       <span className="text-orange-400 italic">—</span>
                     ) : (
-                      formatTime(trade.exitTime)
+                      formatTradeTime(trade.exitTime, trade.exitDate)
                     )}
                   </p>
                 </div>

@@ -13,6 +13,7 @@ export interface RiskManagementSettings {
 
 export interface AppSettings {
   riskManagement: RiskManagementSettings;
+  timeDisplay: 'local' | 'eastern';
 }
 
 // Default settings
@@ -22,7 +23,8 @@ const defaultSettings: AppSettings = {
     riskPercentPerTrade: 2,
     defaultStopLossPercent: 5,
     defaultTargetPercent: 10
-  }
+  },
+  timeDisplay: 'eastern'
 };
 
 // Settings storage key
@@ -34,6 +36,12 @@ interface SettingsContextType {
   updateSettings: (newSettings: AppSettings) => void;
   updateRiskManagement: (riskSettings: RiskManagementSettings) => void;
   getRiskManagementSettings: () => RiskManagementSettings;
+  
+  // Time display settings
+  timeDisplay: 'local' | 'eastern';
+  toggleTimeDisplay: () => void;
+  formatTradeTime: (timeString: string, tradeDate: string) => string;
+  getEasternTime: (timeString: string, tradeDate: string) => string;
   
   // Calculated values
   getMaxRiskAmount: () => number;
@@ -65,7 +73,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
           riskManagement: {
             ...defaultSettings.riskManagement,
             ...parsed.riskManagement
-          }
+          },
+          timeDisplay: parsed.timeDisplay || defaultSettings.timeDisplay
         };
         setSettings(mergedSettings);
       }
@@ -149,11 +158,88 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     return plannedRisk <= maxRiskAmount;
   };
 
+  // Toggle time display between local and eastern
+  const toggleTimeDisplay = () => {
+    const newTimeDisplay = settings.timeDisplay === 'local' ? 'eastern' : 'local';
+    const newSettings = {
+      ...settings,
+      timeDisplay: newTimeDisplay
+    };
+    updateSettings(newSettings);
+  };
+
+  // Convert UK time to Eastern time for display
+  const convertUKToEastern = (ukTimeString: string, tradeDate: string): string => {
+    try {
+      // Handle different date formats and ensure we have a valid date
+      let dateStr = tradeDate;
+      
+      // If tradeDate is already an ISO string, extract just the date part
+      if (tradeDate.includes('T')) {
+        dateStr = tradeDate.split('T')[0];
+      }
+      
+      // Create a datetime object in UK timezone
+      // Format: YYYY-MM-DD + T + HH:MM:SS
+      const ukDateTime = new Date(`${dateStr}T${ukTimeString}`);
+      
+      // Check if the date is valid
+      if (isNaN(ukDateTime.getTime())) {
+        console.error('Invalid date created:', `${dateStr}T${ukTimeString}`);
+        return ukTimeString; // Fallback to original
+      }
+      
+      // Convert to Eastern time with automatic DST handling
+      const easternTime = ukDateTime.toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      // Extract just the time part (HH:MM:SS)
+      const timePart = easternTime.split(', ')[1] || easternTime;
+      
+      // Additional validation
+      if (timePart.includes('Invalid')) {
+        console.error('Invalid time conversion result:', timePart);
+        return ukTimeString; // Fallback to original
+      }
+      
+      return timePart;
+    } catch (error) {
+      console.error('Error converting time:', error, 'Input:', ukTimeString, tradeDate);
+      return ukTimeString; // Fallback to original
+    }
+  };
+
+  // Format trade time based on current display setting
+  const formatTradeTime = (timeString: string, tradeDate: string): string => {
+    if (!timeString) return '—';
+    
+    if (settings.timeDisplay === 'local') {
+      return timeString; // Show UK time as-is
+    } else {
+      return convertUKToEastern(timeString, tradeDate); // Convert to Eastern
+    }
+  };
+
+  // Always convert to Eastern time (for market session calculations)
+  const getEasternTime = (timeString: string, tradeDate: string): string => {
+    if (!timeString) return '—';
+    return convertUKToEastern(timeString, tradeDate);
+  };
+
   const contextValue: SettingsContextType = {
     settings,
     updateSettings,
     updateRiskManagement,
     getRiskManagementSettings,
+    timeDisplay: settings.timeDisplay,
+    toggleTimeDisplay,
+    formatTradeTime,
+    getEasternTime,
     getMaxRiskAmount,
     getRiskRewardRatio,
     getTradesToRisk100Percent,
@@ -190,7 +276,8 @@ export const settingsUtils = {
           riskManagement: {
             ...defaultSettings.riskManagement,
             ...parsed.riskManagement
-          }
+          },
+          timeDisplay: parsed.timeDisplay || defaultSettings.timeDisplay
         };
       }
     } catch (error) {

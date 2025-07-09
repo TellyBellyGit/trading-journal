@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDateFormat } from '../contexts/DateFormatContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 // Navigation items matching your PyQt5 app
 const navigationItems = [
@@ -44,6 +45,7 @@ const AppShell: React.FC<AppShellProps> = ({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialCollapsedState);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const { isUSFormat, toggleDateFormat } = useDateFormat();
+  const { timeDisplay, toggleTimeDisplay } = useSettings();
 
   // Update sidebar state when view changes, but only for notes view or if user hasn't interacted
   useEffect(() => {
@@ -201,6 +203,16 @@ const AppShell: React.FC<AppShellProps> = ({
             >
               <span className="text-xs">📅</span>
               <span className="ml-1">{isUSFormat ? 'MM/DD/YYYY' : 'DD/MM/YYYY'}</span>
+            </button>
+
+            {/* Time Display Toggle */}
+            <button 
+              onClick={toggleTimeDisplay}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              title={`Current time display: ${timeDisplay === 'local' ? 'UK Local Time' : 'Eastern Time'}`}
+            >
+              <span className="text-xs">🕐</span>
+              <span className="ml-1">{timeDisplay === 'local' ? 'Local' : 'EST'}</span>
             </button>
 
             {/* Action Buttons */}
