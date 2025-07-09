@@ -972,17 +972,37 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Assessment:</span>
-                  <span className="text-white text-sm font-medium">{trade.assessment || '—'}</span>
-                </div>
-                <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-sm">Duration:</span>
                   <span className="text-white text-sm font-medium">
                     {(() => {
-                      if (!trade.duration) return '—';
-                      const hours = Math.floor(trade.duration / 60);
-                      const minutes = Math.floor(trade.duration % 60);
-                      const seconds = Math.floor((trade.duration % 1) * 60);
+                      // Calculate duration in real-time from entry/exit times
+                      if (trade.status !== 'Closed' || !trade.exitTime || !trade.exitDate) {
+                        return '—';
+                      }
+                      
+                      // Parse entry and exit times - extract just the date part from ISO string
+                      const entryDateOnly = trade.entryDate.split('T')[0]; // Get YYYY-MM-DD part
+                      const exitDateOnly = trade.exitDate.split('T')[0]; // Get YYYY-MM-DD part
+                      
+                      const entryDateTime = new Date(`${entryDateOnly}T${trade.entryTime}`);
+                      const exitDateTime = new Date(`${exitDateOnly}T${trade.exitTime}`);
+                      
+                      // Check if dates are valid
+                      if (isNaN(entryDateTime.getTime()) || isNaN(exitDateTime.getTime())) {
+                        return '—';
+                      }
+                      
+                      // Calculate duration in milliseconds
+                      const durationMs = exitDateTime.getTime() - entryDateTime.getTime();
+                      
+                      // Convert to seconds
+                      const totalSeconds = Math.floor(durationMs / 1000);
+                      
+                      // Format as HH:MM:SS
+                      const hours = Math.floor(totalSeconds / 3600);
+                      const minutes = Math.floor((totalSeconds % 3600) / 60);
+                      const seconds = totalSeconds % 60;
+                      
                       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                     })()} 
                   </span>

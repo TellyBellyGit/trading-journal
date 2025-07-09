@@ -1299,7 +1299,7 @@ function analyzeTradesWithMatching(rawTrades: RawTradeData[]): AnalyzedTrade[] {
             const entryTime = parseDateTime(position.trade.execTime)!;
             const pnl = (exitPrice - entryPrice) * qtyToClose;
             const percentChange = (exitPrice / entryPrice - 1) * 100;
-            const duration = (sellTime.getTime() - entryTime.getTime()) / (1000 * 60);
+            const duration = (sellTime.getTime() - entryTime.getTime()) / 1000;
 
             analyzedTrades.push({
               symbol,
@@ -1338,7 +1338,7 @@ function analyzeTradesWithMatching(rawTrades: RawTradeData[]): AnalyzedTrade[] {
             const entryTime = parseDateTime(position.trade.execTime)!;
             const pnl = (entryPrice - exitPrice) * qtyToClose; // Reversed for shorts
             const percentChange = (entryPrice / exitPrice - 1) * 100; // Reversed for shorts
-            const duration = (buyTime.getTime() - entryTime.getTime()) / (1000 * 60);
+            const duration = (buyTime.getTime() - entryTime.getTime()) / 1000;
 
             analyzedTrades.push({
               symbol,
@@ -1459,7 +1459,7 @@ function convertToParseTradeFormat(analyzedTrades: AnalyzedTrade[]): ParsedTrade
     entryTime: trade.entryTime.toTimeString().split(' ')[0], // HH:MM:SS
     exitDate: trade.exitTime ? trade.exitTime.toISOString().split('T')[0] : trade.entryTime.toISOString().split('T')[0],
     exitTime: trade.exitTime ? trade.exitTime.toTimeString().split(' ')[0] : '23:59:59',
-    duration: Math.round(trade.duration),
+    duration: trade.duration,
     entryPrice: trade.entryPrice,
     exitPrice: trade.exitPrice || trade.entryPrice,
     pnl: trade.pnl,
