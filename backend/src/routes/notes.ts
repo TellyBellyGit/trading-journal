@@ -1,6 +1,7 @@
 // backend/src/routes/notes.ts
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -90,7 +91,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/notes - Create new note
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { title, content, category, tags }: CreateNoteData = req.body;
     
@@ -106,7 +107,8 @@ router.post('/', async (req, res) => {
         title,
         content,
         category,
-        tags: tagsString
+        tags: tagsString,
+        userId: req.user!.userId
       }
     });
     

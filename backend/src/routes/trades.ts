@@ -3,6 +3,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import { DuplicateDetection } from '../utils/duplicateDetection';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -424,7 +425,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // 🔥 ENHANCED: Create trade with broker
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
       symbol,
@@ -479,6 +480,7 @@ router.post('/', async (req, res) => {
         orderType,
         assessment,
         capital: parseFloat(capital),
+        userId: req.user!.userId,
         brokerId: parseInt(brokerId),
         notes: notes || null,
         strategy: strategy || null,
@@ -1045,7 +1047,7 @@ router.post('/import/process', upload.single('csvFile'), async (req, res) => {
 });
 
 // POST /api/trades/import/save - Save unique trades to database
-router.post('/import/save', async (req, res) => {
+router.post('/import/save', authenticateToken, async (req, res) => {
   try {
     const { trades, brokerId } = req.body;
 
@@ -1085,6 +1087,7 @@ router.post('/import/save', async (req, res) => {
       percentChange: trade.percentChange,
       orderType: trade.orderType,
       status: trade.status,
+      userId: req.user!.userId,
       brokerId: brokerId || 1,
       assessment: null,
       capital: trade.entryPrice * trade.quantity,

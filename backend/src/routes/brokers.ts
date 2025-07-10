@@ -1,6 +1,7 @@
 // backend/src/routes/brokers.ts
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -48,7 +49,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new broker
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
       name,
@@ -68,7 +69,8 @@ router.post('/', async (req, res) => {
         accountId: accountId || null,
         defaultCommission: defaultCommission ? parseFloat(defaultCommission) : null,
         commissionType: commissionType || null,
-        isActive
+        isActive,
+        userId: req.user!.userId
       }
     });
 

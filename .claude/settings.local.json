@@ -25,7 +25,9 @@
       "Bash(apt list:*)",
       "Bash(dpkg:*)",
       "Bash(sqlite3:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(git add:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

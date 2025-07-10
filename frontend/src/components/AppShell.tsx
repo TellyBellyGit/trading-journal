@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Navigation items matching your PyQt5 app
 const navigationItems = [
@@ -46,6 +47,7 @@ const AppShell: React.FC<AppShellProps> = ({
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const { isUSFormat, toggleDateFormat } = useDateFormat();
   const { timeDisplay, toggleTimeDisplay } = useSettings();
+  const { user, logout } = useAuth();
 
   // Update sidebar state when view changes, but only for notes view or if user hasn't interacted
   useEffect(() => {
@@ -158,12 +160,18 @@ const AppShell: React.FC<AppShellProps> = ({
             ${sidebarCollapsed ? 'justify-center' : ''}
           `}>
             <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-semibold">U</span>
+              <span className="text-white text-sm font-semibold">
+                {user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+              </span>
             </div>
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">Trader</p>
-                <p className="text-xs text-gray-400 truncate">Active Session</p>
+                <p className="text-sm font-medium text-white truncate">
+                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Trader'}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  {user?.email || 'Active Session'}
+                </p>
               </div>
             )}
           </div>
@@ -233,6 +241,27 @@ const AppShell: React.FC<AppShellProps> = ({
             <button className="p-2 text-gray-400 hover:text-white transition-colors">
               <span className="text-lg">⚙️</span>
             </button>
+
+            {/* User Info & Logout */}
+            <div className="flex items-center space-x-3 pl-4 border-l border-gray-600">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-semibold">
+                    {user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-300 hidden md:inline">
+                  {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email || 'User'}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors"
+                title="Sign out"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </header>
 
