@@ -19,7 +19,13 @@
       "Bash(npm run:*)",
       "Bash(kill:*)",
       "Bash(node:*)",
-      "Bash(ss:*)"
+      "Bash(ss:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(apt list:*)",
+      "Bash(dpkg:*)",
+      "Bash(sqlite3:*)",
+      "Bash(npx prisma:*)"
     ],
     "deny": []
   }

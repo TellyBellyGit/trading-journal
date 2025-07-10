@@ -251,7 +251,7 @@ const AppShell: React.FC<AppShellProps> = ({
             <span>Last updated: 2 minutes ago</span>
           </div>
           <div className="flex items-center space-x-4">
-            <span>Database: SQLite</span>
+            <span>Database: PostgreSQL</span>
             <span>|</span>
             <span>Records: 1,247</span>
           </div>
