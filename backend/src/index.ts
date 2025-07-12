@@ -13,7 +13,8 @@ import tradesRouter from './routes/trades';
 import brokersRouter from './routes/brokers';
 import importRoutes from './routes/import';
 import notesRouter from './routes/notes';
-import authRouter from './routes/auth'; 
+import authRouter from './routes/auth';
+import adminRouter from './routes/admin'; 
 
 dotenv.config();
 
@@ -60,7 +61,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/trades', tradesRouter);
 app.use('/api/brokers', brokersRouter);
 app.use('/api/trades/import', importRoutes);
-app.use('/api/notes', notesRouter); 
+app.use('/api/notes', notesRouter);
+app.use('/api/admin', adminRouter); 
 
 // Health check
 app.get('/api/health', (req, res) => {

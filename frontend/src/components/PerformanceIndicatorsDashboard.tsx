@@ -290,8 +290,13 @@ const PerformanceIndicatorsDashboard: React.FC<PerformanceIndicatorsDashboardPro
 
       console.log('Fetching analytics from:', endpoint);
 
-      // Fetch data from backend (same as original)
-      const response = await fetch(endpoint);
+      // Fetch data from backend with authentication - using authenticated API
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch analytics: ${response.status} ${response.statusText}`);

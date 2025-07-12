@@ -90,8 +90,14 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ loading = false
 
       console.log('Fetching analytics from:', endpoint);
 
-      // Fetch data from backend
-      const response = await fetch(endpoint);
+      // Fetch data from backend with authentication
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch analytics: ${response.status} ${response.statusText}`);

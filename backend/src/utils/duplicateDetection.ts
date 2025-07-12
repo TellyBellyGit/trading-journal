@@ -41,11 +41,13 @@ export class DuplicateDetection {
    * Detect duplicates by comparing parsed trades against existing database records
    * @param parsedTrades - Array of trades parsed from CSV
    * @param brokerId - ID of the broker account
+   * @param userId - ID of the user (for data isolation)
    * @returns Object containing unique trades, duplicates, and details
    */
   async detectDuplicates(
     parsedTrades: ParsedTrade[], 
-    brokerId: number
+    brokerId: number,
+    userId: number
   ): Promise<DuplicateDetectionResult> {
     const uniqueTrades: ParsedTrade[] = [];
     const duplicateTrades: ParsedTrade[] = [];
@@ -55,7 +57,7 @@ export class DuplicateDetection {
       // Convert entryDate string to Date object for database query
       const entryDate = new Date(trade.entryDate);
       
-      // Query database for existing trade with matching criteria
+      // Query database for existing trade with matching criteria (user-scoped)
       const existingTrade = await this.prisma.trade.findFirst({
         where: {
           symbol: trade.symbol,
@@ -64,7 +66,8 @@ export class DuplicateDetection {
           direction: trade.direction,
           quantity: trade.quantity,
           entryPrice: trade.entryPrice,
-          brokerId: brokerId
+          brokerId: brokerId,
+          userId: userId
         }
       });
 
@@ -104,15 +107,17 @@ export class DuplicateDetection {
    */
   async detectDuplicatesBatch(
     parsedTrades: ParsedTrade[], 
-    brokerId: number
+    brokerId: number,
+    userId: number
   ): Promise<DuplicateDetectionResult> {
     // Create array of unique dates to query
     const entryDates = [...new Set(parsedTrades.map(trade => new Date(trade.entryDate)))];
     
-    // Get all existing trades for these dates in one query
+    // Get all existing trades for these dates in one query (user-scoped)
     const existingTrades = await this.prisma.trade.findMany({
       where: {
         brokerId: brokerId,
+        userId: userId,
         entryDate: {
           in: entryDates
         }

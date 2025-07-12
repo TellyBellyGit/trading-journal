@@ -7,9 +7,10 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all brokers
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const brokers = await prisma.broker.findMany({
+      where: { userId: req.user!.userId },
       orderBy: { name: 'asc' },
       include: {
         _count: {
@@ -25,11 +26,14 @@ router.get('/', async (req, res) => {
 });
 
 // Get single broker with trade count
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const brokerId = parseInt(req.params.id);
     const broker = await prisma.broker.findUnique({
-      where: { id: brokerId },
+      where: { 
+        id: brokerId,
+        userId: req.user!.userId
+      },
       include: {
         _count: {
           select: { trades: true }
@@ -86,7 +90,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update broker
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const brokerId = parseInt(req.params.id);
     const {
@@ -100,7 +104,10 @@ router.put('/:id', async (req, res) => {
     } = req.body;
 
     const broker = await prisma.broker.update({
-      where: { id: brokerId },
+      where: { 
+        id: brokerId,
+        userId: req.user!.userId
+      },
       data: {
         name,
         displayName,
@@ -124,13 +131,16 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete broker (only if no trades)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const brokerId = parseInt(req.params.id);
     
     // Check if broker has trades
     const tradeCount = await prisma.trade.count({
-      where: { brokerId }
+      where: { 
+        brokerId,
+        userId: req.user!.userId
+      }
     });
     
     if (tradeCount > 0) {
@@ -140,7 +150,10 @@ router.delete('/:id', async (req, res) => {
     }
 
     await prisma.broker.delete({
-      where: { id: brokerId }
+      where: { 
+        id: brokerId,
+        userId: req.user!.userId
+      }
     });
     
     res.json({ message: 'Broker deleted successfully' });

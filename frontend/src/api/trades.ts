@@ -79,6 +79,26 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token'); // Fixed: correct key name
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // If sending FormData, remove Content-Type to let browser set it with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Enhanced Trades API
 export const tradesApi = {
   // Get all trades (with optional broker filter and pagination)
@@ -126,6 +146,12 @@ export const tradesApi = {
     return response.data;
   },
 
+  // 🔥 NEW: Update only trade strategy (for auto-save)
+  updateStrategy: async (id: number, strategy: string): Promise<{ success: boolean; updatedAt: string }> => {
+    const response = await api.patch(`/trades/${id}/strategy`, { strategy });
+    return response.data;
+  },
+
   // 🔥 NEW: Search trades with advanced filtering and pagination
   search: async (filters: TradeFilters, page: number = 1, limit: number = 20): Promise<PaginatedResponse<Trade>> => {
     const params = { ...filters, page, limit };
@@ -158,11 +184,8 @@ import: {
     formData.append('csvFile', file);
     
     try {
-      const response = await api.post('/trades/import/process', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Don't set Content-Type for FormData - let the browser set it with boundary
+      const response = await api.post('/trades/import/process', formData);
       
       // Log the response for debugging
       console.log('🔍 Backend response:', response.data);

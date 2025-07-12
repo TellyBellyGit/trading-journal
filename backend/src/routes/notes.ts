@@ -22,11 +22,11 @@ interface UpdateNoteData {
 }
 
 // GET /api/notes - List all notes with optional search/filter
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { search, category, tags } = req.query;
     
-    let whereClause: any = {};
+    let whereClause: any = { userId: req.user!.userId };
     
     // Add search filter
     if (search && typeof search === 'string') {
@@ -65,12 +65,15 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/notes/:id - Get specific note
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
     const note = await prisma.note.findUnique({
-      where: { id }
+      where: { 
+        id,
+        userId: req.user!.userId
+      }
     });
     
     if (!note) {
@@ -126,14 +129,17 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/notes/:id - Update note (for auto-save)
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, category, tags }: UpdateNoteData = req.body;
     
     // Check if note exists
     const existingNote = await prisma.note.findUnique({
-      where: { id }
+      where: { 
+        id,
+        userId: req.user!.userId
+      }
     });
     
     if (!existingNote) {
@@ -144,7 +150,10 @@ router.put('/:id', async (req, res) => {
     const tagsString = tags && tags.length > 0 ? tags.join(', ') : undefined;
     
     const updatedNote = await prisma.note.update({
-      where: { id },
+      where: { 
+        id,
+        userId: req.user!.userId
+      },
       data: {
         ...(title !== undefined && { title }),
         ...(content !== undefined && { content }),
@@ -167,13 +176,16 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/notes/:id - Delete note
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
     // Check if note exists
     const existingNote = await prisma.note.findUnique({
-      where: { id }
+      where: { 
+        id,
+        userId: req.user!.userId
+      }
     });
     
     if (!existingNote) {
@@ -181,7 +193,10 @@ router.delete('/:id', async (req, res) => {
     }
     
     await prisma.note.delete({
-      where: { id }
+      where: { 
+        id,
+        userId: req.user!.userId
+      }
     });
     
     res.status(204).send();
@@ -192,11 +207,14 @@ router.delete('/:id', async (req, res) => {
 });
 
 // GET /api/notes/categories - Get all unique categories
-router.get('/metadata/categories', async (req, res) => {
+router.get('/metadata/categories', authenticateToken, async (req, res) => {
   try {
     const notes = await prisma.note.findMany({
       select: { category: true },
-      where: { category: { not: null } }
+      where: { 
+        userId: req.user!.userId,
+        category: { not: null }
+      }
     });
     
     const categories = [...new Set(notes.map(note => note.category).filter(Boolean))];
@@ -208,11 +226,14 @@ router.get('/metadata/categories', async (req, res) => {
 });
 
 // GET /api/notes/tags - Get all unique tags
-router.get('/metadata/tags', async (req, res) => {
+router.get('/metadata/tags', authenticateToken, async (req, res) => {
   try {
     const notes = await prisma.note.findMany({
       select: { tags: true },
-      where: { tags: { not: null } }
+      where: { 
+        userId: req.user!.userId,
+        tags: { not: null }
+      }
     });
     
     const allTags = notes

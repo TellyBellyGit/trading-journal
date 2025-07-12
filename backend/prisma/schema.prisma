@@ -91,6 +91,14 @@ model Trade {
   // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
+  // Performance indexes
+  @@index([userId])                    // Critical: user-scoped queries
+  @@index([userId, entryDate])         // Critical: user trades by date
+  @@index([userId, status])            // User trades by status
+  @@index([userId, symbol])            // User trades by symbol
+  @@index([brokerId])                  // Broker-scoped queries
+  @@index([entryDate])                 // Date range queries
 }
 
 // 6. Define the Note model
@@ -106,4 +114,9 @@ model Note {
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Performance indexes
+  @@index([userId])                    // Critical: user-scoped queries
+  @@index([userId, createdAt])         // User notes by date
+  @@index([category])                  // Notes by category
 }

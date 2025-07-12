@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+
+const API_BASE_URL = 'http://localhost:3002/api';
 
 // Navigation items matching your PyQt5 app
 const navigationItems = [
@@ -45,9 +47,14 @@ const AppShell: React.FC<AppShellProps> = ({
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialCollapsedState);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [showClearDataModal, setShowClearDataModal] = useState(false);
+  const [clearDataInput, setClearDataInput] = useState('');
+  const [clearingData, setClearingData] = useState(false);
   const { isUSFormat, toggleDateFormat } = useDateFormat();
   const { timeDisplay, toggleTimeDisplay } = useSettings();
   const { user, logout } = useAuth();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Update sidebar state when view changes, but only for notes view or if user hasn't interacted
   useEffect(() => {
@@ -59,6 +66,20 @@ const AppShell: React.FC<AppShellProps> = ({
     }
   }, [currentView, hasUserInteracted]);
 
+  // Handle clicks outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Handle manual sidebar toggle
   const handleSidebarToggle = () => {
     const newState = !sidebarCollapsed;
@@ -66,6 +87,74 @@ const AppShell: React.FC<AppShellProps> = ({
     setHasUserInteracted(true);
     // Save user preference
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState));
+  };
+
+  // Handle clear all data
+  const handleClearAllData = async () => {
+    if (clearDataInput !== 'CLEAR ALL TRADE') {
+      alert('Please type "CLEAR ALL TRADE" exactly to confirm.');
+      return;
+    }
+
+    setClearingData(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_BASE_URL}/admin/clear-user-data`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        alert('All your trade data has been cleared successfully.');
+        setShowClearDataModal(false);
+        setClearDataInput('');
+        // Optionally reload the page to reflect changes
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(`Failed to clear data: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert('Failed to clear data. Please try again.');
+      console.error('Clear data error:', error);
+    } finally {
+      setClearingData(false);
+    }
+  };
+
+  // Handle dropdown menu actions
+  const handleUserAction = (action: string) => {
+    setUserDropdownOpen(false);
+    
+    switch (action) {
+      case 'clear-data':
+        setShowClearDataModal(true);
+        break;
+      case 'profile':
+        // Placeholder - will be implemented later
+        alert('User Profile - Coming Soon');
+        break;
+      case 'account-settings':
+        // Placeholder - will be implemented later
+        alert('Account Settings - Coming Soon');
+        break;
+      case 'billing':
+        // Placeholder - will be implemented later
+        alert('Billing & Subscription - Coming Soon');
+        break;
+      case 'delete-account':
+        // Placeholder - will be implemented later
+        alert('Delete Account - Coming Soon');
+        break;
+      case 'logout':
+        logout();
+        break;
+      default:
+        break;
+    }
   };
 
   // Map current view to navigation ID
@@ -242,9 +331,12 @@ const AppShell: React.FC<AppShellProps> = ({
               <span className="text-lg">⚙️</span>
             </button>
 
-            {/* User Info & Logout */}
-            <div className="flex items-center space-x-3 pl-4 border-l border-gray-600">
-              <div className="flex items-center space-x-2">
+            {/* User Dropdown Menu */}
+            <div className="relative pl-4 border-l border-gray-600" ref={dropdownRef}>
+              <button
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors"
+              >
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-semibold">
                     {user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
@@ -253,14 +345,74 @@ const AppShell: React.FC<AppShellProps> = ({
                 <span className="text-sm text-gray-300 hidden md:inline">
                   {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email || 'User'}
                 </span>
-              </div>
-              <button
-                onClick={logout}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors"
-                title="Sign out"
-              >
-                Sign Out
+                <span className="text-gray-400 text-xs">
+                  {userDropdownOpen ? '▲' : '▼'}
+                </span>
               </button>
+
+              {/* Dropdown Menu */}
+              {userDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50">
+                  <div className="py-2">
+                    {/* User Info Header */}
+                    <div className="px-4 py-2 border-b border-gray-600">
+                      <p className="text-sm font-medium text-white">
+                        {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User'}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {user?.email || 'Active Session'}
+                      </p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <button
+                      onClick={() => handleUserAction('profile')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      👤 User Profile
+                    </button>
+                    
+                    <button
+                      onClick={() => handleUserAction('account-settings')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      ⚙️ Account Settings
+                    </button>
+                    
+                    <button
+                      onClick={() => handleUserAction('billing')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      💳 Billing & Subscription
+                    </button>
+
+                    <div className="border-t border-gray-600 my-1"></div>
+                    
+                    <button
+                      onClick={() => handleUserAction('clear-data')}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900 hover:text-red-300 transition-colors"
+                    >
+                      🗑️ Clear All Data
+                    </button>
+                    
+                    <button
+                      onClick={() => handleUserAction('delete-account')}
+                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900 hover:text-red-300 transition-colors"
+                    >
+                      ❌ Delete Account
+                    </button>
+
+                    <div className="border-t border-gray-600 my-1"></div>
+                    
+                    <button
+                      onClick={() => handleUserAction('logout')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      🚪 Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -286,6 +438,62 @@ const AppShell: React.FC<AppShellProps> = ({
           </div>
         </footer>
       </div>
+
+      {/* Clear Data Confirmation Modal */}
+      {showClearDataModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              ⚠️ Clear All Trade Data
+            </h3>
+            <p className="text-gray-300 mb-4">
+              This action will permanently delete all your trades, notes, and personal data. 
+              Broker information will be preserved as it's shared across users.
+            </p>
+            <p className="text-red-400 font-medium mb-4">
+              This action cannot be undone!
+            </p>
+            <p className="text-gray-300 mb-4">
+              To confirm, type <span className="font-mono bg-gray-700 px-2 py-1 rounded">CLEAR ALL TRADE</span> exactly:
+            </p>
+            <input
+              type="text"
+              value={clearDataInput}
+              onChange={(e) => setClearDataInput(e.target.value)}
+              placeholder="Type confirmation here..."
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !clearingData) {
+                  handleClearAllData();
+                }
+              }}
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={handleClearAllData}
+                disabled={clearingData || clearDataInput !== 'CLEAR ALL TRADE'}
+                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
+                  clearingData || clearDataInput !== 'CLEAR ALL TRADE'
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                }`}
+              >
+                {clearingData ? 'Clearing...' : 'Clear All Data'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowClearDataModal(false);
+                  setClearDataInput('');
+                }}
+                disabled={clearingData}
+                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

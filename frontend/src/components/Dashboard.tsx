@@ -19,7 +19,7 @@ const api = {
   // Fetch all trades
   getTrades: async (): Promise<Trade[]> => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/trades`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -39,7 +39,7 @@ const api = {
   // Fetch dashboard statistics
   getStats: async (): Promise<DashboardStats | null> => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/trades/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,

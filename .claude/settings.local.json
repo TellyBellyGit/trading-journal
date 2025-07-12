@@ -27,7 +27,8 @@
       "Bash(sqlite3:*)",
       "Bash(npx prisma:*)",
       "Bash(git add:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

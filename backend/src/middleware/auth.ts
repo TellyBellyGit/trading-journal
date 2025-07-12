@@ -18,6 +18,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
+    console.log(`🚫 [AUTH] No token provided for ${req.method} ${req.originalUrl} from ${req.ip}`);
     return res.status(401).json({ 
       error: 'Access denied. No token provided.' 
     });
@@ -26,8 +27,10 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   try {
     const decoded = JWTUtils.verifyToken(token);
     req.user = decoded;
+    console.log(`✅ [AUTH] User ${decoded.userId} (${decoded.email}) authenticated for ${req.method} ${req.originalUrl}`);
     next();
   } catch (error) {
+    console.log(`🚫 [AUTH] Invalid token for ${req.method} ${req.originalUrl} from ${req.ip}`);
     return res.status(403).json({ 
       error: 'Invalid or expired token.' 
     });

@@ -11,6 +11,7 @@ import { formatSimpleDate, formatTradingTime } from '../utils/formatters';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { sanitizeForJSON } from '../utils/jsonSanitizer';
 import { useSettings } from '../contexts/SettingsContext';
+import { tradesApi } from '../api/trades';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:3002/api';
@@ -52,16 +53,11 @@ interface Trade {
   };
 }
 
-// API service functions
+// Use centralized API with authentication
 const api = {
   getTrade: async (tradeId: number): Promise<Trade | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/trades/${tradeId}`);
-      if (!response.ok) {
-        if (response.status === 404) return null;
-        throw new Error('Failed to fetch trade');
-      }
-      return await response.json();
+      return await tradesApi.getById(tradeId);
     } catch (error) {
       console.error('Error fetching trade:', error);
       return null;
@@ -70,14 +66,8 @@ const api = {
 
   updateTradeNotes: async (tradeId: number, notes: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/trades/${tradeId}/notes`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ notes: sanitizeForJSON(notes) }), // Changed from commentary to notes
-      });
-      return response.ok;
+      const result = await tradesApi.updateNotes(tradeId, sanitizeForJSON(notes));
+      return result.success;
     } catch (error) {
       console.error('Error updating trade notes:', error);
       return false;
@@ -86,14 +76,8 @@ const api = {
 
   updateTradeAssessment: async (tradeId: number, assessment: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/trades/${tradeId}/assessment`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ assessment }),
-      });
-      return response.ok;
+      const result = await tradesApi.updateAssessment(tradeId, assessment);
+      return result.success;
     } catch (error) {
       console.error('Error updating trade assessment:', error);
       return false;
@@ -102,14 +86,8 @@ const api = {
 
   updateTradeStrategy: async (tradeId: number, strategy: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/trades/${tradeId}/strategy`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ strategy }),
-      });
-      return response.ok;
+      const result = await tradesApi.updateStrategy(tradeId, strategy);
+      return result.success;
     } catch (error) {
       console.error('Error updating trade strategy:', error);
       return false;

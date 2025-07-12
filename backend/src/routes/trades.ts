@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import { DuplicateDetection } from '../utils/duplicateDetection';
 import { authenticateToken } from '../middleware/auth';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -69,7 +70,7 @@ interface AnalyzedTrade {
 }
 
 // 🔥 ENHANCED: Get all trades with broker information and pagination
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { brokerId, page = '1', limit = '20' } = req.query;
     
@@ -77,7 +78,10 @@ router.get('/', async (req, res) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
     
-    const whereClause = brokerId ? { brokerId: parseInt(brokerId as string) } : {};
+    const whereClause: any = { userId: req.user!.userId };
+    if (brokerId) {
+      whereClause.brokerId = parseInt(brokerId as string);
+    }
     
     // Get total count for pagination metadata
     const totalCount = await prisma.trade.count({ where: whereClause });
@@ -116,10 +120,13 @@ router.get('/', async (req, res) => {
 });
 
 // 🔥 FIXED: Get trade statistics by broker
-router.get('/stats', async (req, res) => {
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const { brokerId } = req.query;
-    const whereClause = brokerId ? { brokerId: parseInt(brokerId as string) } : {};
+    const whereClause: any = { userId: req.user!.userId };
+    if (brokerId) {
+      whereClause.brokerId = parseInt(brokerId as string);
+    }
 
     const [
       totalTrades,
@@ -155,7 +162,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // 🔥 UPDATED: Get trades with filtering and search with pagination
-router.get('/search', async (req, res) => {
+router.get('/search', authenticateToken, async (req, res) => {
   try {
     const { 
       symbol, 
@@ -175,7 +182,7 @@ router.get('/search', async (req, res) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    const where: any = {};
+    const where: any = { userId: req.user!.userId };
 
     if (symbol) {
       where.symbol = { contains: symbol as string };
@@ -320,7 +327,7 @@ router.get('/search', async (req, res) => {
 });
 
 // 🔥 NEW: Export trades for AI analysis - optimized with date range filtering
-router.get('/export', async (req, res) => {
+router.get('/export', authenticateToken, async (req, res) => {
   try {
     const { startDate, endDate, status } = req.query;
     
@@ -344,7 +351,7 @@ router.get('/export', async (req, res) => {
     }
 
     // Build where clause for database filtering
-    const where: any = {};
+    const where: any = { userId: req.user!.userId };
     
     // Filter by entry date range
     where.entryDate = {
@@ -396,7 +403,7 @@ router.get('/export', async (req, res) => {
 });
 
 // 🔥 ENHANCED: Get single trade with full details including broker
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const tradeId = parseInt(req.params.id);
     
@@ -406,7 +413,8 @@ router.get('/:id', async (req, res) => {
     
     const trade = await prisma.trade.findUnique({
       where: {
-        id: tradeId
+        id: tradeId,
+        userId: req.user!.userId
       },
       include: {
         broker: true
@@ -502,7 +510,7 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const tradeId = parseInt(req.params.id);
     
@@ -538,7 +546,10 @@ router.put('/:id', async (req, res) => {
     } = req.body;
 
     const trade = await prisma.trade.update({
-      where: { id: tradeId },
+      where: { 
+        id: tradeId,
+        userId: req.user!.userId
+      },
       data: {
         symbol,
         direction,
@@ -578,13 +589,16 @@ router.put('/:id', async (req, res) => {
 });
 
 // 🔥 NEW: Update only trade notes (for auto-save)
-router.patch('/:id/notes', async (req, res) => {
+router.patch('/:id/notes', authenticateToken, async (req, res) => {
   try {
     const tradeId = parseInt(req.params.id);
     const { notes } = req.body;
 
     const trade = await prisma.trade.update({
-      where: { id: tradeId },
+      where: { 
+        id: tradeId,
+        userId: req.user!.userId
+      },
       data: { 
         notes: notes || null,
         updatedAt: new Date()
@@ -599,13 +613,16 @@ router.patch('/:id/notes', async (req, res) => {
 });
 
 // 🔥 NEW: Update only trade assessment (for auto-save)
-router.patch('/:id/assessment', async (req, res) => {
+router.patch('/:id/assessment', authenticateToken, async (req, res) => {
   try {
     const tradeId = parseInt(req.params.id);
     const { assessment } = req.body;
 
     const trade = await prisma.trade.update({
-      where: { id: tradeId },
+      where: { 
+        id: tradeId,
+        userId: req.user!.userId
+      },
       data: { 
         assessment: assessment || null,
         updatedAt: new Date()
@@ -620,13 +637,16 @@ router.patch('/:id/assessment', async (req, res) => {
 });
 
 // 🔥 NEW: Update only trade strategy (for auto-save)
-router.patch('/:id/strategy', async (req, res) => {
+router.patch('/:id/strategy', authenticateToken, async (req, res) => {
   try {
     const tradeId = parseInt(req.params.id);
     const { strategy } = req.body;
 
     const trade = await prisma.trade.update({
-      where: { id: tradeId },
+      where: { 
+        id: tradeId,
+        userId: req.user!.userId
+      },
       data: { 
         strategy: strategy || null,
         updatedAt: new Date()
@@ -641,11 +661,14 @@ router.patch('/:id/strategy', async (req, res) => {
 });
 
 // Delete trade
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const tradeId = parseInt(req.params.id);
     await prisma.trade.delete({
-      where: { id: tradeId }
+      where: { 
+        id: tradeId,
+        userId: req.user!.userId
+      }
     });
     res.json({ message: 'Trade deleted successfully' });
   } catch (error) {
@@ -797,9 +820,10 @@ function calculateLosingStreaks(trades: any[]) {
 }
 
 // Analytics Routes
-router.get('/analytics/summary', async (req, res) => {
+router.get('/analytics/summary', authenticateToken, async (req, res) => {
   try {
     const trades = await prisma.trade.findMany({
+      where: { userId: req.user!.userId },
       include: {
         broker: true,
       },
@@ -817,7 +841,7 @@ router.get('/analytics/summary', async (req, res) => {
   }
 });
 
-router.get('/analytics/daily/:date', async (req, res) => {
+router.get('/analytics/daily/:date', authenticateToken, async (req, res) => {
   try {
     const { date } = req.params;
     const targetDate = new Date(date);
@@ -830,6 +854,7 @@ router.get('/analytics/daily/:date', async (req, res) => {
 
     const trades = await prisma.trade.findMany({
       where: {
+        userId: req.user!.userId,
         entryDate: {
           gte: startOfDay,
           lte: endOfDay,
@@ -852,7 +877,7 @@ router.get('/analytics/daily/:date', async (req, res) => {
   }
 });
 
-router.get('/analytics/weekly/:date', async (req, res) => {
+router.get('/analytics/weekly/:date', authenticateToken, async (req, res) => {
   try {
     const { date } = req.params;
     const targetDate = new Date(date);
@@ -867,6 +892,7 @@ router.get('/analytics/weekly/:date', async (req, res) => {
 
     const trades = await prisma.trade.findMany({
       where: {
+        userId: req.user!.userId,
         entryDate: {
           gte: startOfWeek,
           lte: endOfWeek,
@@ -889,7 +915,7 @@ router.get('/analytics/weekly/:date', async (req, res) => {
   }
 });
 
-router.get('/analytics/monthly/:date', async (req, res) => {
+router.get('/analytics/monthly/:date', authenticateToken, async (req, res) => {
   try {
     const { date } = req.params;
     const targetDate = new Date(date);
@@ -901,6 +927,7 @@ router.get('/analytics/monthly/:date', async (req, res) => {
 
     const trades = await prisma.trade.findMany({
       where: {
+        userId: req.user!.userId,
         entryDate: {
           gte: startOfMonth,
           lte: endOfMonth,
@@ -923,7 +950,7 @@ router.get('/analytics/monthly/:date', async (req, res) => {
   }
 });
 
-router.get('/analytics/ytd/:year', async (req, res) => {
+router.get('/analytics/ytd/:year', authenticateToken, async (req, res) => {
   try {
     const { year } = req.params;
     const targetYear = parseInt(year);
@@ -937,6 +964,7 @@ router.get('/analytics/ytd/:year', async (req, res) => {
 
     const trades = await prisma.trade.findMany({
       where: {
+        userId: req.user!.userId,
         entryDate: {
           gte: startOfYear,
           lte: endOfYear,
@@ -959,7 +987,7 @@ router.get('/analytics/ytd/:year', async (req, res) => {
   }
 });
 
-router.get('/analytics/previous-year/:year', async (req, res) => {
+router.get('/analytics/previous-year/:year', authenticateToken, async (req, res) => {
   try {
     const { year } = req.params;
     const targetYear = parseInt(year);
@@ -970,6 +998,7 @@ router.get('/analytics/previous-year/:year', async (req, res) => {
 
     const trades = await prisma.trade.findMany({
       where: {
+        userId: req.user!.userId,
         entryDate: {
           gte: startOfYear,
           lte: endOfYear,
@@ -993,7 +1022,7 @@ router.get('/analytics/previous-year/:year', async (req, res) => {
 });
 
 // POST /api/trades/import/process - Process CSV file and detect duplicates
-router.post('/import/process', upload.single('csvFile'), async (req, res) => {
+router.post('/import/process', authenticateToken, upload.single('csvFile'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -1018,7 +1047,10 @@ router.post('/import/process', upload.single('csvFile'), async (req, res) => {
     }
 
     const brokerId = 1;
-    const duplicateResult = await duplicateDetection.detectDuplicatesBatch(parsedTrades, brokerId);
+    
+    logger.import(`Processing CSV file with ${parsedTrades.length} trades`, parsedTrades.length, req);
+    
+    const duplicateResult = await duplicateDetection.detectDuplicatesBatch(parsedTrades, brokerId, req.user!.userId);
 
     const summary: ImportSummary = {
       totalImported: duplicateResult.uniqueTrades.length,
@@ -1028,6 +1060,8 @@ router.post('/import/process', upload.single('csvFile'), async (req, res) => {
       openLongs: duplicateResult.uniqueTrades.filter(t => t.direction === 'Long' && t.status === 'Open').length,
       openShorts: duplicateResult.uniqueTrades.filter(t => t.direction === 'Short' && t.status === 'Open').length,
     };
+
+    logger.success(`Import validation complete - ${summary.totalImported} unique, ${summary.duplicatesRejected} duplicates`, req);
 
     res.json({
       trades: duplicateResult.uniqueTrades,
@@ -1060,7 +1094,7 @@ router.post('/import/save', authenticateToken, async (req, res) => {
       });
     }
 
-    const duplicateResult = await duplicateDetection.detectDuplicatesBatch(trades, brokerId || 1);
+    const duplicateResult = await duplicateDetection.detectDuplicatesBatch(trades, brokerId || 1, req.user!.userId);
     
     if (duplicateResult.uniqueTrades.length === 0) {
       return res.json({
