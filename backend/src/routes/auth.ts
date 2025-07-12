@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { PasswordUtils, JWTUtils, PasswordValidator, EmailValidator } from '../utils/auth';
 import { authenticateToken } from '../middleware/auth';
+import SubscriptionService from '../services/subscriptionService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -78,6 +79,14 @@ router.post('/register', async (req, res) => {
       userId: user.id,
       email: user.email
     });
+
+    // Create free subscription for new user
+    try {
+      await SubscriptionService.createFreeSubscription(user.id, user.email);
+    } catch (subscriptionError) {
+      console.error('Error creating free subscription:', subscriptionError);
+      // Don't fail the registration if subscription creation fails
+    }
 
     res.status(201).json({
       message: 'User registered successfully',

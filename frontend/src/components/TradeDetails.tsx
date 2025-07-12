@@ -12,6 +12,7 @@ import { useDateFormat } from '../contexts/DateFormatContext';
 import { sanitizeForJSON } from '../utils/jsonSanitizer';
 import { useSettings } from '../contexts/SettingsContext';
 import { tradesApi } from '../api/trades';
+import { subscriptionsApi } from '../api/subscriptions';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:3002/api';
@@ -567,6 +568,8 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [canUseRichText, setCanUseRichText] = useState(true);
 
   // FULL-FEATURED Tiptap editor with FIXED extensions
   const editor = useEditor({
@@ -605,6 +608,45 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
       }
     },
   });
+
+  // Load subscription status to check rich text eligibility
+  useEffect(() => {
+    const loadSubscriptionStatus = async () => {
+      try {
+        const status = await subscriptionsApi.getStatus();
+        setSubscriptionStatus(status);
+        
+        // Check if user can use rich text features
+        // Free users: only first 10 trades get rich text notes
+        if (status.plan === 'free') {
+          // Get user's trade count to determine eligibility
+          const response = await fetch('http://localhost:3002/api/trades', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+          });
+          const trades = await response.json();
+          
+          // Sort trades by creation date and check if current trade is in first 10
+          const sortedTrades = trades.sort((a: any, b: any) => 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          const currentTradeIndex = sortedTrades.findIndex((t: any) => t.id === tradeId);
+          
+          setCanUseRichText(currentTradeIndex < 10 && currentTradeIndex !== -1);
+        } else {
+          // Paid users get full rich text access
+          setCanUseRichText(true);
+        }
+      } catch (error) {
+        console.error('Error loading subscription status:', error);
+        // Default to allowing rich text if subscription check fails
+        setCanUseRichText(true);
+      }
+    };
+
+    loadSubscriptionStatus();
+  }, [tradeId]);
 
   // Load trade data from API
   useEffect(() => {
@@ -1148,44 +1190,85 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         </div>
       </div>
 
-      {/* Notes Section with FULL-FEATURED Tiptap Editor */}
+      {/* Notes Section - Rich Text or Simple based on subscription */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
         <div className="p-6 border-b border-gray-700">
-          <h2 className="text-xl font-semibold text-white">Trade Journal & Notes</h2>
-          <p className="text-gray-400 text-sm mt-1">
-            Document your thoughts, analysis, and lessons learned. Add images by dragging & dropping, pasting, or using the 📷 button.
-          </p>
-        </div>
-        
-        <div className="bg-gray-800"> {/* Changed from bg-white to match dark theme */}
-          {isDragging && (
-            <div className="absolute inset-0 bg-blue-100/80 flex items-center justify-center z-10 pointer-events-none">
-              <div className="text-center">
-                <div className="text-4xl mb-2">📷</div>
-                <p className="text-blue-600 font-semibold">Drop your image here</p>
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Trade Journal & Notes</h2>
+              <p className="text-gray-400 text-sm mt-1">
+                {canUseRichText 
+                  ? "Document your thoughts, analysis, and lessons learned. Add images by dragging & dropping, pasting, or using the 📷 button."
+                  : "Document your thoughts and analysis. Upgrade to unlock rich text formatting and image support."
+                }
+              </p>
             </div>
-          )}
-          <EditorToolbar editor={editor} />
-          <EditorContent 
-            editor={editor} 
-            className="min-h-[400px] max-h-[600px] overflow-y-auto"
-          />
-        </div>
-        
-        <div className="p-4 bg-gray-800 border-t border-gray-700">
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <div className="flex items-center space-x-6">
-              <span>💡 Format text with the toolbar above</span>
-              <span>📷 Add images by drag & drop, paste, or click Image button</span>
-              <span>🔧 Click images to select, then drag the blue circle to resize</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>Auto-save enabled</span>
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            </div>
+            {!canUseRichText && subscriptionStatus?.plan === 'free' && (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('openSubscriptionModal'))}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                Upgrade for Rich Text
+              </button>
+            )}
           </div>
         </div>
+        
+        {canUseRichText ? (
+          // Rich Text Editor for eligible users
+          <div className="bg-gray-800">
+            {isDragging && (
+              <div className="absolute inset-0 bg-blue-100/80 flex items-center justify-center z-10 pointer-events-none">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">📷</div>
+                  <p className="text-blue-600 font-semibold">Drop your image here</p>
+                </div>
+              </div>
+            )}
+            <EditorToolbar editor={editor} />
+            <EditorContent 
+              editor={editor} 
+              className="min-h-[400px] max-h-[600px] overflow-y-auto"
+            />
+            <div className="p-4 bg-gray-800 border-t border-gray-700">
+              <div className="flex items-center justify-between text-sm text-gray-400">
+                <div className="flex items-center space-x-6">
+                  <span>💡 Format text with the toolbar above</span>
+                  <span>📷 Add images by drag & drop, paste, or click Image button</span>
+                  <span>🔧 Click images to select, then drag the blue circle to resize</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>Auto-save enabled</span>
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Simple Text Area for users without rich text access
+          <div className="p-6">
+            <textarea
+              value={trade?.notes ? trade.notes.replace(/<[^>]*>/g, '') : ''} // Strip HTML tags for plain text display
+              onChange={(e) => {
+                if (trade) {
+                  triggerAutoSave(e.target.value);
+                }
+              }}
+              placeholder="Enter your trade notes here... (Plain text only - upgrade for rich formatting and images)"
+              className="w-full h-64 p-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="flex items-center justify-between text-sm text-gray-400 mt-4">
+              <div className="flex items-center space-x-4">
+                <span>📝 Plain text notes</span>
+                <span>✨ Upgrade for rich formatting, images, and more</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span>Auto-save enabled</span>
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       <style>{`

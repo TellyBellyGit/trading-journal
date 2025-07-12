@@ -9,6 +9,9 @@ import TradingCalendar from './TradingCalendar';
 import Notes from './Notes';
 import Settings from './Settings';
 import DatePickerModal from './DatePickerModal';
+import SubscriptionPage from '../pages/SubscriptionPage';
+import { subscriptionsApi } from '../api/subscriptions';
+import { useEffect } from 'react';
 
 // API configuration
 const API_BASE_URL = 'http://localhost:3002/api';
@@ -18,9 +21,66 @@ const API_BASE_URL = 'http://localhost:3002/api';
 const TradingApp: React.FC = () => {
   const [currentView, setCurrentView] = useState('original');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [upgradeNotification, setUpgradeNotification] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    trigger: string;
+  } | null>(null);
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
+  };
+
+  // Monitor subscription status and show strategic upgrade prompts
+  useEffect(() => {
+    const checkSubscriptionStatus = async () => {
+      try {
+        const status = await subscriptionsApi.getStatus();
+        
+        if (status.plan === 'free' && status.maxTrades > 0) {
+          // Strategic upgrade moment 1: 80% usage
+          if (status.usagePercentage >= 80 && status.usagePercentage < 95) {
+            const tradesRemaining = status.maxTrades - status.tradeCount;
+            setUpgradeNotification({
+              show: true,
+              title: 'Approaching Your Monthly Limit',
+              message: `You have ${tradesRemaining} trades remaining this month. Upgrade to Pro for unlimited trades, rich text notes, and advanced analytics.`,
+              trigger: '80_percent'
+            });
+          }
+          // Strategic upgrade moment 2: Grace period
+          else if (status.tradeCount > status.maxTrades) {
+            const graceUsed = status.tradeCount - status.maxTrades;
+            setUpgradeNotification({
+              show: true,
+              title: 'Using Grace Period',
+              message: `You've used ${graceUsed} of your 2 grace trades. Upgrade now to continue adding trades next month without limits.`,
+              trigger: 'grace_period'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+      }
+    };
+
+    // Check status when component mounts and every 30 seconds
+    checkSubscriptionStatus();
+    const interval = setInterval(checkSubscriptionStatus, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle dismissing upgrade notification
+  const handleDismissUpgrade = () => {
+    setUpgradeNotification(null);
+  };
+
+  // Handle upgrade action
+  const handleUpgrade = () => {
+    setCurrentView('subscription');
+    setUpgradeNotification(null);
   };
 
   const handleNewTrade = () => {
@@ -133,6 +193,8 @@ const TradingApp: React.FC = () => {
         return <Notes />;
       case 'settings':
         return <Settings />;
+      case 'subscription':
+        return <SubscriptionPage />;
       default:
         return <Dashboard onViewChange={handleViewChange} onExportToAI={handleExportToAI} />;
     }
@@ -154,6 +216,8 @@ const TradingApp: React.FC = () => {
         return 'Trading Calendar';
       case 'settings':
         return 'Settings';
+      case 'subscription':
+        return 'Subscription Management';
       default:
         return 'Trading Dashboard';
     }
@@ -175,6 +239,8 @@ const TradingApp: React.FC = () => {
         return 'Visual calendar view of your trading activity';
       case 'settings':
         return 'Configure your trading journal preferences and risk management';
+      case 'subscription':
+        return 'Manage your subscription, billing, and plan upgrades';
       default:
         return 'Real-time trading performance';
     }
@@ -191,6 +257,44 @@ const TradingApp: React.FC = () => {
       >
         {renderContent()}
       </AppShell>
+      
+      {/* Strategic Upgrade Notification */}
+      {upgradeNotification?.show && (
+        <div className="fixed top-4 right-4 max-w-md z-50">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 border border-blue-500 rounded-lg p-4 shadow-lg">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="text-white font-semibold text-sm mb-2">
+                  ✨ {upgradeNotification.title}
+                </h3>
+                <p className="text-blue-100 text-xs mb-3">
+                  {upgradeNotification.message}
+                </p>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleUpgrade}
+                    className="px-3 py-1.5 bg-white text-blue-600 rounded text-xs font-medium hover:bg-blue-50 transition-colors"
+                  >
+                    Upgrade Now
+                  </button>
+                  <button
+                    onClick={handleDismissUpgrade}
+                    className="px-3 py-1.5 bg-blue-700 text-white rounded text-xs hover:bg-blue-800 transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleDismissUpgrade}
+                className="ml-2 text-blue-200 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Date Picker Modal */}
       <DatePickerModal

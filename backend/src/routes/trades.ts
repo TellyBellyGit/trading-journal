@@ -5,6 +5,7 @@ import multer from 'multer';
 import { DuplicateDetection } from '../utils/duplicateDetection';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import SubscriptionService from '../services/subscriptionService';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -435,6 +436,33 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // 🔥 ENHANCED: Create trade with broker
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user!.userId;
+
+    // Enhanced subscription limits with grace period
+    const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(userId);
+    if (subscriptionStatus && subscriptionStatus.maxTrades > 0) {
+      const GRACE_TRADES = 2;
+      const effectiveLimit = subscriptionStatus.maxTrades + GRACE_TRADES;
+      
+      // Check if user has exceeded grace limit
+      if (subscriptionStatus.tradeCount >= effectiveLimit) {
+        return res.status(403).json({
+          error: 'Subscription limit reached',
+          message: `You've reached your monthly limit of ${subscriptionStatus.maxTrades} trades plus ${GRACE_TRADES} grace trades.`,
+          remaining: 0,
+          gracePeriodExhausted: true
+        });
+      }
+      
+      // Check if user is entering grace period
+      const isEnteringGrace = subscriptionStatus.tradeCount >= subscriptionStatus.maxTrades;
+      if (isEnteringGrace) {
+        const tradesInGrace = subscriptionStatus.tradeCount - subscriptionStatus.maxTrades + 1;
+        const remainingGrace = GRACE_TRADES - tradesInGrace;
+        // Continue with trade creation but will return grace period info in response
+      }
+    }
+
     const {
       symbol,
       direction,
@@ -503,7 +531,36 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     });
 
-    res.status(201).json(trade);
+    // Increment subscription trade count
+    try {
+      await SubscriptionService.incrementTradeCount(userId);
+    } catch (subscriptionError) {
+      console.error('Error incrementing trade count:', subscriptionError);
+      // Don't fail the trade creation if subscription update fails
+    }
+
+    // Check if user is now in grace period after adding trade
+    let gracePeriodInfo = null;
+    if (subscriptionStatus && subscriptionStatus.maxTrades > 0) {
+      const newTradeCount = subscriptionStatus.tradeCount + 1;
+      if (newTradeCount > subscriptionStatus.maxTrades) {
+        const tradesInGrace = newTradeCount - subscriptionStatus.maxTrades;
+        const remainingGrace = Math.max(0, 2 - tradesInGrace); // 2 is GRACE_TRADES
+        gracePeriodInfo = {
+          inGracePeriod: true,
+          tradesInGrace,
+          remainingGrace,
+          message: remainingGrace > 0 
+            ? `You've used ${tradesInGrace} of your 2 grace trades. ${remainingGrace} grace trades remaining.`
+            : `You've used all your grace trades. Upgrade to continue adding trades next month.`
+        };
+      }
+    }
+
+    res.status(201).json({
+      ...trade,
+      gracePeriod: gracePeriodInfo
+    });
   } catch (error) {
     console.error('Error creating trade:', error);
     res.status(500).json({ error: 'Failed to create trade' });
@@ -1083,6 +1140,7 @@ router.post('/import/process', authenticateToken, upload.single('csvFile'), asyn
 // POST /api/trades/import/save - Save unique trades to database
 router.post('/import/save', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user!.userId;
     const { trades, brokerId } = req.body;
 
     if (!trades || !Array.isArray(trades)) {
@@ -1104,6 +1162,60 @@ router.post('/import/save', authenticateToken, async (req, res) => {
           duplicatesRejected: duplicateResult.duplicateCount
         }
       });
+    }
+
+    // Check subscription limits for bulk import
+    const canAddTrade = await SubscriptionService.canAddTrade(userId);
+    if (!canAddTrade.canAdd) {
+      return res.status(403).json({
+        error: 'Subscription limit reached',
+        message: `Cannot import ${duplicateResult.uniqueTrades.length} trades. ${canAddTrade.reason}`,
+        remaining: canAddTrade.remaining || 0,
+        attemptedToImport: duplicateResult.uniqueTrades.length
+      });
+    }
+
+    // Enhanced subscription limits for free accounts
+    const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(userId);
+    if (subscriptionStatus && subscriptionStatus.maxTrades > 0) {
+      const remainingTrades = subscriptionStatus.maxTrades - subscriptionStatus.tradeCount;
+      const tradesToImport = duplicateResult.uniqueTrades.length;
+      
+      // 1. Import batch limit: max 5 trades per import for free users
+      const MAX_IMPORT_BATCH_FREE = 5;
+      if (tradesToImport > MAX_IMPORT_BATCH_FREE) {
+        return res.status(403).json({
+          error: 'Import batch limit exceeded',
+          message: `Free accounts can import up to ${MAX_IMPORT_BATCH_FREE} trades per batch. You're trying to import ${tradesToImport} trades.`,
+          remaining: remainingTrades,
+          attemptedToImport: tradesToImport,
+          maxBatchSize: MAX_IMPORT_BATCH_FREE,
+          canImportPartial: Math.min(tradesToImport, MAX_IMPORT_BATCH_FREE, remainingTrades)
+        });
+      }
+      
+      // 2. Monthly limit check with grace period (allow 1-2 trades over limit)
+      const GRACE_TRADES = 2;
+      const effectiveLimit = subscriptionStatus.maxTrades + GRACE_TRADES;
+      const wouldExceedGraceLimit = (subscriptionStatus.tradeCount + tradesToImport) > effectiveLimit;
+      
+      if (wouldExceedGraceLimit) {
+        return res.status(403).json({
+          error: 'Import would exceed monthly limit',
+          message: `Cannot import ${tradesToImport} trades. Only ${remainingTrades} trades remaining this month.`,
+          remaining: remainingTrades,
+          attemptedToImport: tradesToImport,
+          gracePeriod: Math.max(0, effectiveLimit - subscriptionStatus.tradeCount),
+          canImportPartial: Math.max(0, remainingTrades)
+        });
+      }
+      
+      // 3. Check if user is in grace period
+      if (subscriptionStatus.tradeCount >= subscriptionStatus.maxTrades && (subscriptionStatus.tradeCount + tradesToImport) <= effectiveLimit) {
+        // User is importing within grace period - add warning
+        const tradesInGrace = (subscriptionStatus.tradeCount + tradesToImport) - subscriptionStatus.maxTrades;
+        // Continue with import but return grace period info
+      }
     }
 
     const tradesForDB = duplicateResult.uniqueTrades.map(trade => ({
@@ -1138,12 +1250,45 @@ router.post('/import/save', authenticateToken, async (req, res) => {
       data: tradesForDB
     });
 
+    // Update subscription trade count for imported trades
+    try {
+      // Increment by the number of trades imported
+      await prisma.subscription.update({
+        where: { userId },
+        data: {
+          tradeCount: {
+            increment: result.count
+          }
+        }
+      });
+    } catch (subscriptionError) {
+      console.error('Error updating trade count after import:', subscriptionError);
+      // Don't fail the import if subscription update fails
+    }
+
+    // Check if user is now in grace period after import
+    let gracePeriodInfo = null;
+    if (subscriptionStatus && subscriptionStatus.maxTrades > 0) {
+      const newTradeCount = subscriptionStatus.tradeCount + result.count;
+      if (newTradeCount > subscriptionStatus.maxTrades) {
+        const tradesInGrace = newTradeCount - subscriptionStatus.maxTrades;
+        const remainingGrace = Math.max(0, 2 - tradesInGrace); // 2 is GRACE_TRADES
+        gracePeriodInfo = {
+          inGracePeriod: true,
+          tradesInGrace,
+          remainingGrace,
+          message: `You've used ${tradesInGrace} of your 2 grace trades. Upgrade to continue adding trades next month.`
+        };
+      }
+    }
+
     res.json({
       message: `Successfully imported ${result.count} trades`,
       summary: {
         saved: result.count,
         duplicatesRejected: duplicateResult.duplicateCount
-      }
+      },
+      gracePeriod: gracePeriodInfo
     });
 
   } catch (error) {

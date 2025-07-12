@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import SubscriptionPricing from './SubscriptionPricing';
+import { subscriptionsApi } from '../api/subscriptions';
 
 const API_BASE_URL = 'http://localhost:3002/api';
 
@@ -14,6 +16,7 @@ const navigationItems = [
   { id: 'notes', label: 'Notes', icon: '📝', active: false },
   { id: 'playbook', label: 'Performance Indicators', icon: '🎯', active: false },
   { id: 'import', label: 'Import', icon: '📤', active: false },
+  { id: 'subscription', label: 'Subscription', icon: '💳', active: false },
   { id: 'settings', label: 'Settings', icon: '⚙️', active: false },
 ];
 
@@ -51,6 +54,8 @@ const AppShell: React.FC<AppShellProps> = ({
   const [showClearDataModal, setShowClearDataModal] = useState(false);
   const [clearDataInput, setClearDataInput] = useState('');
   const [clearingData, setClearingData] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const { isUSFormat, toggleDateFormat } = useDateFormat();
   const { timeDisplay, toggleTimeDisplay } = useSettings();
   const { user, logout } = useAuth();
@@ -125,6 +130,54 @@ const AppShell: React.FC<AppShellProps> = ({
     }
   };
 
+  // Load subscription status
+  const loadSubscriptionStatus = useCallback(async () => {
+    try {
+      console.log('📊 Loading subscription status...');
+      const status = await subscriptionsApi.getStatus();
+      console.log('📊 Subscription status loaded:', status);
+      setSubscriptionStatus(status);
+    } catch (error) {
+      console.error('Error loading subscription status:', error);
+    }
+  }, []);
+
+  // Load subscription status on component mount and listen for updates
+  useEffect(() => {
+    if (user) {
+      loadSubscriptionStatus();
+    }
+  }, [user]);
+
+  // Listen for subscription status updates (e.g., after reset)
+  useEffect(() => {
+    const handleSubscriptionUpdate = () => {
+      console.log('🔄 Subscription update event received, reloading status...');
+      loadSubscriptionStatus();
+    };
+
+    window.addEventListener('subscriptionUpdated', handleSubscriptionUpdate);
+    
+    return () => {
+      window.removeEventListener('subscriptionUpdated', handleSubscriptionUpdate);
+    };
+  }, [loadSubscriptionStatus]);
+
+  // Listen for subscription modal events from other components
+  useEffect(() => {
+    const handleOpenSubscriptionModal = () => {
+      if (onViewChange) {
+        onViewChange('subscription');
+      }
+    };
+
+    window.addEventListener('openSubscriptionModal', handleOpenSubscriptionModal);
+    
+    return () => {
+      window.removeEventListener('openSubscriptionModal', handleOpenSubscriptionModal);
+    };
+  }, [onViewChange]);
+
   // Handle dropdown menu actions
   const handleUserAction = (action: string) => {
     setUserDropdownOpen(false);
@@ -142,8 +195,9 @@ const AppShell: React.FC<AppShellProps> = ({
         alert('Account Settings - Coming Soon');
         break;
       case 'billing':
-        // Placeholder - will be implemented later
-        alert('Billing & Subscription - Coming Soon');
+        if (onViewChange) {
+          onViewChange('subscription');
+        }
         break;
       case 'delete-account':
         // Placeholder - will be implemented later
@@ -167,6 +221,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'notes': return 'notes';
       case 'import': return 'import';
       case 'performance-indicators': return 'playbook';
+      case 'subscription': return 'subscription';
       case 'settings': return 'settings';
       default: return 'dashboard';
     }
@@ -182,6 +237,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'notes': return 'notes';
       case 'import': return 'import';
       case 'playbook': return 'performance-indicators';
+      case 'subscription': return 'subscription';
       case 'settings': return 'settings';
       default: return 'original';
     }
@@ -320,6 +376,28 @@ const AppShell: React.FC<AppShellProps> = ({
               + Add Trade
             </button>
             
+            {/* Usage Indicator for Free Users */}
+            {subscriptionStatus && subscriptionStatus.plan === 'free' && subscriptionStatus.maxTrades > 0 && subscriptionStatus.usagePercentage >= 50 && (
+              <div className="flex items-center space-x-2 px-3 py-1 bg-gray-800 border border-gray-600 rounded-lg">
+                <span className="text-xs text-gray-400">Trades:</span>
+                <span className={`text-xs font-medium ${
+                  subscriptionStatus.usagePercentage >= 90 ? 'text-red-400' :
+                  subscriptionStatus.usagePercentage >= 70 ? 'text-yellow-400' : 'text-gray-300'
+                }`}>
+                  {subscriptionStatus.tradeCount}/{subscriptionStatus.maxTrades}
+                </span>
+                <div className="w-12 bg-gray-600 rounded-full h-1">
+                  <div 
+                    className={`h-1 rounded-full transition-all ${
+                      subscriptionStatus.usagePercentage >= 90 ? 'bg-red-500' :
+                      subscriptionStatus.usagePercentage >= 70 ? 'bg-yellow-500' : 'bg-blue-500'
+                    }`}
+                    style={{ width: `${Math.min(subscriptionStatus.usagePercentage, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Notifications */}
             <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
               <span className="text-lg">🔔</span>
@@ -362,6 +440,57 @@ const AppShell: React.FC<AppShellProps> = ({
                       <p className="text-xs text-gray-400">
                         {user?.email || 'Active Session'}
                       </p>
+                      
+                      {/* Subscription Status */}
+                      {subscriptionStatus && (
+                        <div className="mt-2 p-2 bg-gray-700 rounded text-xs">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-gray-300 capitalize">{subscriptionStatus.plan} Plan</span>
+                            {subscriptionStatus.plan !== 'free' && (
+                              <span className={`px-2 py-0.5 rounded text-xs ${
+                                subscriptionStatus.status === 'active' ? 'bg-green-600' : 'bg-yellow-600'
+                              }`}>
+                                {subscriptionStatus.status}
+                              </span>
+                            )}
+                          </div>
+                          {subscriptionStatus.maxTrades > 0 && (
+                            <div>
+                              <div className="flex justify-between text-gray-400 mb-1">
+                                <span>Trades this month</span>
+                                <span className={`${
+                                  subscriptionStatus.usagePercentage >= 90 ? 'text-red-400 font-medium' :
+                                  subscriptionStatus.usagePercentage >= 70 ? 'text-yellow-400 font-medium' : 'text-gray-400'
+                                }`}>
+                                  {subscriptionStatus.tradeCount}/{subscriptionStatus.maxTrades}
+                                  {subscriptionStatus.tradeCount > subscriptionStatus.maxTrades && (
+                                    <span className="text-red-400"> (Grace: {subscriptionStatus.tradeCount - subscriptionStatus.maxTrades}/2)</span>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-600 rounded-full h-1.5">
+                                <div 
+                                  className={`h-1.5 rounded-full transition-all ${
+                                    subscriptionStatus.usagePercentage >= 90 ? 'bg-red-500' :
+                                    subscriptionStatus.usagePercentage >= 70 ? 'bg-yellow-500' : 'bg-blue-500'
+                                  }`}
+                                  style={{ width: `${Math.min(subscriptionStatus.usagePercentage, 100)}%` }}
+                                />
+                              </div>
+                              {subscriptionStatus.usagePercentage >= 80 && (
+                                <div className={`text-xs mt-1 ${
+                                  subscriptionStatus.usagePercentage >= 90 ? 'text-red-400' : 'text-yellow-400'
+                                }`}>
+                                  {subscriptionStatus.usagePercentage >= 90 
+                                    ? '⚠️ Almost at limit!' 
+                                    : '📊 Approaching limit'
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Menu Items */}
@@ -491,6 +620,21 @@ const AppShell: React.FC<AppShellProps> = ({
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Pricing Modal */}
+      {showSubscriptionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-xl max-w-6xl w-full max-h-screen overflow-y-auto">
+            <SubscriptionPricing
+              currentPlan={subscriptionStatus?.plan || 'free'}
+              onClose={() => {
+                setShowSubscriptionModal(false);
+                loadSubscriptionStatus(); // Refresh subscription status
+              }}
+            />
           </div>
         </div>
       )}

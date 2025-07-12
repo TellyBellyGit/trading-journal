@@ -14,7 +14,9 @@ import brokersRouter from './routes/brokers';
 import importRoutes from './routes/import';
 import notesRouter from './routes/notes';
 import authRouter from './routes/auth';
-import adminRouter from './routes/admin'; 
+import adminRouter from './routes/admin';
+import subscriptionsRouter from './routes/subscriptions';
+import webhooksRouter from './routes/webhooks'; 
 
 dotenv.config();
 
@@ -24,6 +26,10 @@ const PORT = process.env.PORT || 3002; // 🔥 CHANGED: Use 3002 instead of 3001
 
 // Middleware
 app.use(cors());
+
+// Special webhook route (needs raw body for Stripe signature verification)
+app.use('/api/webhooks', webhooksRouter);
+
 //app.use(express.json());
 
 // Enhanced JSON parsing with better error handling
@@ -62,7 +68,8 @@ app.use('/api/trades', tradesRouter);
 app.use('/api/brokers', brokersRouter);
 app.use('/api/trades/import', importRoutes);
 app.use('/api/notes', notesRouter);
-app.use('/api/admin', adminRouter); 
+app.use('/api/admin', adminRouter);
+app.use('/api/subscriptions', subscriptionsRouter); 
 
 // Health check
 app.get('/api/health', (req, res) => {

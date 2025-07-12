@@ -25,9 +25,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   // Relations
-  brokers   Broker[]
-  trades    Trade[]
-  notes     Note[]
+  brokers      Broker[]
+  trades       Trade[]
+  notes        Note[]
+  subscription Subscription?
 }
 
 // 4. Define the Broker model
@@ -119,4 +120,36 @@ model Note {
   @@index([userId])                    // Critical: user-scoped queries
   @@index([userId, createdAt])         // User notes by date
   @@index([category])                  // Notes by category
+}
+
+// 7. Define the Subscription model
+model Subscription {
+  id                Int      @id @default(autoincrement())
+  // Stripe identifiers
+  stripeCustomerId     String   @unique  // Stripe customer ID
+  stripeSubscriptionId String?  @unique  // Stripe subscription ID (null for free tier)
+  stripePriceId        String?           // Stripe price ID for current plan
+  // Subscription details
+  plan                 String   @default("free")  // "free", "pro", "premium"
+  status               String   @default("active") // "active", "canceled", "past_due", "incomplete"
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean  @default(false)
+  // Usage tracking
+  tradeCount           Int      @default(0)       // Current period trade count
+  periodStartDate      DateTime @default(now())   // When current usage period started
+  // Limits based on plan
+  maxTrades            Int      @default(25)      // Max trades per month for current plan
+  // User relationship
+  userId               Int      @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Performance indexes
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@index([plan])
+  @@index([status])
 }

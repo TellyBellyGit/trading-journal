@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { tradesApi } from '../api/trades'; // Add this import
+import { subscriptionsApi } from '../api/subscriptions';
 
 // Types for import process
 interface ImportSummary {
@@ -9,6 +10,12 @@ interface ImportSummary {
   shortTrades: number;
   openLongs: number;
   openShorts: number;
+  saved?: number;
+  partialImport?: {
+    imported: number;
+    remaining: number;
+    message: string;
+  };
 }
 
 interface ParsedTrade {
@@ -29,9 +36,18 @@ interface ParsedTrade {
 }
 
 interface ImportError {
-  type: 'file' | 'processing' | 'validation' | 'database';
+  type: 'file' | 'processing' | 'validation' | 'database' | 'subscription';
   message: string;
   details?: string[];
+  canImportPartial?: number;
+  maxBatchSize?: number;
+  gracePeriod?: number;
+}
+
+interface ImportSuccess {
+  type: 'success';
+  message: string;
+  details: string[];
 }
 
 type ImportStep = 'upload' | 'processing' | 'preview' | 'complete';
@@ -42,6 +58,7 @@ const ImportTrades: React.FC = () => {
   const [parsedTrades, setParsedTrades] = useState<ParsedTrade[]>([]);
   const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
   const [error, setError] = useState<ImportError | null>(null);
+  const [success, setSuccess] = useState<ImportSuccess | null>(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -147,11 +164,41 @@ const ImportTrades: React.FC = () => {
       const result = await tradesApi.import.save(parsedTrades, 1); //instead of brokerId 
 
       if (result.error) {
-        setError({
-          type: 'database',
-          message: result.error.message,
-          details: result.error.details
-        });
+        // Enhanced error handling for subscription limits
+        if (result.error === 'Import batch limit exceeded') {
+          setError({
+            type: 'subscription',
+            message: 'Import Batch Limit Exceeded',
+            details: [
+              result.message || 'Free accounts can import up to 5 trades per batch.',
+              `You tried to import: ${result.attemptedToImport || parsedTrades.length} trades`,
+              `You can import up to: ${result.canImportPartial || 0} trades in this batch`,
+              'Upgrade to Pro for unlimited batch imports.'
+            ],
+            canImportPartial: result.canImportPartial,
+            maxBatchSize: result.maxBatchSize
+          });
+        } else if (result.error === 'Import would exceed monthly limit' || result.error === 'Subscription limit reached') {
+          setError({
+            type: 'subscription',
+            message: 'Monthly Limit Reached',
+            details: [
+              result.message || 'Your current plan does not allow importing this many trades.',
+              `Attempted to import: ${result.attemptedToImport || parsedTrades.length} trades`,
+              `Remaining this month: ${result.remaining || 0} trades`,
+              result.gracePeriod ? `Grace period available: ${result.gracePeriod} trades` : null,
+              'Upgrade to Pro or Premium for unlimited trades.'
+            ].filter(Boolean),
+            canImportPartial: result.canImportPartial,
+            gracePeriod: result.gracePeriod
+          });
+        } else {
+          setError({
+            type: 'database',
+            message: result.error.message || result.error,
+            details: result.error.details || [result.message]
+          });
+        }
         return;
       }
 
@@ -186,6 +233,98 @@ const ImportTrades: React.FC = () => {
     setShowAllDuplicates(false);
     setShowAllLongs(false);
     setShowAllShorts(false);
+  };
+
+  // Handle partial import when batch limit is exceeded
+  const handlePartialImport = async () => {
+    if (!error || !error.canImportPartial) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Import only the allowed number of trades
+      const tradesToImport = parsedTrades.slice(0, error.canImportPartial);
+      console.log(`🚀 Attempting partial import of ${tradesToImport.length} trades out of ${parsedTrades.length} total`);
+      
+      const result = await tradesApi.import.save(tradesToImport, 1);
+      console.log('✅ Partial import result:', result);
+      
+      if (result.error) {
+        setError({
+          type: 'database',
+          message: result.error.message || result.error,
+          details: result.error.details || [result.message]
+        });
+        return;
+      }
+      
+      // Update state to show remaining trades
+      const remainingTrades = parsedTrades.slice(error.canImportPartial);
+      setParsedTrades(remainingTrades);
+      
+      // Get updated subscription status to show remaining monthly trades
+      let monthlyRemaining = 0;
+      try {
+        const updatedStatus = await subscriptionsApi.getStatus();
+        monthlyRemaining = updatedStatus.maxTrades - updatedStatus.tradeCount;
+      } catch (statusError) {
+        console.error('Error fetching updated subscription status:', statusError);
+        // Continue with success message even if we can't get updated status
+        monthlyRemaining = 0;
+      }
+      
+      // Show success message and update summary
+      setImportSummary({
+        ...importSummary,
+        saved: (importSummary?.saved || 0) + result.summary.saved,
+        partialImport: {
+          imported: result.summary.saved,
+          remaining: remainingTrades.length,
+          message: `Successfully imported ${result.summary.saved} trades. ${monthlyRemaining} trades remaining this month. ${remainingTrades.length} trades from your file were not imported.`
+        }
+      });
+      
+      // Show success notification
+      setSuccess({
+        type: 'success',
+        message: 'Partial Import Successful',
+        details: [
+          `✅ Imported: ${result.summary.saved} trades`,
+          `📊 Remaining this month: ${monthlyRemaining} trades`,
+          `📁 Not imported: ${remainingTrades.length} trades from your file`,
+          remainingTrades.length > 0 ? 'You can import more trades next month or upgrade for unlimited imports.' : ''
+        ].filter(Boolean)
+      });
+      
+      // Clear any existing errors
+      setError(null);
+      
+      // Notify other components that subscription status has been updated
+      window.dispatchEvent(new CustomEvent('subscriptionUpdated'));
+      
+      if (remainingTrades.length === 0) {
+        setCurrentStep('complete');
+      }
+      
+    } catch (error) {
+      console.error('Partial import error:', error);
+      setError({
+        type: 'database',
+        message: 'Failed to import trades',
+        details: ['Please try again or contact support']
+      });
+      // Clear any success message if there was an actual error
+      setSuccess(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle upgrade action
+  const handleUpgrade = () => {
+    // Dispatch event to open subscription modal
+    window.dispatchEvent(new CustomEvent('openSubscriptionModal'));
   };
 
   // Format currency
@@ -723,29 +862,97 @@ const ImportTrades: React.FC = () => {
     </div>
   );
 
+  // Render success state
+  const renderSuccess = () => {
+    if (!success) return null;
+
+    return (
+      <div className="border rounded-lg p-6 bg-green-900/20 border-green-700">
+        <div className="flex items-center space-x-2 mb-2">
+          <span className="text-xl text-green-400">✅</span>
+          <h4 className="font-medium text-lg text-green-400">
+            {success.message}
+          </h4>
+        </div>
+        <ul className="text-sm space-y-1 mb-4 text-green-300">
+          {success.details.map((detail, index) => (
+            <li key={index}>• {detail}</li>
+          ))}
+        </ul>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setSuccess(null)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Render error state
   const renderError = () => {
     if (!error) return null;
 
+    const isSubscriptionError = error.type === 'subscription';
+
     return (
-      <div className="bg-red-900/20 border border-red-700 rounded-lg p-6">
+      <div className={`border rounded-lg p-6 ${
+        isSubscriptionError 
+          ? 'bg-yellow-900/20 border-yellow-700' 
+          : 'bg-red-900/20 border-red-700'
+      }`}>
         <div className="flex items-center space-x-2 mb-2">
-          <span className="text-red-400 text-xl">⚠️</span>
-          <h4 className="text-red-400 font-medium text-lg">{error.message}</h4>
+          <span className={`text-xl ${isSubscriptionError ? 'text-yellow-400' : 'text-red-400'}`}>
+            {isSubscriptionError ? '⚡' : '⚠️'}
+          </span>
+          <h4 className={`font-medium text-lg ${isSubscriptionError ? 'text-yellow-400' : 'text-red-400'}`}>
+            {error.message}
+          </h4>
         </div>
         {error.details && (
-          <ul className="text-red-300 text-sm space-y-1 mb-4">
+          <ul className={`text-sm space-y-1 mb-4 ${isSubscriptionError ? 'text-yellow-300' : 'text-red-300'}`}>
             {error.details.map((detail, index) => (
               <li key={index}>• {detail}</li>
             ))}
           </ul>
         )}
-        <button
-          onClick={() => setError(null)}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-        >
-          Dismiss
-        </button>
+        <div className="flex space-x-3">
+          {isSubscriptionError ? (
+            <>
+              {/* Show partial import option if available */}
+              {error.canImportPartial && error.canImportPartial > 0 && (
+                <button
+                  onClick={handlePartialImport}
+                  disabled={loading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  {loading ? 'Importing...' : `Import ${error.canImportPartial} Trades`}
+                </button>
+              )}
+              <button
+                onClick={handleUpgrade}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                Upgrade Plan
+              </button>
+              <button
+                onClick={() => setError(null)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+              >
+                Dismiss
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setError(null)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
       </div>
     );
   };
@@ -781,6 +988,9 @@ const ImportTrades: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Success Display */}
+      {success && renderSuccess()}
 
       {/* Error Display */}
       {error && renderError()}

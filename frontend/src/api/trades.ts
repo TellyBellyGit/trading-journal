@@ -211,10 +211,16 @@ import: {
       
       return response.data;
     } catch (error) {
-      console.error('❌ Import save error:', error);
       if (axios.isAxiosError(error) && error.response) {
+        // Don't log scary errors for expected subscription limits
+        if (error.response.status === 403 && error.response.data?.error?.includes('limit')) {
+          console.log('📊 Subscription limit reached:', error.response.data.message);
+        } else {
+          console.error('❌ Import save error:', error);
+        }
         return error.response.data;
       }
+      console.error('❌ Import save error:', error);
       throw error;
     }
   }
