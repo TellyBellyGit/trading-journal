@@ -8,6 +8,7 @@ interface User {
   lastName: string;
   timezone: string;
   isActive: boolean;
+  isAdmin: boolean;
   createdAt: string;
   updatedAt?: string;
 }

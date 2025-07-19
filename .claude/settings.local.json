@@ -29,7 +29,8 @@
       "Bash(git add:*)",
       "Bash(mv:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(PGPASSWORD=trading_password psql -h localhost -p 5432 -U trading_user -d trading_journal_dev -c \"SELECT id, email, \"\"isAdmin\"\" FROM \"\"User\"\" LIMIT 5;\")"
     ],
     "deny": []
   }

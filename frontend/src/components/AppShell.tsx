@@ -8,7 +8,7 @@ import { subscriptionsApi } from '../api/subscriptions';
 const API_BASE_URL = 'http://localhost:3002/api';
 
 // Navigation items matching your PyQt5 app
-const navigationItems = [
+const getNavigationItems = (isAdmin: boolean = false) => [
   { id: 'dashboard', label: 'Dashboard', icon: '📊', active: true },
   { id: 'trades', label: 'All Trades', icon: '📈', active: false },
   { id: 'analytics', label: 'Analytics', icon: '📊', active: false },
@@ -18,6 +18,7 @@ const navigationItems = [
   { id: 'import', label: 'Import', icon: '📤', active: false },
   { id: 'subscription', label: 'Subscription', icon: '💳', active: false },
   { id: 'settings', label: 'Settings', icon: '⚙️', active: false },
+  ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '👑', active: false }] : []),
 ];
 
 interface AppShellProps {
@@ -223,6 +224,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'performance-indicators': return 'playbook';
       case 'subscription': return 'subscription';
       case 'settings': return 'settings';
+      case 'admin': return 'admin';
       default: return 'dashboard';
     }
   };
@@ -239,11 +241,13 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'playbook': return 'performance-indicators';
       case 'subscription': return 'subscription';
       case 'settings': return 'settings';
+      case 'admin': return 'admin';
       default: return 'original';
     }
   };
 
   const activeNav = getNavIdFromView(currentView);
+  const navigationItems = getNavigationItems(user?.isAdmin || false);
 
   return (
     <div className="h-screen bg-gray-900 flex overflow-hidden">

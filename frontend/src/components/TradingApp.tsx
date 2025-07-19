@@ -10,6 +10,7 @@ import Notes from './Notes';
 import Settings from './Settings';
 import DatePickerModal from './DatePickerModal';
 import SubscriptionPage from '../pages/SubscriptionPage';
+import Admin from '../pages/Admin';
 import { subscriptionsApi } from '../api/subscriptions';
 import { useEffect } from 'react';
 
@@ -195,6 +196,8 @@ const TradingApp: React.FC = () => {
         return <Settings />;
       case 'subscription':
         return <SubscriptionPage />;
+      case 'admin':
+        return <Admin />;
       default:
         return <Dashboard onViewChange={handleViewChange} onExportToAI={handleExportToAI} />;
     }
@@ -218,6 +221,8 @@ const TradingApp: React.FC = () => {
         return 'Settings';
       case 'subscription':
         return 'Subscription Management';
+      case 'admin':
+        return 'Admin Dashboard';
       default:
         return 'Trading Dashboard';
     }
@@ -241,6 +246,8 @@ const TradingApp: React.FC = () => {
         return 'Configure your trading journal preferences and risk management';
       case 'subscription':
         return 'Manage your subscription, billing, and plan upgrades';
+      case 'admin':
+        return 'System administration and user management';
       default:
         return 'Real-time trading performance';
     }

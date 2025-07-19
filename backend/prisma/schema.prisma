@@ -19,6 +19,7 @@ model User {
   firstName String
   lastName  String
   isActive  Boolean  @default(true)
+  isAdmin   Boolean  @default(false)
   // Optional user preferences
   timezone  String?  @default("UTC")
   // Timestamps
