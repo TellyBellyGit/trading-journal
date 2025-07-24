@@ -9,7 +9,7 @@ import { StripeProvider } from "./contexts/StripeContext";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+  //<React.StrictMode>
     <StripeProvider>
       <SettingsProvider>
         <DateFormatProvider>
@@ -17,5 +17,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </DateFormatProvider>
       </SettingsProvider>
     </StripeProvider>
-  </React.StrictMode>
+  //</React.StrictMode>
 );

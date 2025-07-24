@@ -1,6 +1,19 @@
 // backend/src/utils/logger.ts
 import { Request } from 'express';
 
+// Extend Express Request type to include user (if not already extended)
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: number;
+        email: string;
+        isAdmin?: boolean;
+      };
+    }
+  }
+}
+
 interface LogContext {
   userId?: number;
   email?: string;

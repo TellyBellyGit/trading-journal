@@ -20,6 +20,17 @@ model User {
   lastName  String
   isActive  Boolean  @default(true)
   isAdmin   Boolean  @default(false)
+  // Email verification fields
+  emailVerified           Boolean   @default(false)
+  emailVerificationToken  String?
+  emailVerificationExpires DateTime?
+  // Password reset fields
+  passwordResetToken      String?
+  passwordResetExpires    DateTime?
+  // Security fields
+  loginAttempts           Int       @default(0)
+  lockedUntil            DateTime?
+  lastLogin              DateTime?
   // Optional user preferences
   timezone  String?  @default("UTC")
   // Timestamps
@@ -30,6 +41,7 @@ model User {
   trades       Trade[]
   notes        Note[]
   subscription Subscription?
+  loginHistory LoginHistory[]
 }
 
 // 4. Define the Broker model
@@ -153,4 +165,26 @@ model Subscription {
   @@index([stripeSubscriptionId])
   @@index([plan])
   @@index([status])
+}
+
+// 8. Define the LoginHistory model
+model LoginHistory {
+  id        Int      @id @default(autoincrement())
+  // User relationship
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Login attempt details
+  ipAddress String?
+  userAgent String?
+  success   Boolean  @default(false)
+  // Additional context
+  failureReason String? // "invalid_password", "account_locked", "unverified_email", etc.
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Performance indexes
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([success])
+  @@index([ipAddress])
 }

@@ -30,34 +30,8 @@ app.use(cors());
 // Special webhook route (needs raw body for Stripe signature verification)
 app.use('/api/webhooks', webhooksRouter);
 
-//app.use(express.json());
-
-// Enhanced JSON parsing with better error handling
-app.use(express.json({ 
-  limit: '10mb',
-  verify: (req: any, res: any, buf: Buffer) => {
-    try {
-      // Attempt to parse the buffer to validate JSON format
-      const body = buf.toString('utf8');
-      
-      // Check for common Unicode surrogate issues that break JSON parsing
-      if (body.includes('\uD800') || body.includes('\uDFFF')) {
-        console.warn('Request contains potentially problematic Unicode surrogates');
-      }
-      
-      JSON.parse(body);
-    } catch (error: any) {
-      console.error('JSON parsing validation failed:', {
-        error: error.message,
-        url: req.url,
-        method: req.method,
-        contentLength: buf.length,
-        contentPreview: buf.toString('utf8').substring(0, 200) + '...'
-      });
-      throw new Error(`Invalid JSON format: ${error.message}`);
-    }
-  }
-}));
+// Standard JSON parsing
+app.use(express.json({ limit: '10mb' }));
 
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

@@ -19,7 +19,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: RegisterData) => Promise<void>;
+  register: (userData: RegisterData) => Promise<{ error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -113,7 +113,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Register function
-  const register = async (userData: RegisterData): Promise<void> => {
+  const register = async (userData: RegisterData): Promise<{ error?: string }> => {
     try {
       setIsLoading(true);
       
@@ -127,21 +127,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
+        return { error: errorData.error || 'Registration failed' };
       }
 
-      const data: AuthResponse = await response.json();
+      const data = await response.json();
       
-      // Store auth data
-      setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
-      localStorage.setItem('refresh_token', data.refreshToken);
+      // Registration successful - no auto-login, user needs to verify email
+      // Don't set user/token data here as registration requires email verification
+      return {}; // Success - no error
       
     } catch (error) {
       console.error('Registration error:', error);
-      throw error;
+      return { error: error instanceof Error ? error.message : 'Registration failed' };
     } finally {
       setIsLoading(false);
     }

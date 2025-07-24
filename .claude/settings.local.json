@@ -30,7 +30,17 @@
       "Bash(mv:*)",
       "Bash(npx tsc:*)",
       "Bash(npx ts-node:*)",
-      "Bash(PGPASSWORD=trading_password psql -h localhost -p 5432 -U trading_user -d trading_journal_dev -c \"SELECT id, email, \"\"isAdmin\"\" FROM \"\"User\"\" LIMIT 5;\")"
+      "Bash(PGPASSWORD=trading_password psql -h localhost -p 5432 -U trading_user -d trading_journal_dev -c \"SELECT id, email, \"\"isAdmin\"\" FROM \"\"User\"\" LIMIT 5;\")",
+      "Bash(PGPASSWORD=trading_password psql -h localhost -p 5432 -U trading_user -d trading_journal_dev -c \"SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = ''User'' AND column_name IN (''emailVerified'', ''emailVerificationToken'', ''passwordResetToken'', ''loginAttempts'', ''lockedUntil'', ''lastLogin'') ORDER BY column_name;\")",
+      "Bash(PGPASSWORD=trading_password psql -h localhost -p 5432 -U trading_user -d trading_journal_dev -c \"UPDATE \"\"User\"\" SET \"\"emailVerified\"\" = true WHERE \"\"createdAt\"\" < NOW();\")",
+      "Bash(PGPASSWORD=trading_password psql -h localhost -p 5432 -U trading_user -d trading_journal_dev -c \"SELECT id, email, \"\"emailVerified\"\", \"\"loginAttempts\"\" FROM \"\"User\"\";\")",
+      "Bash(PORT=3003 node dist/index.js)",
+      "Bash(npm uninstall:*)",
+      "Bash(mkdir:*)",
+      "Bash(git init:*)",
+      "Bash(git commit:*)",
+      "Bash(git -C tradrdash-web add .)",
+      "Bash(git -C tradrdash-web commit -m \"Initial commit: TradrDash marketing website\")"
     ],
     "deny": []
   }

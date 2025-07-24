@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth, RegisterData } from '../../contexts/AuthContext';
 
 interface RegisterProps {
   onSwitchToLogin?: () => void;
@@ -7,207 +6,149 @@ interface RegisterProps {
 }
 
 const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
-  const { register, isLoading } = useAuth();
-  const [formData, setFormData] = useState<RegisterData>({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    timezone: 'UTC'
-  });
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [emailMessage, setEmailMessage] = useState('');
+  const [emailMessageColor, setEmailMessageColor] = useState('');
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Handle input changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const checkEmailExists = async (email: string) => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) return;
     
-    if (name === 'confirmPassword') {
-      setConfirmPassword(value);
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  // Validate password strength
-  const validatePassword = (password: string): string[] => {
-    const errors: string[] = [];
-    
-    if (password.length < 8) {
-      errors.push('Password must be at least 8 characters long');
-    }
-    if (!/(?=.*[a-z])/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-    if (!/(?=.*[A-Z])/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-    if (!/(?=.*\d)/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
-    if (!/(?=.*[@$!%*?&])/.test(password)) {
-      errors.push('Password must contain at least one special character (@$!%*?&)');
-    }
-    
-    return errors;
-  };
-
-  // Validate form
-  const validateForm = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
-    // First name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-
-    // Last name validation
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    }
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else {
-      const passwordErrors = validatePassword(formData.password);
-      if (passwordErrors.length > 0) {
-        newErrors.password = passwordErrors[0]; // Show first error
+    try {
+      const response = await fetch('http://localhost:3002/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.available) {
+          setEmailMessage('E-mail OK');
+          setEmailMessageColor('text-green-400');
+        } else {
+          setEmailMessage('');
+          setEmailMessageColor('text-red-400');
+        }
+      } else {
+        setEmailMessage('E-mail OK');
+        setEmailMessageColor('text-green-400');
       }
+    } catch (error) {
+      setEmailMessage('E-mail OK');
+      setEmailMessageColor('text-green-400');
     }
-
-    // Confirm password validation
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailBlur = () => {
+    checkEmailExists(email);
+  };
+
+  const handlePasswordFocus = () => {
+    console.log('Password field focused - calling email check');
+    checkEmailExists(email);
+    setShowPasswordRequirements(true);
+  };
+
+  const handleConfirmPasswordFocus = () => {
+    setShowPasswordRequirements(false);
+  };
+
+  const checkPasswordRequirements = (password: string) => {
+    const requirements = [
+      { text: 'contains at least 8 characters', met: password.length >= 8 },
+      { text: 'contains both lower (a-z) and upper case letters (A-Z)', met: /[a-z]/.test(password) && /[A-Z]/.test(password) },
+      { text: 'contains at least one number (0-9) or a symbol', met: /[\d\W]/.test(password) },
+      { text: 'does not contain your email address', met: !email || !password.toLowerCase().includes(email.toLowerCase().split('@')[0]) },
+      { text: 'is not commonly used', met: !['password', '123456', 'qwerty', 'abc123', 'password123'].includes(password.toLowerCase()) }
+    ];
+    return requirements;
+  };
+
+  const passwordRequirements = checkPasswordRequirements(password);
+  const metRequirements = passwordRequirements.filter(req => req.met).length;
+  const isPasswordValid = metRequirements === 5;
+  const passwordsMatch = password === confirmPassword && confirmPassword !== '';
+  const canSubmit = firstName && lastName && email && isPasswordValid && passwordsMatch;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!canSubmit) {
+      console.log('Form validation failed - cannot submit');
       return;
     }
-
-    try {
-      await register(formData);
-      onSuccess?.();
-    } catch (error) {
-      setErrors({
-        submit: error instanceof Error ? error.message : 'Registration failed'
-      });
-    }
-  };
-
-  // Get password strength indicator
-  const getPasswordStrength = (password: string) => {
-    const errors = validatePassword(password);
-    const strength = 5 - errors.length;
     
-    if (strength <= 1) return { label: 'Weak', color: 'bg-red-500', width: '20%' };
-    if (strength <= 2) return { label: 'Fair', color: 'bg-yellow-500', width: '40%' };
-    if (strength <= 3) return { label: 'Good', color: 'bg-blue-500', width: '60%' };
-    if (strength <= 4) return { label: 'Strong', color: 'bg-green-500', width: '80%' };
-    return { label: 'Very Strong', color: 'bg-green-600', width: '100%' };
+    console.log('Form is valid - ready to submit:', {
+      firstName,
+      lastName, 
+      email,
+      passwordValid: isPasswordValid,
+      passwordsMatch
+    });
+    // Submit button does nothing else as requested
   };
-
-  const passwordStrength = formData.password ? getPasswordStrength(formData.password) : null;
-
-  // Timezone options (simplified list)
-  const timezones = [
-    'UTC',
-    'America/New_York',
-    'America/Chicago',
-    'America/Denver',
-    'America/Los_Angeles',
-    'Europe/London',
-    'Europe/Paris',
-    'Asia/Tokyo',
-    'Australia/Sydney'
-  ];
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4 py-8">
-      <div className="max-w-md w-full bg-gray-800 rounded-lg shadow-xl p-8">
+      <style>{`
+        .password-no-reveal::-ms-reveal,
+        .password-no-reveal::-ms-clear {
+          display: none;
+        }
+        .password-no-reveal::-webkit-credentials-auto-fill-button {
+          display: none !important;
+        }
+        .password-no-reveal::-webkit-textfield-decoration-container {
+          display: none !important;
+        }
+      `}</style>
+      <div className="max-w-4xl w-full bg-gray-800 rounded-lg shadow-xl p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
-          <p className="text-gray-400">Join our trading journal community</p>
         </div>
 
         {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">
-                First Name
-              </label>
-              <input
-                type="text"
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                  errors.firstName ? 'border-red-500' : 'border-gray-600'
-                }`}
-                placeholder="John"
-                disabled={isLoading}
-              />
-              {errors.firstName && (
-                <p className="mt-1 text-sm text-red-400">{errors.firstName}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-2">
-                Last Name
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                  errors.lastName ? 'border-red-500' : 'border-gray-600'
-                }`}
-                placeholder="Doe"
-                disabled={isLoading}
-              />
-              {errors.lastName && (
-                <p className="mt-1 text-sm text-red-400">{errors.lastName}</p>
-              )}
-            </div>
+        <div className="flex gap-8">
+          <form onSubmit={handleSubmit} className="space-y-6 max-w-md border border-gray-600 rounded-lg p-8">
+          {/* First Name */}
+          <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">
+              First Name
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="First Name"
+            />
           </div>
 
-          {/* Email Field */}
+          {/* Last Name */}
+          <div>
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-2">
+              Last Name
+            </label>
+            <input
+              type="text"
+              id="lastName"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Last Name"
+            />
+          </div>
+
+          {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
               Email Address
@@ -215,144 +156,166 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
             <input
               type="email"
               id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                errors.email ? 'border-red-500' : 'border-gray-600'
-              }`}
-              placeholder="john@example.com"
-              disabled={isLoading}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={handleEmailBlur}
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Email Address"
             />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-400">{errors.email}</p>
+            {emailMessage && (
+              <p className={`mt-1 text-sm ${emailMessageColor}`}>{emailMessage}</p>
+            )}
+            {emailMessageColor === 'text-red-400' && !emailMessage && (
+              <p className="mt-1 text-sm text-red-400">
+                An account with this email address already exists.{' '}
+                <button
+                  onClick={onSwitchToLogin}
+                  className="text-blue-400 hover:text-blue-300 underline focus:outline-none"
+                >
+                  Sign in
+                </button>
+              </p>
             )}
           </div>
 
-          {/* Timezone Field */}
-          <div>
-            <label htmlFor="timezone" className="block text-sm font-medium text-gray-300 mb-2">
-              Timezone
-            </label>
-            <select
-              id="timezone"
-              name="timezone"
-              value={formData.timezone}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-              disabled={isLoading}
-            >
-              {timezones.map(tz => (
-                <option key={tz} value={tz}>{tz}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Password Field */}
-          <div>
+          {/* Password */}
+          <div className="relative">
             <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-              Password
+              Create a password that:
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors pr-12 ${
-                  errors.password ? 'border-red-500' : 'border-gray-600'
-                }`}
-                placeholder="Create a strong password"
-                disabled={isLoading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={handlePasswordFocus}
+                className="w-full px-4 py-3 pr-12 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 password-no-reveal"
+                placeholder="Password"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none"
-                disabled={isLoading}
-              >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
+              {password && (
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none text-sm"
+                >
+                  {showPassword ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              )}
             </div>
-            
-            {/* Password Strength Indicator */}
-            {formData.password && passwordStrength && (
-              <div className="mt-2">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-gray-400">Password Strength</span>
-                  <span className={`text-xs font-medium ${
-                    passwordStrength.label === 'Weak' ? 'text-red-400' :
-                    passwordStrength.label === 'Fair' ? 'text-yellow-400' :
-                    passwordStrength.label === 'Good' ? 'text-blue-400' :
-                    'text-green-400'
-                  }`}>
-                    {passwordStrength.label}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-600 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
-                    style={{ width: passwordStrength.width }}
-                  ></div>
-                </div>
-              </div>
-            )}
-            
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-400">{errors.password}</p>
+            {password && !isPasswordValid && (
+              <p className="mt-1 text-sm text-red-400">Password invalid - must meet all 5 requirements</p>
             )}
           </div>
 
-          {/* Confirm Password Field */}
+          {/* Confirm Password */}
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
               Confirm Password
             </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={confirmPassword}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                errors.confirmPassword ? 'border-red-500' : 'border-gray-600'
-              }`}
-              placeholder="Confirm your password"
-              disabled={isLoading}
-            />
-            {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={handleConfirmPasswordFocus}
+                className={`w-full px-4 py-3 pr-12 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 password-no-reveal ${
+                  confirmPassword && !passwordsMatch ? 'border-red-500' : 'border-gray-600'
+                }`}
+                placeholder="Confirm Password"
+              />
+              {confirmPassword && (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none text-sm"
+                >
+                  {showConfirmPassword ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              )}
+            </div>
+            {confirmPassword && !passwordsMatch && (
+              <p className="mt-1 text-sm text-red-400">Passwords do not match</p>
             )}
           </div>
 
-          {/* Submit Error */}
-          {errors.submit && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-              <p className="text-sm text-red-400">{errors.submit}</p>
-            </div>
-          )}
+          {/* Terms Agreement */}
+          <div className="text-sm text-gray-400">
+            By clicking Create account, I agree that I have read and accepted the{' '}
+            <a href="#" className="text-blue-400 hover:text-blue-300 underline">
+              Terms of Use
+            </a>{' '}
+            and{' '}
+            <a href="#" className="text-blue-400 hover:text-blue-300 underline">
+              Privacy Policy
+            </a>.
+          </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={!canSubmit}
             className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-              isLoading
-                ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800'
+              canSubmit
+                ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                : 'bg-gray-600 cursor-not-allowed'
             }`}
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Creating Account...
-              </div>
-            ) : (
-              'Create Account'
-            )}
+            Create Account
           </button>
         </form>
+
+          {/* Right Column with Border */}
+          <div className="flex-1 border border-gray-600 rounded-lg p-5 ml-8">
+            {/* Spacer to align with password field */}
+            <div className="space-y-6">
+              {/* First Name spacer */}
+              <div className="h-20"></div>
+              {/* Last Name spacer */}
+              <div className="h-20"></div>
+              {/* Email spacer */}
+              <div className="h-20"></div>
+              
+              {/* Requirements Box - Aligned with Password */}
+              {password && showPasswordRequirements && (
+                <div className="w-80 p-4 bg-gray-800 h-fit">
+                  <p className="text-sm text-gray-300 mb-2 font-medium">
+                    Password strength: {metRequirements} of 5 requirements met
+                  </p>
+                  <ul className="space-y-1">
+                    {passwordRequirements.map((req, index) => (
+                      <li key={index} className={`text-xs flex items-center ${req.met ? 'text-green-400' : 'text-red-400'}`}>
+                        <span className="mr-2">{req.met ? '✓' : '✗'}</span>
+                        {req.text}: {req.met ? 'met' : 'not met'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Switch to Login */}
         {onSwitchToLogin && (
@@ -362,7 +325,6 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
               <button
                 onClick={onSwitchToLogin}
                 className="text-blue-400 hover:text-blue-300 font-medium focus:outline-none focus:underline"
-                disabled={isLoading}
               >
                 Sign in
               </button>
@@ -370,6 +332,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
           </div>
         )}
       </div>
+
     </div>
   );
 };
