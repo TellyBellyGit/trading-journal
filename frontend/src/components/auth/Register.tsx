@@ -108,6 +108,127 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
         .password-no-reveal::-webkit-textfield-decoration-container {
           display: none !important;
         }
+        
+        /* Brand gradient classes from tradrdash marketing site */
+        .brand-gradient {
+          background: linear-gradient(to right, #2563eb, #9333ea) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+          color: transparent !important;
+          display: inline-block !important;
+          -webkit-font-smoothing: antialiased !important;
+          text-rendering: optimizeLegibility !important;
+          will-change: transform !important;
+          position: relative !important;
+          font-weight: 700 !important;
+          filter: contrast(1.2) brightness(1.15) saturate(1.1) !important;
+        }
+        
+        .brand-gradient-header {
+          background: linear-gradient(90deg, #1d4ed8, #7c3aed, #9333ea) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+          color: transparent !important;
+          display: inline-block !important;
+          -webkit-font-smoothing: antialiased !important;
+          text-rendering: optimizeLegibility !important;
+          will-change: transform !important;
+          position: relative !important;
+          font-weight: 800 !important;
+          filter: contrast(1.3) brightness(1.2) saturate(1.2) !important;
+          text-shadow: 0 0 20px rgba(147, 51, 234, 0.3) !important;
+          font-size: 1.05em !important;
+        }
+        
+        .gradient-blue-purple {
+          background: linear-gradient(to right, #3b82f6, #a855f7) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+          color: transparent !important;
+          display: inline-block !important;
+          -webkit-font-smoothing: antialiased !important;
+          text-rendering: optimizeLegibility !important;
+          will-change: transform !important;
+          position: relative !important;
+          font-weight: 600 !important;
+          filter: contrast(1.1) brightness(1.1) !important;
+        }
+        
+        .gradient-green-blue {
+          background: linear-gradient(to right, #22c55e, #3b82f6) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+          color: transparent !important;
+          display: inline-block !important;
+          -webkit-font-smoothing: antialiased !important;
+          text-rendering: optimizeLegibility !important;
+          will-change: transform !important;
+          position: relative !important;
+          font-weight: 600 !important;
+          filter: contrast(1.1) brightness(1.1) !important;
+        }
+        
+        .gradient-purple-pink {
+          background: linear-gradient(to right, #a855f7, #ec4899) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+          color: transparent !important;
+          display: inline-block !important;
+          -webkit-font-smoothing: antialiased !important;
+          text-rendering: optimizeLegibility !important;
+          will-change: transform !important;
+          position: relative !important;
+          font-weight: 600 !important;
+          filter: contrast(1.1) brightness(1.1) !important;
+        }
+        
+        .gradient-orange-red {
+          background: linear-gradient(to right, #f97316, #ef4444) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+          background-clip: text !important;
+          color: transparent !important;
+          display: inline-block !important;
+          -webkit-font-smoothing: antialiased !important;
+          text-rendering: optimizeLegibility !important;
+          will-change: transform !important;
+          position: relative !important;
+          font-weight: 600 !important;
+          filter: contrast(1.1) brightness(1.1) !important;
+        }
+        
+        /* Simple image rotation animation */
+        @keyframes imageRotation {
+          0%, 24% { opacity: 1; }
+          25%, 100% { opacity: 0; }
+        }
+        
+        @keyframes imageRotation2 {
+          0%, 24% { opacity: 0; }
+          25%, 49% { opacity: 1; }
+          50%, 100% { opacity: 0; }
+        }
+        
+        @keyframes imageRotation3 {
+          0%, 49% { opacity: 0; }
+          50%, 74% { opacity: 1; }
+          75%, 100% { opacity: 0; }
+        }
+        
+        @keyframes imageRotation4 {
+          0%, 74% { opacity: 0; }
+          75%, 100% { opacity: 1; }
+        }
+        
+        .image-1 { animation: imageRotation 20s infinite; }
+        .image-2 { animation: imageRotation2 20s infinite; }
+        .image-3 { animation: imageRotation3 20s infinite; }
+        .image-4 { animation: imageRotation4 20s infinite; }
       `}</style>
       <div className="max-w-4xl w-full bg-gray-800 rounded-lg shadow-xl p-8">
         {/* Header */}
@@ -288,17 +409,70 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
 
           {/* Right Column with Border */}
           <div className="flex-1 border border-gray-600 rounded-lg p-5 ml-8">
-            {/* Spacer to align with password field */}
-            <div className="space-y-6">
-              {/* First Name spacer */}
-              <div className="h-20"></div>
-              {/* Last Name spacer */}
-              <div className="h-20"></div>
-              {/* Email spacer */}
-              <div className="h-20"></div>
-              
-              {/* Requirements Box - Aligned with Password */}
-              {password && showPasswordRequirements && (
+            {/* Brand Header */}
+            <div className="mb-8 text-center">
+              <h2 className="text-2xl font-bold mb-2">
+                <span className="text-white">tradr</span>
+                <span className="brand-gradient-header">dash</span>
+              </h2>
+              <p className="text-gray-400 text-sm">Master Your Trading Journey</p>
+            </div>
+
+            {/* Key Features */}
+            <div className="mb-12 text-center">
+              <h3 className="text-lg font-semibold text-gray-400 mb-4">Key Features:</h3>
+              <ul className="space-y-3">
+                <li className="flex items-center justify-center">
+                  <span className="text-sm font-bold brand-gradient">Rich Trade Journaling with Image Support</span>
+                </li>
+                <li className="flex items-center justify-center">
+                  <span className="text-sm font-bold gradient-orange-red">Calendar Views & Timeline Analysis</span>
+                </li>
+                <li className="flex items-center justify-center">
+                  <span className="text-sm font-bold gradient-purple-pink">AI-Powered Trade Analysis & Insights</span>
+                </li>
+                <li className="flex items-center justify-center">
+                  <span className="text-sm font-bold gradient-blue-purple">Multi-Broker CSV Import System</span>
+                </li>
+                <li className="flex items-center justify-center">
+                  <span className="text-sm font-bold gradient-green-blue">Comprehensive P&L Tracking & Analytics</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Auto-Rotating Screenshots */}
+            <div className="mb-8 text-center" style={{marginTop: '150px'}}>
+              <div className="relative w-80 h-60 mx-auto rounded-lg border border-gray-600 shadow-lg bg-gray-900 flex items-center justify-center">
+                {/* All images stacked on top of each other */}
+                <img 
+                  src="/tradelist.png" 
+                  alt="Trade List - Main Dashboard"
+                  className="absolute max-w-full max-h-full object-contain image-1"
+                />
+                <img 
+                  src="/Performance Indicators.png" 
+                  alt="Performance Analytics Dashboard"
+                  className="absolute max-w-full max-h-full object-contain image-2"
+                />
+                <img 
+                  src="/Calendar.png" 
+                  alt="Trading Calendar View"
+                  className="absolute max-w-full max-h-full object-contain image-3"
+                />
+                <img 
+                  src="/Performance.png" 
+                  alt="Detailed Performance Charts"
+                  className="absolute max-w-full max-h-full object-contain image-4"
+                />
+                
+                {/* Subtle gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-blue-500/5 pointer-events-none"></div>
+              </div>
+            </div>
+
+            {/* Password Requirements - Show when typing password */}
+            {password && showPasswordRequirements && (
+              <div className="border-t border-gray-600 pt-6">
                 <div className="w-80 p-4 bg-gray-800 h-fit">
                   <p className="text-sm text-gray-300 mb-2 font-medium">
                     Password strength: {metRequirements} of 5 requirements met
@@ -312,8 +486,8 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
                     ))}
                   </ul>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
