@@ -16,6 +16,8 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const checkEmailExists = async (email: string) => {
     if (!email || !/\S+@\S+\.\S+/.test(email)) return;
@@ -63,10 +65,10 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
   const checkPasswordRequirements = (password: string) => {
     const requirements = [
       { text: 'contains at least 8 characters', met: password.length >= 8 },
-      { text: 'contains both lower (a-z) and upper case letters (A-Z)', met: /[a-z]/.test(password) && /[A-Z]/.test(password) },
-      { text: 'contains at least one number (0-9) or a symbol', met: /[\d\W]/.test(password) },
-      { text: 'does not contain your email address', met: !email || !password.toLowerCase().includes(email.toLowerCase().split('@')[0]) },
-      { text: 'is not commonly used', met: !['password', '123456', 'qwerty', 'abc123', 'password123'].includes(password.toLowerCase()) }
+      { text: 'contains at least one lowercase letter (a-z)', met: /[a-z]/.test(password) },
+      { text: 'contains at least one uppercase letter (A-Z)', met: /[A-Z]/.test(password) },
+      { text: 'contains at least one number (0-9)', met: /\d/.test(password) },
+      { text: 'contains at least one special character (@$!%*?&)', met: /[@$!%*?&]/.test(password) }
     ];
     return requirements;
   };
@@ -77,22 +79,48 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
   const passwordsMatch = password === confirmPassword && confirmPassword !== '';
   const canSubmit = firstName && lastName && email && isPasswordValid && passwordsMatch;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!canSubmit) {
-      console.log('Form validation failed - cannot submit');
+    if (!canSubmit || isSubmitting) {
       return;
     }
     
-    console.log('Form is valid - ready to submit:', {
-      firstName,
-      lastName, 
-      email,
-      passwordValid: isPasswordValid,
-      passwordsMatch
-    });
-    // Submit button does nothing else as requested
+    setIsSubmitting(true);
+    setSubmitError('');
+    
+    try {
+      const response = await fetch('http://localhost:3002/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: email.toLowerCase(),
+          password,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Registration successful:', data);
+        
+        // Call onSuccess callback if provided
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        const errorData = await response.json();
+        setSubmitError(errorData.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setSubmitError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -393,17 +421,24 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
             </a>.
           </div>
 
+          {/* Error Message */}
+          {submitError && (
+            <div className="p-3 bg-red-900/50 border border-red-500 rounded-lg">
+              <p className="text-sm text-red-400">{submitError}</p>
+            </div>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={!canSubmit}
+            disabled={!canSubmit || isSubmitting}
             className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-              canSubmit
+              canSubmit && !isSubmitting
                 ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
                 : 'bg-gray-600 cursor-not-allowed'
             }`}
           >
-            Create Account
+            {isSubmitting ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 
@@ -441,7 +476,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
             </div>
 
             {/* Auto-Rotating Screenshots */}
-            <div className="mb-8 text-center" style={{marginTop: '150px'}}>
+            <div className="mb-8 text-center" style={{marginTop: '100px'}}>
               <div className="relative w-80 h-60 mx-auto rounded-lg border border-gray-600 shadow-lg bg-gray-900 flex items-center justify-center">
                 {/* All images stacked on top of each other */}
                 <img 
@@ -472,7 +507,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
 
             {/* Password Requirements - Show when typing password */}
             {password && showPasswordRequirements && (
-              <div className="border-t border-gray-600 pt-6">
+              <div className="border-t border-gray-600 pt-6" style={{marginTop: '95px'}}>
                 <div className="w-80 p-4 bg-gray-800 h-fit">
                   <p className="text-sm text-gray-300 mb-2 font-medium">
                     Password strength: {metRequirements} of 5 requirements met

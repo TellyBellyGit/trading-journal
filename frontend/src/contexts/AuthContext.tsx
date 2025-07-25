@@ -18,10 +18,12 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<{ error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  clearError: () => void;
 }
 
 interface RegisterData {
@@ -47,8 +49,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const API_BASE_URL = 'http://localhost:3002/api';
+
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -81,6 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setIsLoading(true);
+      setError(null); // Clear any existing errors
       
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -92,7 +97,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
+        const errorMessage = errorData.error || 'Login failed';
+        
+        // Store error in context state instead of DOM manipulation
+        setError(errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data: AuthResponse = await response.json();
@@ -188,15 +197,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Clear error function
+  const clearError = () => {
+    setError(null);
+  };
+
   const value: AuthContextType = {
     user,
     token,
     isLoading,
     isAuthenticated: !!user && !!token,
+    error,
     login,
     register,
     logout,
     refreshUser,
+    clearError,
   };
 
   return (

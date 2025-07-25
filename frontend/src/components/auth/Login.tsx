@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+
+// NOTE: I am not going to over engineer a solution
 
 interface LoginProps {
   onSwitchToRegister?: () => void;
@@ -7,12 +9,11 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
-  const { login, isLoading } = useAuth();
+  const { login, error, clearError } = useAuth(); // Get error and clearError from context
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
 
   // Handle input changes
@@ -24,47 +25,21 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
     }));
     
     // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+    if (error) {
+      clearError();
     }
-  };
-
-  // Validate form
-  const validateForm = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted with:', formData);
     
-    if (!validateForm()) {
-      return;
-    }
-
     try {
       await login(formData.email, formData.password);
       onSuccess?.();
     } catch (error) {
-      setErrors({
-        submit: error instanceof Error ? error.message : 'Login failed'
-      });
+      // Error is handled by AuthContext
     }
   };
 
@@ -90,15 +65,9 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                errors.email ? 'border-red-500' : 'border-gray-600'
-              }`}
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               placeholder="Enter your email"
-              disabled={isLoading}
             />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-400">{errors.email}</p>
-            )}
           </div>
 
           {/* Password Field */}
@@ -113,52 +82,33 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors pr-12 ${
-                  errors.password ? 'border-red-500' : 'border-gray-600'
-                }`}
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors pr-12"
                 placeholder="Enter your password"
-                disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none"
-                disabled={isLoading}
               >
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-400">{errors.password}</p>
-            )}
           </div>
-
-          {/* Submit Error */}
-          {errors.submit && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-              <p className="text-sm text-red-400">{errors.submit}</p>
-            </div>
-          )}
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
-            className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-              isLoading
-                ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800'
-            }`}
+            className="w-full py-3 px-4 rounded-lg font-medium text-white transition-colors bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Signing in...
-              </div>
-            ) : (
-              'Sign In'
-            )}
+            Sign In
           </button>
+          
+          {/* AuthContext Error Message */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
         </form>
 
         {/* Switch to Register */}
@@ -169,7 +119,6 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
               <button
                 onClick={onSwitchToRegister}
                 className="text-blue-400 hover:text-blue-300 font-medium focus:outline-none focus:underline"
-                disabled={isLoading}
               >
                 Sign up
               </button>
@@ -185,6 +134,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
             <p><strong>Password:</strong> defaultpassword123</p>
           </div>
         </div>
+
       </div>
     </div>
   );
