@@ -1,15 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Login from './Login';
 import Register from './Register';
+import ResetPassword from './ResetPassword';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
 }
 
+// Helper function to detect reset token and determine initial auth mode
+const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get('token');
+  
+  // If there's a token parameter, show reset form regardless of path
+  if (resetToken) {
+    console.log('🔑 Reset token detected:', resetToken.substring(0, 8) + '...');
+    return 'reset-password';
+  }
+  
+  return 'login';
+};
+
 const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'reset-password'>(getInitialAuthMode());
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -23,12 +38,27 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
     );
   }
 
+  // If there's a reset token, always show reset form regardless of auth status
+  if (authMode === 'reset-password') {
+    return (
+      <div>
+        <ResetPassword 
+          onBackToLogin={() => {
+            setAuthMode('login');
+            // Clear URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }}
+        />
+      </div>
+    );
+  }
+
   // If user is authenticated, show the main app
   if (isAuthenticated) {
     return <>{children}</>;
   }
 
-  // If not authenticated, show login or register form
+  // If not authenticated, show login or register form (reset is handled above)
   return (
     <div>
       {authMode === 'login' ? (

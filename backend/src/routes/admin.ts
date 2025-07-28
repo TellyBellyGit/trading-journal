@@ -49,6 +49,8 @@ router.get('/users', requireAdmin, async (req, res) => {
           lastName: true,
           isActive: true,
           isAdmin: true,
+          emailVerified: true,
+          lastLogin: true,
           timezone: true,
           createdAt: true,
           updatedAt: true,
@@ -405,6 +407,160 @@ router.get('/user-stats', requireAdmin, async (req, res) => {
     console.error('Error fetching user stats:', error);
     res.status(500).json({ 
       error: 'Failed to fetch user statistics',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 🔥 NEW: Toggle email verification status
+router.patch('/users/:id/email-verification', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { emailVerified } = req.body;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    if (typeof emailVerified !== 'boolean') {
+      return res.status(400).json({ error: 'emailVerified must be a boolean' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        emailVerified,
+        // Clear verification token if marking as verified
+        ...(emailVerified && {
+          emailVerificationToken: null,
+          emailVerificationExpires: null
+        })
+      },
+      select: {
+        id: true,
+        email: true,
+        emailVerified: true,
+        updatedAt: true
+      }
+    });
+
+    logger.info(`Admin ${req.user?.email} toggled email verification for user ${updatedUser.email} to ${emailVerified}`, req);
+
+    res.json({
+      message: `Email verification ${emailVerified ? 'enabled' : 'disabled'} for user`,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    logger.error('Failed to toggle email verification', error, req);
+    res.status(500).json({ 
+      error: 'Failed to update email verification status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 🔥 NEW: Toggle account suspension/activation
+router.patch('/users/:id/account-status', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { isActive } = req.body;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ error: 'isActive must be a boolean' });
+    }
+
+    // Prevent admin from deactivating themselves
+    if (userId === req.user?.userId && !isActive) {
+      return res.status(400).json({ error: 'Cannot deactivate your own account' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+      select: {
+        id: true,
+        email: true,
+        isActive: true,
+        updatedAt: true
+      }
+    });
+
+    logger.info(`Admin ${req.user?.email} ${isActive ? 'activated' : 'suspended'} user account ${updatedUser.email}`, req);
+
+    res.json({
+      message: `User account ${isActive ? 'activated' : 'suspended'} successfully`,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    logger.error('Failed to toggle account status', error, req);
+    res.status(500).json({ 
+      error: 'Failed to update account status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 🔥 NEW: Manual password reset (generate reset token)
+router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Generate reset token
+    const crypto = await import('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordResetToken: hashedToken,
+        passwordResetExpires: resetExpires
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true
+      }
+    });
+
+    logger.info(`Admin ${req.user?.email} generated password reset token for user ${updatedUser.email}`, req);
+
+    // 🔍 DEBUG: Include debug info in response for testing
+    res.json({
+      message: 'Password reset token generated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: `${updatedUser.firstName} ${updatedUser.lastName}`
+      },
+      resetToken, // Only for testing - remove in production
+      resetLink: `${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${resetToken}`,
+      expiresAt: resetExpires,
+      debug: {
+        rawToken: resetToken.substring(0, 8) + '...',
+        hashedToken: hashedToken.substring(0, 8) + '...',
+        expiresAt: resetExpires.toISOString(),
+        userId,
+        tokenStoredInDatabase: true
+      }
+    });
+
+  } catch (error) {
+    logger.error('Failed to generate password reset token', error, req);
+    res.status(500).json({ 
+      error: 'Failed to generate password reset token',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

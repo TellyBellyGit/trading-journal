@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+
+interface ResetPasswordProps {
+  onBackToLogin?: () => void;
+}
 
 interface ResetPasswordState {
   token: string | null;
@@ -19,10 +22,15 @@ interface ResetPasswordState {
   showConfirmPassword: boolean;
 }
 
-const ResetPassword: React.FC = () => {
-  const [searchParams] = useSearchParams();
+const ResetPassword: React.FC<ResetPasswordProps> = ({ onBackToLogin }) => {
+  // Get token from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  
+  console.log('🔄 ResetPassword component loaded with token:', token ? token.substring(0, 8) + '...' : 'null');
+  
   const [state, setState] = useState<ResetPasswordState>({
-    token: searchParams.get('token'),
+    token,
     newPassword: '',
     confirmPassword: '',
     loading: false,
@@ -48,8 +56,12 @@ const ResetPassword: React.FC = () => {
   }, [state.token]);
 
   const validateToken = async (token: string) => {
+    console.log('🚀 CALLING API: validate-reset-token with token:', token.substring(0, 8) + '...');
+    
     try {
-      const response = await fetch(`/api/auth/validate-reset-token/${token}`);
+      const response = await fetch(`http://localhost:3002/api/auth/validate-reset-token/${token}`);
+      console.log('📡 API RETURNED STATUS:', response.status, response.ok ? 'OK' : 'ERROR');
+      
       const data = await response.json();
 
       if (response.ok && data.valid) {
@@ -64,6 +76,11 @@ const ResetPassword: React.FC = () => {
           }
         }));
       } else {
+        // 🔍 DEBUG: Log debug info from backend
+        if (data.debug) {
+          console.log('🔍 BACKEND DEBUG INFO:', data.debug);
+        }
+        
         setState(prev => ({ 
           ...prev, 
           validating: false, 
@@ -122,7 +139,7 @@ const ResetPassword: React.FC = () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await fetch('http://localhost:3002/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,6 +153,7 @@ const ResetPassword: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
+        console.log('✅ Password reset successful for user:', data.user?.email);
         setState(prev => ({ ...prev, success: true, loading: false }));
       } else {
         setState(prev => ({ 
@@ -226,8 +244,7 @@ const ResetPassword: React.FC = () => {
             
             <button
               onClick={() => {
-                // TODO: Navigate to login page
-                alert('Navigate to login page');
+                onBackToLogin?.();
               }}
               className="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
@@ -257,8 +274,7 @@ const ResetPassword: React.FC = () => {
 
           <button
             onClick={() => {
-              // TODO: Navigate to login page
-              alert('Navigate to login page');
+              onBackToLogin?.();
             }}
             className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >

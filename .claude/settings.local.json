@@ -41,7 +41,8 @@
       "Bash(git commit:*)",
       "Bash(git -C tradrdash-web add .)",
       "Bash(git -C tradrdash-web commit -m \"Initial commit: TradrDash marketing website\")",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }

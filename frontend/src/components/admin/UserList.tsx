@@ -79,6 +79,59 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
     }
   };
 
+  // 🔥 NEW: Toggle email verification
+  const handleEmailVerificationToggle = async (userId: number, currentStatus: boolean) => {
+    try {
+      setUpdating(userId);
+      await adminAPI.toggleEmailVerification(userId, !currentStatus);
+      await loadUsers(); // Refresh the list
+    } catch (err) {
+      alert(`Failed to toggle email verification: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // 🔥 NEW: Toggle account status (using new API)
+  const handleAccountStatusToggle = async (userId: number, currentStatus: boolean) => {
+    try {
+      setUpdating(userId);
+      await adminAPI.toggleAccountStatus(userId, !currentStatus);
+      await loadUsers(); // Refresh the list
+    } catch (err) {
+      alert(`Failed to toggle account status: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // 🔥 NEW: Reset password
+  const handlePasswordReset = async (userId: number, userEmail: string) => {
+    if (!confirm(`Generate a password reset link for ${userEmail}?`)) {
+      return;
+    }
+
+    try {
+      setUpdating(userId);
+      const result = await adminAPI.resetPassword(userId);
+      
+      // Show the reset link in a modal or copy to clipboard
+      const message = `Password reset link generated for ${result.user.email}:\n\n${result.resetLink}\n\nToken expires: ${new Date(result.expiresAt).toLocaleString()}`;
+      
+      // Try to copy to clipboard
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(result.resetLink);
+        alert(`${message}\n\n✅ Reset link copied to clipboard!`);
+      } else {
+        alert(message);
+      }
+    } catch (err) {
+      alert(`Failed to reset password: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -144,9 +197,10 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
             <tr className="border-b border-gray-700">
               <th className="text-left text-gray-300 font-medium py-3 px-2">User</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Status</th>
+              <th className="text-left text-gray-300 font-medium py-3 px-2">Email</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Role</th>
+              <th className="text-left text-gray-300 font-medium py-3 px-2">Last Login</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Activity</th>
-              <th className="text-left text-gray-300 font-medium py-3 px-2">Joined</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Actions</th>
             </tr>
           </thead>
@@ -170,7 +224,7 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                 </td>
                 <td className="py-3 px-2">
                   <button
-                    onClick={() => handleStatusToggle(user.id, user.isActive)}
+                    onClick={() => handleAccountStatusToggle(user.id, user.isActive)}
                     disabled={updating === user.id}
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
                       user.isActive
@@ -178,7 +232,20 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                         : 'bg-red-900 text-red-300 hover:bg-red-800'
                     } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {updating === user.id ? '...' : user.isActive ? 'Active' : 'Inactive'}
+                    {updating === user.id ? '...' : user.isActive ? 'Active' : 'Suspended'}
+                  </button>
+                </td>
+                <td className="py-3 px-2">
+                  <button
+                    onClick={() => handleEmailVerificationToggle(user.id, user.emailVerified)}
+                    disabled={updating === user.id}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                      user.emailVerified
+                        ? 'bg-blue-900 text-blue-300 hover:bg-blue-800'
+                        : 'bg-orange-900 text-orange-300 hover:bg-orange-800'
+                    } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    {updating === user.id ? '...' : user.emailVerified ? '✅ Verified' : '⏳ Pending'}
                   </button>
                 </td>
                 <td className="py-3 px-2">
@@ -196,22 +263,40 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                 </td>
                 <td className="py-3 px-2">
                   <div className="text-sm text-gray-300">
+                    {user.lastLogin ? (
+                      <div className="flex flex-col">
+                        <span>{formatDate(user.lastLogin)}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(user.lastLogin).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 italic">Never</span>
+                    )}
+                  </div>
+                </td>
+                <td className="py-3 px-2">
+                  <div className="text-sm text-gray-300">
                     <div>{user._count.trades} trades</div>
                     <div className="text-gray-500">{user._count.notes} notes</div>
                   </div>
                 </td>
                 <td className="py-3 px-2">
-                  <span className="text-gray-300 text-sm">
-                    {formatDate(user.createdAt)}
-                  </span>
-                </td>
-                <td className="py-3 px-2">
-                  <button
-                    onClick={() => onUserSelect?.(user)}
-                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                  >
-                    View Details
-                  </button>
+                  <div className="flex flex-col space-y-1">
+                    <button
+                      onClick={() => handlePasswordReset(user.id, user.email)}
+                      disabled={updating === user.id}
+                      className="text-orange-400 hover:text-orange-300 text-sm transition-colors disabled:opacity-50"
+                    >
+                      Reset Password
+                    </button>
+                    <button
+                      onClick={() => onUserSelect?.(user)}
+                      className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

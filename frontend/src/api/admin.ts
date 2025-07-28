@@ -9,6 +9,8 @@ export interface AdminUser {
   lastName: string;
   isActive: boolean;
   isAdmin: boolean;
+  emailVerified: boolean;
+  lastLogin: string | null;
   timezone: string;
   createdAt: string;
   updatedAt: string;
@@ -161,6 +163,76 @@ class AdminAPI {
 
     if (!response.ok) {
       throw new Error(`Failed to fetch admin stats: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // 🔥 NEW: Toggle email verification status
+  async toggleEmailVerification(userId: number, emailVerified: boolean): Promise<{
+    message: string;
+    user: {
+      id: number;
+      email: string;
+      emailVerified: boolean;
+      updatedAt: string;
+    };
+  }> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/email-verification`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ emailVerified })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to toggle email verification: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // 🔥 NEW: Toggle account status (suspend/activate)
+  async toggleAccountStatus(userId: number, isActive: boolean): Promise<{
+    message: string;
+    user: {
+      id: number;
+      email: string;
+      isActive: boolean;
+      updatedAt: string;
+    };
+  }> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/account-status`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ isActive })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to toggle account status: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // 🔥 NEW: Generate password reset token
+  async resetPassword(userId: number): Promise<{
+    message: string;
+    user: {
+      id: number;
+      email: string;
+      name: string;
+    };
+    resetToken: string;
+    resetLink: string;
+    expiresAt: string;
+  }> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/reset-password`, {
+      method: 'POST',
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to reset password: ${response.statusText}`);
     }
 
     return response.json();

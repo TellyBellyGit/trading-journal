@@ -663,10 +663,14 @@ router.post('/reset-password', async (req, res) => {
       });
     }
 
+    // Hash the token to match stored format (admin-generated tokens are hashed)
+    const crypto = await import('crypto');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
     // Find user with valid reset token
     const user = await prisma.user.findFirst({
       where: {
-        passwordResetToken: token,
+        passwordResetToken: hashedToken,
         passwordResetExpires: {
           gt: new Date() // Token must not be expired
         }
@@ -746,20 +750,29 @@ router.post('/reset-password', async (req, res) => {
 
 // GET /api/auth/validate-reset-token - Validate password reset token
 router.get('/validate-reset-token/:token', async (req, res) => {
+  console.log('🔍 TOKEN VALIDATION - Token:', req.params.token?.substring(0, 8) + '... [v1.1]');
+  
   try {
     const { token } = req.params;
 
     if (!token) {
       return res.status(400).json({
         error: 'Reset token is required',
-        type: 'validation_error'
+        type: 'validation_error',
+        debug: { version: 'v1.1', timestamp: new Date().toISOString() }
       });
     }
+
+    // Hash the token to match stored format (admin-generated tokens are hashed)
+    const crypto = await import('crypto');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    console.log('🔍 TOKEN LOOKUP - Hashed token:', hashedToken.substring(0, 8) + '... [v1.1]');
 
     // Find user with valid reset token
     const user = await prisma.user.findFirst({
       where: {
-        passwordResetToken: token,
+        passwordResetToken: hashedToken,
         passwordResetExpires: {
           gt: new Date()
         }
@@ -770,23 +783,35 @@ router.get('/validate-reset-token/:token', async (req, res) => {
         firstName: true,
         emailVerified: true,
         isActive: true,
-        passwordResetExpires: true
+        passwordResetExpires: true,
+        passwordResetToken: true
       }
     });
 
     if (!user) {
+      console.log('🔍 TOKEN NOT FOUND - No matching user [v1.1]');
       return res.status(400).json({
         error: 'Invalid or expired reset token',
         type: 'invalid_token',
-        valid: false
+        valid: false,
+        debug: {
+          version: 'v1.1',
+          rawToken: token.substring(0, 8) + '...',
+          hashedToken: hashedToken.substring(0, 8) + '...',
+          currentTime: new Date().toISOString(),
+          userFound: false,
+          message: 'No user record found with matching passwordResetToken'
+        }
       });
     }
 
     if (!user.emailVerified || !user.isActive) {
+      console.log('🔍 ACCOUNT ISSUES - User found but account invalid [v1.1]');
       return res.status(400).json({
         error: 'Account cannot reset password at this time',
         type: 'account_error',
-        valid: false
+        valid: false,
+        debug: { version: 'v1.1', emailVerified: user.emailVerified, isActive: user.isActive }
       });
     }
 
@@ -795,20 +820,24 @@ router.get('/validate-reset-token/:token', async (req, res) => {
     const expiresAt = new Date(user.passwordResetExpires!);
     const remainingMinutes = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60));
 
+    console.log('🔍 TOKEN VALID - User found, sending success response [v1.1]');
+
     res.json({
       valid: true,
       email: user.email,
       firstName: user.firstName,
       expiresInMinutes: remainingMinutes,
-      type: 'token_valid'
+      type: 'token_valid',
+      debug: { version: 'v1.1', userId: user.id, remainingMinutes }
     });
 
   } catch (error) {
-    console.error('Validate reset token error:', error);
+    console.error('🔍 TOKEN VALIDATION ERROR [v1.1]:', error);
     res.status(500).json({
       error: 'Token validation service temporarily unavailable',
       type: 'server_error',
-      valid: false
+      valid: false,
+      debug: { version: 'v1.1', error: error instanceof Error ? error.message : 'Unknown error' }
     });
   }
 });
