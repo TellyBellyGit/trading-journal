@@ -1,77 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import TradingCalendar from './TradingCalendar';
-import { Trade } from '../types/Trade';
-
-// API configuration
-const API_BASE_URL = 'http://localhost:3002/api';
-
-interface DashboardStats {
-  totalTrades: number;
-  totalPnL: number;
-  openTrades: number;
-  closedTrades: number;
-  winRate: number;
-  avgTrade: number;
-}
-
-// API service functions
-const api = {
-  // Fetch all trades
-  getTrades: async (): Promise<Trade[]> => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/trades`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch trades');
-      const data = await response.json();
-      // Handle paginated response format
-      return data.trades || data || [];
-    } catch (error) {
-      console.error('Error fetching trades:', error);
-      return [];
-    }
-  },
-
-  // Fetch dashboard statistics
-  getStats: async (): Promise<DashboardStats | null> => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/trades/stats`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-      return null;
-    }
-  },
-
-  // Fetch recent trades (limit to last 10)
-  getRecentTrades: async (limit: number = 4): Promise<Trade[]> => {
-    try {
-      const response = await api.getTrades();
-      // Handle paginated response format
-      const trades = response || [];
-      return trades
-        .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
-        .slice(0, limit);
-    } catch (error) {
-      console.error('Error fetching recent trades:', error);
-      return [];
-    }
-  }
-};
+import { Trade, TradeStats } from '../types/Trade';
+import { tradesApi } from '../api/trades';
 
 // Calculate longest consecutive streak in recent trades
-const calculateCurrentStreak = (trades: Trade[]) => {
+const calculateCurrentStreak = (trades: { id: number; pnl: number | null; entryDate: string }[]) => {
   // Add validation to ensure trades is an array
   if (!trades || !Array.isArray(trades) || trades.length === 0) {
     return { type: 'none', count: 0, display: 'No Trades' };
@@ -163,29 +96,26 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<TradeStats | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
-  const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const [allTrades, setAllTrades] = useState<{ id: number; pnl: number | null; entryDate: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
 
-  // Load dashboard data
+  // Load dashboard data using new combined endpoint
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const [statsData, tradesData, allTradesData] = await Promise.all([
-        api.getStats(),
-        api.getRecentTrades(4),
-        api.getTrades() // Get all trades for streak calculation
-      ]);
+      // Single API call to get all dashboard data
+      const dashboardData = await tradesApi.getDashboard();
       
-      setStats(statsData);
-      setRecentTrades(tradesData);
-      setAllTrades(allTradesData);
+      setStats(dashboardData.stats);
+      setRecentTrades(dashboardData.recentTrades);
+      setAllTrades(dashboardData.allTrades);
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setError('Failed to load dashboard data');
@@ -288,9 +218,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
       icon: '🎯' 
     },
     { 
-      title: 'Current Streak', 
-      value: currentStreak.display, 
-      color: currentStreak.type === 'win' ? 'green' : currentStreak.type === 'loss' ? 'red' : 'gray', 
+      title: 'Avg Trade', 
+      value: stats?.avgPnL ? formatCurrency(stats.avgPnL) : '$0.00', 
+      color: 'orange', 
       icon: '📈' 
     }
   ];
@@ -305,33 +235,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
               <h3 className="text-gray-400 text-sm font-medium">{metric.title}</h3>
               <span className="text-2xl">{metric.icon}</span>
             </div>
-            {metric.title === 'Current Streak' ? (
-              <div className={`${
-                metric.color === 'blue' ? 'text-blue-400' :
-                metric.color === 'green' ? 'text-green-400' :
-                metric.color === 'red' ? 'text-red-400' :
-                metric.color === 'purple' ? 'text-purple-400' :
-                metric.color === 'gray' ? 'text-gray-400' :
-                'text-orange-400'
-              }`}>
-                {metric.value.split('\n').map((line, lineIndex) => (
-                  <div key={lineIndex} className={lineIndex === 0 ? 'text-sm font-medium' : 'text-sm font-bold mt-1'}>
-                    {line}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={`text-2xl font-bold ${
-                metric.color === 'blue' ? 'text-blue-400' :
-                metric.color === 'green' ? 'text-green-400' :
-                metric.color === 'red' ? 'text-red-400' :
-                metric.color === 'purple' ? 'text-purple-400' :
-                metric.color === 'gray' ? 'text-gray-400' :
-                'text-orange-400'
-              }`}>
-                {metric.value}
-              </p>
-            )}
+            <p className={`text-2xl font-bold ${
+              metric.color === 'blue' ? 'text-blue-400' :
+              metric.color === 'green' ? 'text-green-400' :
+              metric.color === 'red' ? 'text-red-400' :
+              metric.color === 'purple' ? 'text-purple-400' :
+              metric.color === 'gray' ? 'text-gray-400' :
+              'text-orange-400'
+            }`}>
+              {metric.value}
+            </p>
           </div>
         ))}
       </div>
@@ -424,12 +337,37 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg">
-          <div className="p-6 border-b border-gray-700">
-            <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+        {/* Current Streak & Quick Actions */}
+        <div className="space-y-6">
+          {/* Current Streak Card */}
+          <div className="bg-gray-800 border border-gray-700 rounded-lg">
+            <div className="p-6 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white flex items-center">
+                <span className="text-xl mr-2">📈</span>
+                Current Streak
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className={`${
+                currentStreak.type === 'win' ? 'text-green-400' :
+                currentStreak.type === 'loss' ? 'text-red-400' :
+                'text-gray-400'
+              }`}>
+                {currentStreak.display.split('\n').map((line, lineIndex) => (
+                  <div key={lineIndex} className={lineIndex === 0 ? 'text-sm font-medium' : 'text-lg font-bold mt-2'}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="p-6 space-y-4">
+
+          {/* Quick Actions */}
+          <div className="bg-gray-800 border border-gray-700 rounded-lg">
+            <div className="p-6 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+            </div>
+            <div className="p-6 space-y-4">
             {[
               { label: 'List Trades', icon: '📝', color: 'blue', action: () => onViewChange?.('all-trades') },
               { label: 'Analytics', icon: '📊', color: 'purple', action: () => onViewChange?.('analytics') },
@@ -452,6 +390,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
                 <span className="font-medium">{action.label}</span>
               </button>
             ))}
+            </div>
           </div>
         </div>
       </div>

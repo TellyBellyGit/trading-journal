@@ -173,6 +173,18 @@ export const tradesApi = {
     return response.data;
   },
 
+  // 🔥 NEW: Get dashboard data (combines stats, recent trades, and all trades for streak)
+  getDashboard: async (brokerId?: number): Promise<{
+    stats: TradeStats;
+    recentTrades: Trade[];
+    allTrades: { id: number; pnl: number | null; entryDate: string }[];
+    timestamp: string;
+  }> => {
+    const params = brokerId ? { brokerId } : {};
+    const response = await api.get('/trades/dashboard', { params });
+    return response.data;
+  },
+
   // Delete trade
   delete: async (id: number): Promise<void> => {
     await api.delete(`/trades/${id}`);

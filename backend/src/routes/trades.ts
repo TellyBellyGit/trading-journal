@@ -162,6 +162,86 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// 🔥 NEW: Dashboard endpoint - combines all dashboard data in one request
+router.get('/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const { brokerId } = req.query;
+    const whereClause: any = { userId: req.user!.userId };
+    if (brokerId) {
+      whereClause.brokerId = parseInt(brokerId as string);
+    }
+
+    // Fetch all data in parallel
+    const [
+      // Stats data
+      totalTrades,
+      totalPnL,
+      winningTrades,
+      totalCommission,
+      // Recent trades (last 4)
+      recentTrades,
+      // All trades for streak calculation
+      allTrades
+    ] = await Promise.all([
+      prisma.trade.count({ where: whereClause }),
+      prisma.trade.aggregate({ where: whereClause, _sum: { pnl: true } }),
+      prisma.trade.count({ where: { ...whereClause, pnl: { gt: 0 } } }),
+      prisma.trade.aggregate({ where: whereClause, _sum: { commission: true } }),
+      prisma.trade.findMany({
+        where: whereClause,
+        include: {
+          broker: {
+            select: {
+              id: true,
+              name: true,
+              displayName: true,
+              accountType: true
+            }
+          }
+        },
+        orderBy: { entryDate: 'desc' },
+        take: 4
+      }),
+      prisma.trade.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          pnl: true,
+          entryDate: true
+        },
+        orderBy: { entryDate: 'desc' }
+      })
+    ]);
+
+    // Calculate stats
+    const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+    const avgPnL = totalTrades > 0 ? (totalPnL._sum.pnl || 0) / totalTrades : 0;
+
+    const stats = {
+      totalTrades,
+      totalPnL: totalPnL._sum.pnl || 0,
+      netPnL: (totalPnL._sum.pnl || 0) - (totalCommission._sum.commission || 0),
+      winningTrades,
+      losingTrades: totalTrades - winningTrades,
+      winRate: Math.round(winRate * 10) / 10,
+      avgTrade: Math.round(avgPnL * 100) / 100,
+      totalCommission: totalCommission._sum.commission || 0,
+      openTrades: await prisma.trade.count({ where: { ...whereClause, status: 'Open' } }),
+      closedTrades: await prisma.trade.count({ where: { ...whereClause, status: 'Closed' } })
+    };
+
+    res.json({
+      stats,
+      recentTrades,
+      allTrades,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
 // 🔥 UPDATED: Get trades with filtering and search with pagination
 router.get('/search', authenticateToken, async (req, res) => {
   try {
