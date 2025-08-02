@@ -57,6 +57,29 @@ const UserDetail: React.FC<UserDetailProps> = ({ userId, onBack }) => {
     }
   };
 
+  const handleResetTradeCount = async () => {
+    if (!userDetail?.subscription) return;
+    
+    const confirmed = window.confirm(
+      `Reset trade count for ${userDetail.firstName} ${userDetail.lastName}?\n\n` +
+      `Current usage: ${userDetail.subscription.tradeCount}/${userDetail.subscription.maxTrades}\n` +
+      `This will reset their monthly trade count to 0.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      setUpdating(true);
+      const result = await adminAPI.resetUserTradeCount(userId);
+      await loadUserDetail(); // Refresh data
+      alert(`✅ ${result.message}\n\nPrevious count: ${result.resetData.previousCount}\nNew count: ${result.resetData.newCount}`);
+    } catch (err) {
+      alert(`Failed to reset trade count: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -184,7 +207,18 @@ const UserDetail: React.FC<UserDetailProps> = ({ userId, onBack }) => {
         {/* Subscription Info */}
         {userDetail.subscription && (
           <div className="mb-6 p-4 bg-gray-700 rounded-lg">
-            <h3 className="text-lg font-semibold text-white mb-3">Subscription</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-white">Subscription</h3>
+              {/* Reset Trade Count Button */}
+              <button
+                onClick={handleResetTradeCount}
+                disabled={updating}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors flex items-center space-x-1"
+              >
+                <span>🔄</span>
+                <span>Reset Trade Count</span>
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-gray-400 text-sm">Plan</p>

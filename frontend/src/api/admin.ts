@@ -14,10 +14,18 @@ export interface AdminUser {
   timezone: string;
   createdAt: string;
   updatedAt: string;
+  subscription?: {
+    plan: string;
+    status: string;
+    tradeCount: number;
+    maxTrades: number;
+    currentPeriodEnd: string;
+  };
   _count: {
     trades: number;
     notes: number;
     brokers: number;
+    loginHistory: number;
   };
 }
 
@@ -233,6 +241,30 @@ class AdminAPI {
 
     if (!response.ok) {
       throw new Error(`Failed to reset password: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // Reset user's trade count
+  async resetUserTradeCount(userId: number): Promise<{
+    success: boolean;
+    message: string;
+    resetData: {
+      userId: number;
+      userEmail: string;
+      previousCount: number;
+      newCount: number;
+    };
+  }> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/reset-trade-count`, {
+      method: 'POST',
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to reset trade count');
     }
 
     return response.json();

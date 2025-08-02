@@ -38,7 +38,7 @@ router.get('/users', requireAdmin, async (req, res) => {
       whereClause.isActive = false;
     }
 
-    // Get users with pagination
+    // Get users with pagination including subscription data
     const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
         where: whereClause,
@@ -54,11 +54,21 @@ router.get('/users', requireAdmin, async (req, res) => {
           timezone: true,
           createdAt: true,
           updatedAt: true,
+          subscription: {
+            select: {
+              plan: true,
+              status: true,
+              tradeCount: true,
+              maxTrades: true,
+              currentPeriodEnd: true
+            }
+          },
           _count: {
             select: {
               trades: true,
               notes: true,
-              brokers: true
+              brokers: true,
+              loginHistory: true
             }
           }
         },
@@ -268,6 +278,71 @@ router.patch('/users/:id', requireAdmin, async (req, res) => {
     logger.error('Failed to update user', error, req);
     res.status(500).json({ 
       error: 'Failed to update user',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// POST /api/admin/users/:id/reset-trade-count - Reset user's monthly trade count
+router.post('/users/:id/reset-trade-count', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Check if user exists and has a subscription
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { 
+        id: true, 
+        email: true, 
+        firstName: true, 
+        lastName: true,
+        subscription: {
+          select: {
+            tradeCount: true,
+            maxTrades: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.subscription) {
+      return res.status(400).json({ error: 'User has no subscription' });
+    }
+
+    // Reset trade count using Prisma directly
+    await prisma.subscription.update({
+      where: { userId },
+      data: {
+        tradeCount: 0,
+        periodStartDate: new Date()
+      }
+    });
+    
+    logger.info(`Admin ${req.user?.email} reset trade count for user ${user.email} (${user.firstName} ${user.lastName})`);
+    
+    res.json({ 
+      success: true, 
+      message: `Trade count reset successfully for ${user.firstName} ${user.lastName}`,
+      resetData: {
+        userId: user.id,
+        userEmail: user.email,
+        previousCount: user.subscription.tradeCount,
+        newCount: 0
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Failed to reset trade count', error, req);
+    res.status(500).json({ 
+      error: 'Failed to reset trade count',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

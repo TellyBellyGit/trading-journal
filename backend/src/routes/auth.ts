@@ -851,4 +851,63 @@ router.post('/logout', authenticateToken, (req, res) => {
   });
 });
 
+// PATCH /api/auth/profile - Update user profile (name)
+router.patch('/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const { firstName, lastName } = req.body;
+
+    // Validate input
+    if (!firstName || !lastName) {
+      return res.status(400).json({
+        error: 'Both firstName and lastName are required'
+      });
+    }
+
+    // Validate name format (basic validation)
+    if (firstName.trim().length < 1 || lastName.trim().length < 1) {
+      return res.status(400).json({
+        error: 'Names cannot be empty'
+      });
+    }
+
+    if (firstName.length > 50 || lastName.length > 50) {
+      return res.status(400).json({
+        error: 'Names cannot exceed 50 characters'
+      });
+    }
+
+    // Update user profile
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim()
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        isAdmin: true,
+        updatedAt: true
+      }
+    });
+
+    console.log(`User ${updatedUser.email} updated their profile name to: ${updatedUser.firstName} ${updatedUser.lastName}`);
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({
+      error: 'Failed to update profile',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

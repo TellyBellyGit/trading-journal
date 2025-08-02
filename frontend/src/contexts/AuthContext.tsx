@@ -23,6 +23,7 @@ interface AuthContextType {
   register: (userData: RegisterData) => Promise<{ error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  updateProfile: (firstName: string, lastName: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -197,6 +198,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Update profile function
+  const updateProfile = async (firstName: string, lastName: string): Promise<void> => {
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ firstName, lastName }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      const data = await response.json();
+      const updatedUser = data.user;
+
+      // Update local state and localStorage
+      setUser(updatedUser);
+      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Profile update failed';
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Clear error function
   const clearError = () => {
     setError(null);
@@ -212,6 +253,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     register,
     logout,
     refreshUser,
+    updateProfile,
     clearError,
   };
 

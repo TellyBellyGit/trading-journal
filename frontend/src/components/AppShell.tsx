@@ -56,10 +56,14 @@ const AppShell: React.FC<AppShellProps> = ({
   const [clearDataInput, setClearDataInput] = useState('');
   const [clearingData, setClearingData] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showProfileEditModal, setShowProfileEditModal] = useState(false);
+  const [profileFirstName, setProfileFirstName] = useState('');
+  const [profileLastName, setProfileLastName] = useState('');
+  const [updatingProfile, setUpdatingProfile] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const { isUSFormat, toggleDateFormat } = useDateFormat();
   const { timeDisplay, toggleTimeDisplay } = useSettings();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Update sidebar state when view changes, but only for notes view or if user hasn't interacted
@@ -179,6 +183,33 @@ const AppShell: React.FC<AppShellProps> = ({
     };
   }, [onViewChange]);
 
+  // Handle profile editing
+  const handleProfileEdit = () => {
+    if (user) {
+      setProfileFirstName(user.firstName);
+      setProfileLastName(user.lastName);
+      setShowProfileEditModal(true);
+    }
+  };
+
+  const handleProfileSave = async () => {
+    if (!profileFirstName.trim() || !profileLastName.trim()) {
+      alert('Both first name and last name are required');
+      return;
+    }
+
+    try {
+      setUpdatingProfile(true);
+      await updateProfile(profileFirstName.trim(), profileLastName.trim());
+      setShowProfileEditModal(false);
+      alert('Profile updated successfully!');
+    } catch (error) {
+      alert(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
+
   // Handle dropdown menu actions
   const handleUserAction = (action: string) => {
     setUserDropdownOpen(false);
@@ -188,8 +219,7 @@ const AppShell: React.FC<AppShellProps> = ({
         setShowClearDataModal(true);
         break;
       case 'profile':
-        // Placeholder - will be implemented later
-        alert('User Profile - Coming Soon');
+        handleProfileEdit();
         break;
       case 'account-settings':
         // Placeholder - will be implemented later
@@ -639,6 +669,69 @@ const AppShell: React.FC<AppShellProps> = ({
                 loadSubscriptionStatus(); // Refresh subscription status
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Profile Edit Modal */}
+      {showProfileEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              ✏️ Edit Profile
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  value={profileFirstName}
+                  onChange={(e) => setProfileFirstName(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter first name"
+                  maxLength={50}
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  value={profileLastName}
+                  onChange={(e) => setProfileLastName(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter last name"
+                  maxLength={50}
+                />
+              </div>
+            </div>
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={handleProfileSave}
+                disabled={updatingProfile || !profileFirstName.trim() || !profileLastName.trim()}
+                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
+                  updatingProfile || !profileFirstName.trim() || !profileLastName.trim()
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {updatingProfile ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowProfileEditModal(false);
+                  setProfileFirstName('');
+                  setProfileLastName('');
+                }}
+                disabled={updatingProfile}
+                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

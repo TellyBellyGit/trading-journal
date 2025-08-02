@@ -198,7 +198,7 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
               <th className="text-left text-gray-300 font-medium py-3 px-2">User</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Status</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Email</th>
-              <th className="text-left text-gray-300 font-medium py-3 px-2">Role</th>
+              <th className="text-left text-gray-300 font-medium py-3 px-2">Subscription</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Last Login</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Activity</th>
               <th className="text-left text-gray-300 font-medium py-3 px-2">Actions</th>
@@ -215,9 +215,22 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                       </span>
                     </div>
                     <div>
-                      <p className="text-white font-medium">
-                        {user.firstName} {user.lastName}
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-white font-medium">
+                          {user.firstName} {user.lastName}
+                        </p>
+                        {user.isAdmin && (
+                          <button
+                            onClick={() => handleAdminToggle(user.id, user.isAdmin)}
+                            disabled={updating === user.id}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors bg-purple-900 text-purple-300 hover:bg-purple-800 ${
+                              updating === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                            }`}
+                          >
+                            👑 Admin
+                          </button>
+                        )}
+                      </div>
                       <p className="text-gray-400 text-sm">{user.email}</p>
                     </div>
                   </div>
@@ -249,17 +262,39 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                   </button>
                 </td>
                 <td className="py-3 px-2">
-                  <button
-                    onClick={() => handleAdminToggle(user.id, user.isAdmin)}
-                    disabled={updating === user.id}
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                      user.isAdmin
-                        ? 'bg-purple-900 text-purple-300 hover:bg-purple-800'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    {updating === user.id ? '...' : user.isAdmin ? 'Admin' : 'User'}
-                  </button>
+                  {user.subscription ? (
+                    <div className="text-sm">
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                          user.subscription.plan === 'free' 
+                            ? 'bg-gray-700 text-gray-300' 
+                            : user.subscription.plan === 'pro'
+                            ? 'bg-blue-900 text-blue-300'
+                            : 'bg-purple-900 text-purple-300'
+                        }`}>
+                          {user.subscription.plan}
+                        </span>
+                        {user.subscription.plan === 'free' && (
+                          <span className={`text-xs ${
+                            user.subscription.tradeCount >= user.subscription.maxTrades * 0.8
+                              ? 'text-red-400 font-medium'
+                              : user.subscription.tradeCount >= user.subscription.maxTrades * 0.7
+                              ? 'text-yellow-400'
+                              : 'text-gray-400'
+                          }`}>
+                            {user.subscription.tradeCount}/{user.subscription.maxTrades}
+                          </span>
+                        )}
+                      </div>
+                      {user.subscription.plan === 'free' && user.subscription.tradeCount > user.subscription.maxTrades && (
+                        <div className="text-xs text-red-400 mt-1">
+                          Grace: {user.subscription.tradeCount - user.subscription.maxTrades}/2
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-red-400">No subscription</span>
+                  )}
                 </td>
                 <td className="py-3 px-2">
                   <div className="text-sm text-gray-300">
@@ -277,8 +312,18 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                 </td>
                 <td className="py-3 px-2">
                   <div className="text-sm text-gray-300">
-                    <div>{user._count.trades} trades</div>
-                    <div className="text-gray-500">{user._count.notes} notes</div>
+                    <div className="flex items-center space-x-1">
+                      <span>📈</span>
+                      <span>{user._count.trades} trades</span>
+                    </div>
+                    <div className="flex items-center space-x-1 text-gray-500">
+                      <span>📝</span>
+                      <span>{user._count.notes} notes</span>
+                    </div>
+                    <div className="flex items-center space-x-1 text-gray-500">
+                      <span>🔐</span>
+                      <span>{user._count.loginHistory} logins</span>
+                    </div>
                   </div>
                 </td>
                 <td className="py-3 px-2">
