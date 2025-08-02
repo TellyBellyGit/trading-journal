@@ -8,7 +8,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import tradesRouter from './routes/trades';
 import brokersRouter from './routes/brokers';
 import importRoutes from './routes/import';
@@ -16,12 +15,13 @@ import notesRouter from './routes/notes';
 import authRouter from './routes/auth';
 import adminRouter from './routes/admin';
 import subscriptionsRouter from './routes/subscriptions';
-import webhooksRouter from './routes/webhooks'; 
+import webhooksRouter from './routes/webhooks';
+import { JWTUtils } from './utils/auth';
+import PrismaClientSingleton, { prisma } from './lib/prisma';
 
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3002; // 🔥 CHANGED: Use 3002 instead of 3001
 
 // Middleware
@@ -79,8 +79,43 @@ app.use((error: any, req: any, res: any, next: any) => {
   });
 });
 
+// Database warmup function
+const warmupDatabase = async () => {
+  console.log('🔥 Warming up shared database connection pool...');
+  
+  try {
+    // Pre-connect to database using singleton
+    await PrismaClientSingleton.connect();
+    
+    // Run some dummy queries to initialize connection pool and caches
+    await Promise.all([
+      prisma.user.findFirst(),
+      prisma.trade.findFirst(),  
+      prisma.subscription.findFirst(),
+      prisma.broker.findFirst(),
+      prisma.note.findFirst(),
+      prisma.loginHistory.findFirst() // Add LoginHistory to warmup
+    ]);
+    
+    // Pre-load JWT verification library (dummy token will fail but loads crypto)
+    try {
+      JWTUtils.verifyToken('dummy.token.string');
+    } catch (e) {
+      // Expected to fail, just loads the JWT library
+    }
+    
+    console.log('✅ Shared database connection pool warmed up and ready!');
+  } catch (error) {
+    console.error('⚠️  Database warmup failed:', error);
+    // Don't crash the server, just log the warning
+  }
+};
+
 // Start server with error handling
-const startServer = () => {
+const startServer = async () => {
+  // Warmup database before starting server
+  await warmupDatabase();
+  
   const server = app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Trading Journal API ready`);
@@ -107,13 +142,12 @@ startServer();
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down gracefully...');
-  await prisma.$disconnect();
-  console.log('📊 Database disconnected');
+  await PrismaClientSingleton.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
-  await prisma.$disconnect();
+  await PrismaClientSingleton.disconnect();
   process.exit(0);
 });

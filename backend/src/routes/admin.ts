@@ -1,11 +1,10 @@
 // backend/src/routes/admin.ts
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { requireAdmin } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/admin/users - List all users with pagination and search
 router.get('/users', requireAdmin, async (req, res) => {

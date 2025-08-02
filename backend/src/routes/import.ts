@@ -1,12 +1,11 @@
 // 1. Create: backend/src/routes/import.ts
 import express from 'express';
 import multer from 'multer';
-import { PrismaClient } from '@prisma/client';
 import { TradeAnalyzer, RawTradeData } from '../utils/tradeAnalyzer';
 import { CSVProcessor } from '../utils/csvProcessor';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Configure multer for file uploads
 const upload = multer({

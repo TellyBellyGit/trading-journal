@@ -42,6 +42,12 @@ model User {
   notes        Note[]
   subscription Subscription?
   loginHistory LoginHistory[]
+  
+  // Performance indexes for login and user queries
+  @@index([email])                        // Critical: login performance
+  @@index([isActive])                     // User status queries
+  @@index([lastLogin])                    // Recent login queries
+  @@index([emailVerified])                // Email verification status
 }
 
 // 4. Define the Broker model
@@ -111,6 +117,7 @@ model Trade {
   @@index([userId, entryDate])         // Critical: user trades by date
   @@index([userId, status])            // User trades by status
   @@index([userId, symbol])            // User trades by symbol
+  @@index([userId, pnl])               // Critical: P&L queries and filtering
   @@index([brokerId])                  // Broker-scoped queries
   @@index([entryDate])                 // Date range queries
 }

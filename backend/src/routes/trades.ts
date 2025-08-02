@@ -1,14 +1,13 @@
 // backend/src/routes/trades.ts
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import { DuplicateDetection } from '../utils/duplicateDetection';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import SubscriptionService from '../services/subscriptionService';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Configure multer for file uploads
 const upload = multer({ 
@@ -171,22 +170,26 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
       whereClause.brokerId = parseInt(brokerId as string);
     }
 
-    // Fetch all data in parallel
+    // Fetch all dashboard data in parallel (optimized - no more ALL trades fetch)
     const [
       // Stats data
       totalTrades,
       totalPnL,
       winningTrades,
       totalCommission,
+      openTrades,
+      closedTrades,
       // Recent trades (last 4)
       recentTrades,
-      // All trades for streak calculation
-      allTrades
+      // Last 10 trades for streak calculation (much more efficient)
+      recentTradesForStreak
     ] = await Promise.all([
       prisma.trade.count({ where: whereClause }),
       prisma.trade.aggregate({ where: whereClause, _sum: { pnl: true } }),
       prisma.trade.count({ where: { ...whereClause, pnl: { gt: 0 } } }),
       prisma.trade.aggregate({ where: whereClause, _sum: { commission: true } }),
+      prisma.trade.count({ where: { ...whereClause, status: 'Open' } }),
+      prisma.trade.count({ where: { ...whereClause, status: 'Closed' } }),
       prisma.trade.findMany({
         where: whereClause,
         include: {
@@ -202,6 +205,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         orderBy: { entryDate: 'desc' },
         take: 4
       }),
+      // Only fetch last 10 trades for streak calculation (not ALL trades!)
       prisma.trade.findMany({
         where: whereClause,
         select: {
@@ -209,9 +213,53 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
           pnl: true,
           entryDate: true
         },
-        orderBy: { entryDate: 'desc' }
+        orderBy: { entryDate: 'desc' },
+        take: 10 // Only last 10 trades instead of ALL trades
       })
     ]);
+
+    // Calculate streak efficiently with only last 10 trades
+    const calculateStreak = (trades: { pnl: number | null }[]) => {
+      if (trades.length === 0) {
+        return { type: 'none', count: 0, display: 'No Closed Trades' };
+      }
+
+      let longestStreak = 1;
+      let longestStreakType = trades[0].pnl! > 0 ? 'win' : 'loss';
+      let currentStreak = 1;
+      let currentType = longestStreakType;
+
+      for (let i = 1; i < trades.length; i++) {
+        const tradeType = trades[i].pnl! > 0 ? 'win' : 'loss';
+        
+        if (tradeType === currentType) {
+          currentStreak++;
+        } else {
+          if (currentStreak > longestStreak) {
+            longestStreak = currentStreak;
+            longestStreakType = currentType;
+          }
+          currentStreak = 1;
+          currentType = tradeType;
+        }
+      }
+
+      if (currentStreak > longestStreak) {
+        longestStreak = currentStreak;
+        longestStreakType = currentType;
+      }
+
+      const wins = trades.filter(t => t.pnl! > 0).length;
+      const losses = trades.length - wins;
+      
+      return {
+        type: longestStreakType,
+        count: longestStreak,
+        display: `Last ${trades.length} trades: ${wins} Wins ${losses} Losses\n${longestStreak} consecutive ${longestStreakType}${longestStreak > 1 ? (longestStreakType === 'win' ? 's' : 'es') : ''}`
+      };
+    };
+
+    const streak = calculateStreak(recentTradesForStreak);
 
     // Calculate stats
     const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
@@ -224,16 +272,16 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
       winningTrades,
       losingTrades: totalTrades - winningTrades,
       winRate: Math.round(winRate * 10) / 10,
-      avgTrade: Math.round(avgPnL * 100) / 100,
+      avgPnL: Math.round(avgPnL * 100) / 100, // Fixed: renamed from avgTrade to avgPnL
       totalCommission: totalCommission._sum.commission || 0,
-      openTrades: await prisma.trade.count({ where: { ...whereClause, status: 'Open' } }),
-      closedTrades: await prisma.trade.count({ where: { ...whereClause, status: 'Closed' } })
+      openTrades,
+      closedTrades
     };
 
     res.json({
       stats,
       recentTrades,
-      allTrades,
+      streak, // Return calculated streak instead of ALL trades
       timestamp: new Date().toISOString()
     });
   } catch (error) {

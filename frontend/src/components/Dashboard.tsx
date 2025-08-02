@@ -3,91 +3,7 @@ import TradingCalendar from './TradingCalendar';
 import { Trade, TradeStats } from '../types/Trade';
 import { tradesApi } from '../api/trades';
 
-// Calculate longest consecutive streak in recent trades
-const calculateCurrentStreak = (trades: { id: number; pnl: number | null; entryDate: string }[]) => {
-  // Add validation to ensure trades is an array
-  if (!trades || !Array.isArray(trades) || trades.length === 0) {
-    return { type: 'none', count: 0, display: 'No Trades' };
-  }
-  
-  // Filter only closed trades with P&L data, sorted by most recent first
-  const closedTrades = trades
-    .filter(trade => {
-      return trade.pnl !== null && trade.pnl !== undefined;
-    })
-    .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
-  
-  if (closedTrades.length === 0) return { type: 'none', count: 0, display: 'No Closed Trades' };
-  
-  // Take last 10 trades for context
-  const last10Trades = closedTrades.slice(0, 10);
-  
-  // Count wins and losses in last 10
-  let wins = 0;
-  let losses = 0;
-  
-  for (const trade of last10Trades) {
-    if (trade.pnl !== undefined && trade.pnl !== null && trade.pnl > 0) {
-      wins++;
-    } else if (trade.pnl !== undefined && trade.pnl !== null) {
-      losses++;
-    }
-  }
-  
-  // Find longest consecutive streak in the last 10 trades
-  let longestStreak = 0;
-  let longestStreakType = 'win'; // 'win' or 'loss'
-  let currentStreak = 1;
-  let currentType = '';
-  
-  // Initialize with first trade
-  if (last10Trades.length > 0) {
-    const firstTradePnl = last10Trades[0].pnl;
-    if (firstTradePnl !== undefined && firstTradePnl !== null) {
-      currentType = firstTradePnl > 0 ? 'win' : 'loss';
-      longestStreak = 1;
-      longestStreakType = currentType;
-    }
-  }
-  
-  // Check each subsequent trade
-  for (let i = 1; i < last10Trades.length; i++) {
-    const tradePnl = last10Trades[i].pnl;
-    if (tradePnl === undefined || tradePnl === null) continue;
-    const tradeType = tradePnl > 0 ? 'win' : 'loss';
-    
-    if (tradeType === currentType) {
-      // Extend current streak
-      currentStreak++;
-    } else {
-      // Check if current streak is longest so far
-      if (currentStreak > longestStreak) {
-        longestStreak = currentStreak;
-        longestStreakType = currentType;
-      }
-      // Start new streak
-      currentStreak = 1;
-      currentType = tradeType;
-    }
-  }
-  
-  // Check final streak
-  if (currentStreak > longestStreak) {
-    longestStreak = currentStreak;
-    longestStreakType = currentType;
-  }
-  
-  // Format display with 2 lines
-  const line1 = `Last ${last10Trades.length} trades: ${wins} Wins ${losses} Losses`;
-  const line2 = `${longestStreak} consecutive ${longestStreakType}${longestStreak > 1 ? (longestStreakType === 'win' ? 's' : 'es') : ''}`;
-  const display = `${line1}\n${line2}`;
-  
-  return { 
-    type: longestStreakType, 
-    count: longestStreak, 
-    display: display 
-  };
-};
+// Streak calculation now handled server-side for better performance
 
 // Enhanced Dashboard Component with Real Data
 interface DashboardProps {
@@ -98,7 +14,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => {
   const [stats, setStats] = useState<TradeStats | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
-  const [allTrades, setAllTrades] = useState<{ id: number; pnl: number | null; entryDate: string }[]>([]);
+  const [streak, setStreak] = useState<{ type: string; count: number; display: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
@@ -115,7 +31,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
       
       setStats(dashboardData.stats);
       setRecentTrades(dashboardData.recentTrades);
-      setAllTrades(dashboardData.allTrades);
+      setStreak(dashboardData.streak);
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setError('Failed to load dashboard data');
@@ -193,8 +109,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
     );
   }
 
-  // Calculate current streak
-  const currentStreak = calculateCurrentStreak(allTrades);
+  // Use server-calculated streak
+  const currentStreak = streak || { type: 'none', count: 0, display: 'No Trades' };
 
   // Calculate metrics for display
   const metrics = [
@@ -345,7 +261,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
                 currentStreak.type === 'loss' ? 'text-red-400' :
                 'text-gray-400'
               }`}>
-                {currentStreak.display.split('\n').map((line, lineIndex) => (
+                {(currentStreak.display || 'No streak data').split('\n').map((line, lineIndex) => (
                   <div key={lineIndex} className={lineIndex === 0 ? 'text-sm font-medium' : 'text-lg font-bold mt-2'}>
                     {line}
                   </div>

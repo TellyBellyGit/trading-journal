@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { stripe, SUBSCRIPTION_PLANS, SubscriptionPlan, getPlanLimits } from '../config/stripe';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export class SubscriptionService {
   // Create a free subscription for new users

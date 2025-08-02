@@ -1,5 +1,4 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { PasswordUtils, JWTUtils, PasswordValidator, EmailValidator } from '../utils/auth';
 import { authenticateToken } from '../middleware/auth';
 import { loginRateLimit, emailVerificationRateLimit, passwordResetRateLimit } from '../middleware/rateLimiting';
@@ -7,9 +6,9 @@ import AuthSecurity from '../utils/authSecurity';
 import SubscriptionService from '../services/subscriptionService';
 import { emailService } from '../services/emailService';
 import { generateSecureToken } from '../utils/tokenUtils';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // POST /api/auth/check-email
 router.post('/check-email', async (req, res) => {
@@ -157,8 +156,11 @@ router.post('/register', async (req, res) => {
 
 // POST /api/auth/login - Enhanced with security features
 router.post('/login', loginRateLimit, async (req, res) => {
+  const loginStartTime = Date.now();
   const ipAddress = req.ip || req.connection.remoteAddress;
   const userAgent = req.get('User-Agent');
+
+  console.log(`🔐 [LOGIN-TIMING] Login started at ${new Date().toISOString()}`);
 
   try {
     const { email, password } = req.body;
@@ -179,7 +181,11 @@ router.post('/login', loginRateLimit, async (req, res) => {
       });
     }
 
+    const validationEndTime = Date.now();
+    console.log(`🔐 [LOGIN-TIMING] Validation completed in ${validationEndTime - loginStartTime}ms`);
+
     // Find user
+    const dbQueryStartTime = Date.now();
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
       select: {
@@ -199,16 +205,21 @@ router.post('/login', loginRateLimit, async (req, res) => {
         lastLogin: true
       }
     });
+    const dbQueryEndTime = Date.now();
+    console.log(`🔐 [LOGIN-TIMING] Database user lookup completed in ${dbQueryEndTime - dbQueryStartTime}ms`);
 
     // Always check password even if user doesn't exist (timing attack prevention)
+    const passwordStartTime = Date.now();
     const dummyPassword = '$2a$12$dummy.hash.to.prevent.timing.attacks.and.user.enumeration';
     const isValidPassword = user 
       ? await PasswordUtils.comparePassword(password, user.password)
       : await PasswordUtils.comparePassword(password, dummyPassword);
+    const passwordEndTime = Date.now();
+    console.log(`🔐 [LOGIN-TIMING] Password verification completed in ${passwordEndTime - passwordStartTime}ms`);
 
     if (!user) {
-      // Record failed attempt for non-existent user (security logging)
-      await prisma.loginHistory.create({
+      // Record failed attempt for non-existent user (async - don't wait)
+      prisma.loginHistory.create({
         data: {
           userId: 0, // Special ID for non-existent users
           ipAddress,
@@ -224,10 +235,11 @@ router.post('/login', loginRateLimit, async (req, res) => {
       });
     }
 
-    // Check if account is locked
-    const isLocked = await AuthSecurity.isAccountLocked(user.id);
+    // Check if account is locked (inline check instead of separate query)
+    const isLocked = user.lockedUntil && new Date() <= user.lockedUntil;
     if (isLocked) {
-      await prisma.loginHistory.create({
+      // Record attempt async - don't wait
+      prisma.loginHistory.create({
         data: {
           userId: user.id,
           ipAddress,
@@ -275,9 +287,13 @@ router.post('/login', loginRateLimit, async (req, res) => {
     }
 
     // Successful login - record it and reset attempts
+    const securityLoggingStartTime = Date.now();
     await AuthSecurity.recordSuccessfulLogin(user.id, ipAddress, userAgent);
+    const securityLoggingEndTime = Date.now();
+    console.log(`🔐 [LOGIN-TIMING] Security logging completed in ${securityLoggingEndTime - securityLoggingStartTime}ms`);
 
     // Generate tokens
+    const tokenStartTime = Date.now();
     const token = JWTUtils.generateToken({
       userId: user.id,
       email: user.email
@@ -287,9 +303,14 @@ router.post('/login', loginRateLimit, async (req, res) => {
       userId: user.id,
       email: user.email
     });
+    const tokenEndTime = Date.now();
+    console.log(`🔐 [LOGIN-TIMING] Token generation completed in ${tokenEndTime - tokenStartTime}ms`);
 
     // Return user data (excluding password)
     const { password: _, loginAttempts, lockedUntil, ...userWithoutPassword } = user;
+
+    const totalTime = Date.now() - loginStartTime;
+    console.log(`🔐 [LOGIN-TIMING] ✅ LOGIN COMPLETED - Total time: ${totalTime}ms`);
 
     res.json({
       message: 'Login successful',
@@ -352,6 +373,93 @@ router.get('/me', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+// GET /api/auth/initial-data - Get combined user data, subscription, and basic stats for fast loading
+router.get('/initial-data', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const userId = req.user.userId;
+
+    // Execute all queries in parallel for maximum performance
+    const [user, subscription, basicStats] = await Promise.all([
+      // User data
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          timezone: true,
+          isActive: true,
+          isAdmin: true,
+          emailVerified: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      }),
+      
+      // Subscription data
+      prisma.subscription.findUnique({
+        where: { userId },
+        select: {
+          plan: true,
+          status: true,
+          tradeCount: true,
+          maxTrades: true,
+          currentPeriodEnd: true,
+          periodStartDate: true
+        }
+      }),
+      
+      // Basic stats (minimal dashboard data)
+      prisma.trade.aggregate({
+        where: { userId },
+        _count: { id: true },
+        _sum: { pnl: true }
+      })
+    ]);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Calculate basic subscription info
+    let subscriptionData = null;
+    if (subscription) {
+      const usagePercentage = subscription.maxTrades > 0 
+        ? Math.round((subscription.tradeCount / subscription.maxTrades) * 100)
+        : 0;
+        
+      subscriptionData = {
+        ...subscription,
+        usagePercentage,
+        isOverLimit: subscription.tradeCount > subscription.maxTrades
+      };
+    }
+
+    // Basic stats
+    const statsData = {
+      totalTrades: basicStats._count.id || 0,
+      totalPnL: basicStats._sum.pnl || 0
+    };
+
+    res.json({
+      user,
+      subscription: subscriptionData,
+      stats: statsData
+    });
+
+  } catch (error) {
+    console.error('Get initial data error:', error);
     res.status(500).json({
       error: 'Internal server error'
     });

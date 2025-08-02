@@ -173,11 +173,11 @@ export const tradesApi = {
     return response.data;
   },
 
-  // 🔥 NEW: Get dashboard data (combines stats, recent trades, and all trades for streak)
+  // 🔥 NEW: Get dashboard data (combines stats, recent trades, and server-calculated streak)
   getDashboard: async (brokerId?: number): Promise<{
     stats: TradeStats;
     recentTrades: Trade[];
-    allTrades: { id: number; pnl: number | null; entryDate: string }[];
+    streak: { type: string; count: number; display: string };
     timestamp: string;
   }> => {
     const params = brokerId ? { brokerId } : {};

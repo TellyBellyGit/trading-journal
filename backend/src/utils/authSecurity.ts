@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { emailService } from '../services/emailService';
 import { logger } from './logger';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export interface LoginAttemptResult {
   success: boolean;
@@ -118,26 +116,44 @@ export class AuthSecurity {
    */
   static async recordSuccessfulLogin(userId: number, ipAddress?: string, userAgent?: string): Promise<void> {
     try {
+      const dbOperationStartTime = Date.now();
+      console.log(`🔐 [AUTH-SECURITY-TIMING] Starting database operations for successful login`);
+      
       await Promise.all([
         // Record successful login in history
-        prisma.loginHistory.create({
-          data: {
-            userId,
-            ipAddress,
-            userAgent,
-            success: true
-          }
-        }),
+        (async () => {
+          const historyStartTime = Date.now();
+          const result = await prisma.loginHistory.create({
+            data: {
+              userId,
+              ipAddress,
+              userAgent,
+              success: true
+            }
+          });
+          const historyEndTime = Date.now();
+          console.log(`🔐 [AUTH-SECURITY-TIMING] LoginHistory.create completed in ${historyEndTime - historyStartTime}ms`);
+          return result;
+        })(),
         // Reset login attempts and update last login
-        prisma.user.update({
-          where: { id: userId },
-          data: {
-            loginAttempts: 0,
-            lockedUntil: null,
-            lastLogin: new Date()
-          }
-        })
+        (async () => {
+          const userUpdateStartTime = Date.now();
+          const result = await prisma.user.update({
+            where: { id: userId },
+            data: {
+              loginAttempts: 0,
+              lockedUntil: null,
+              lastLogin: new Date()
+            }
+          });
+          const userUpdateEndTime = Date.now();
+          console.log(`🔐 [AUTH-SECURITY-TIMING] User.update completed in ${userUpdateEndTime - userUpdateStartTime}ms`);
+          return result;
+        })()
       ]);
+
+      const dbOperationEndTime = Date.now();
+      console.log(`🔐 [AUTH-SECURITY-TIMING] ✅ All database operations completed in ${dbOperationEndTime - dbOperationStartTime}ms`);
 
       logger.info(`Successful login for user ${userId}`, undefined);
     } catch (error) {

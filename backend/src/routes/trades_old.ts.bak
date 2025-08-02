@@ -1,12 +1,10 @@
 // backend/src/routes/trades.ts
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import { DuplicateDetection } from '../utils/duplicateDetection';
-
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Configure multer for file uploads
 const upload = multer({ 

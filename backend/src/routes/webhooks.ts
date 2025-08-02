@@ -1,10 +1,9 @@
 import express from 'express';
 import { stripe } from '../config/stripe';
-import { PrismaClient } from '@prisma/client';
 import SubscriptionService from '../services/subscriptionService';
+import { prisma } from '../lib/prisma';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Stripe webhook endpoint (raw body needed for signature verification)
 router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {

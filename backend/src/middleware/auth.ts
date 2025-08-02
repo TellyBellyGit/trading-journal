@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { JWTUtils } from '../utils/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
+// Simple in-memory cache for JWT verification (5 minute TTL)
+const jwtCache = new Map<string, { decoded: any; expires: number }>();
+const JWT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Extend Express Request type to include user
 declare global {
@@ -29,7 +31,36 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const decoded = JWTUtils.verifyToken(token);
+    let decoded;
+    
+    // Check cache first
+    const cached = jwtCache.get(token);
+    if (cached && cached.expires > Date.now()) {
+      decoded = cached.decoded;
+      // console.log(`🔍 [AUTH] Cache hit for user ${decoded.userId}`);
+    } else {
+      // Not in cache or expired, verify token
+      decoded = JWTUtils.verifyToken(token);
+      
+      // Cache the result
+      jwtCache.set(token, {
+        decoded,
+        expires: Date.now() + JWT_CACHE_TTL
+      });
+      
+      // Clean up expired entries occasionally (1% chance per request)
+      if (Math.random() < 0.01) {
+        const now = Date.now();
+        for (const [key, value] of jwtCache.entries()) {
+          if (value.expires <= now) {
+            jwtCache.delete(key);
+          }
+        }
+      }
+      
+      // console.log(`🔍 [AUTH] Token verified and cached for user ${decoded.userId}`);
+    }
+    
     req.user = decoded;
     console.log(`✅ [AUTH] User ${decoded.userId} (${decoded.email}) authenticated for ${req.method} ${req.originalUrl}`);
     next();

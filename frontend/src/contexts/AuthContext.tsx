@@ -23,6 +23,7 @@ interface AuthContextType {
   register: (userData: RegisterData) => Promise<{ error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  loadInitialData: () => Promise<{ user: any; subscription: any; stats: any }>;
   updateProfile: (firstName: string, lastName: string) => Promise<void>;
   clearError: () => void;
 }
@@ -163,7 +164,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('refresh_token');
   };
 
-  // Refresh user data
+  // Load initial data after login (user + subscription + basic stats)
+  const loadInitialData = async (): Promise<{ user: any; subscription: any; stats: any }> => {
+    try {
+      const currentToken = token || localStorage.getItem('auth_token');
+      
+      if (!currentToken) {
+        throw new Error('No token available');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/initial-data`, {
+        headers: {
+          'Authorization': `Bearer ${currentToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token is invalid, logout user
+          logout();
+          throw new Error('Authentication failed');
+        }
+        throw new Error('Failed to load initial data');
+      }
+
+      const data = await response.json();
+      setUser(data.user);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      
+      return data;
+      
+    } catch (error) {
+      console.error('Load initial data error:', error);
+      logout();
+      throw error;
+    }
+  };
+
+  // Refresh user data (lightweight version)
   const refreshUser = async (): Promise<void> => {
     try {
       const currentToken = token || localStorage.getItem('auth_token');
@@ -253,6 +291,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     register,
     logout,
     refreshUser,
+    loadInitialData,
     updateProfile,
     clearError,
   };
