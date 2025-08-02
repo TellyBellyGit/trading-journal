@@ -87,6 +87,7 @@ const warmupDatabase = async () => {
     // Pre-connect to database using singleton
     await PrismaClientSingleton.connect();
     
+    console.log('🔥 [WARMUP] Phase 1: Initializing read connections...');
     // Run some dummy queries to initialize connection pool and caches
     await Promise.all([
       prisma.user.findFirst(),
@@ -94,9 +95,49 @@ const warmupDatabase = async () => {
       prisma.subscription.findFirst(),
       prisma.broker.findFirst(),
       prisma.note.findFirst(),
-      prisma.loginHistory.findFirst() // Add LoginHistory to warmup
+      prisma.loginHistory.findFirst()
     ]);
     
+    console.log('🔥 [WARMUP] Phase 2: Initializing write connections and query plans...');
+    // Initialize write paths by performing safe UPDATE operations
+    // This warms up the connection pool for write operations and caches query plans
+    
+    // Find a user to perform dummy update (should exist after seeding)
+    const testUser = await prisma.user.findFirst();
+    if (testUser) {
+      // Perform a safe dummy update that doesn't change anything meaningful
+      await prisma.user.update({
+        where: { id: testUser.id },
+        data: {
+          updatedAt: new Date() // Just update the timestamp, harmless operation
+        }
+      });
+      console.log('🔥 [WARMUP] User.update path initialized');
+    }
+    
+    // Warm up LoginHistory create operation (used in every login)
+    // We'll create and immediately delete a dummy record
+    try {
+      const dummyHistory = await prisma.loginHistory.create({
+        data: {
+          userId: testUser?.id || 1,
+          ipAddress: '127.0.0.1',
+          userAgent: 'warmup-agent',
+          success: true,
+          failureReason: 'warmup-test'
+        }
+      });
+      
+      // Immediately clean up the dummy record
+      await prisma.loginHistory.delete({
+        where: { id: dummyHistory.id }
+      });
+      console.log('🔥 [WARMUP] LoginHistory.create/delete paths initialized');
+    } catch (warmupError) {
+      console.log('🔥 [WARMUP] LoginHistory warmup skipped (no test user available)');
+    }
+    
+    console.log('🔥 [WARMUP] Phase 3: Loading JWT crypto libraries...');
     // Pre-load JWT verification library (dummy token will fail but loads crypto)
     try {
       JWTUtils.verifyToken('dummy.token.string');
@@ -104,7 +145,7 @@ const warmupDatabase = async () => {
       // Expected to fail, just loads the JWT library
     }
     
-    console.log('✅ Shared database connection pool warmed up and ready!');
+    console.log('✅ Database connection pool (read + write paths) warmed up and ready!');
   } catch (error) {
     console.error('⚠️  Database warmup failed:', error);
     // Don't crash the server, just log the warning

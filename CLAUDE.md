@@ -27,68 +27,122 @@ npm run db:push     # Push schema changes to database
 
 ## Architecture Overview
 
-This is a **full-stack monorepo** trading journal application:
+This is a **production-ready multi-user SaaS trading journal application**:
 
-- **Frontend**: React 18 + TypeScript + Vite + TailwindCSS
+- **Frontend**: React 18 + TypeScript + Vite + TailwindCSS (dark theme)
 - **Backend**: Node.js + Express + TypeScript + Prisma ORM
-- **Database**: SQLite with Prisma schema at `backend/prisma/schema.prisma`
+- **Database**: PostgreSQL with comprehensive indexing and performance optimization
+- **Authentication**: Full JWT-based auth with email verification, password reset, account security
+- **Subscriptions**: Stripe integration with usage tracking and tier management
+- **Email Service**: Resend integration for transactional emails
 - **Port Configuration**: Frontend (5173), Backend (3002)
 
 ## Key Project Structure
 
 ```
 trading-journal/
-├── frontend/               # React TypeScript frontend
-│   ├── src/components/    # UI components (Dashboard, AllTrades, etc.)
-│   ├── src/pages/         # Page components
+├── frontend/               # React TypeScript frontend with dark theme
+│   ├── src/components/    # UI components (Dashboard, AllTrades, auth components)
+│   ├── src/components/auth/ # Complete authentication system
+│   ├── src/pages/         # Page components (Admin, Dashboard, etc.)
 │   ├── src/api/           # API communication layer
+│   ├── src/contexts/      # React contexts (Auth, Settings, Stripe, etc.)
 │   └── src/types/         # TypeScript type definitions
 ├── backend/               # Express API server
-│   ├── src/routes/        # API route handlers
-│   ├── src/utils/         # Business logic classes
+│   ├── src/routes/        # API route handlers (auth, trades, admin, etc.)
+│   ├── src/utils/         # Business logic (auth security, duplicate detection)
+│   ├── src/middleware/    # Auth middleware, rate limiting
+│   ├── src/services/      # Email service, subscription service
+│   ├── src/lib/           # Database singleton, utilities
 │   ├── prisma/           # Database schema and migrations
-│   └── scripts/          # Database seeding scripts
+│   └── scripts/          # Database seeding and migration scripts
 ```
 
-## Database Schema
+## Database Architecture
+
+**Database**: PostgreSQL with sophisticated schema and performance optimization
 
 **Core Models:**
-- **Broker**: Trading broker accounts with commission structures
-- **Trade**: Complete trade lifecycle with entry/exit data, P&L calculations, rich journaling fields, and assessment system
+- **User**: Multi-user system with email verification, security features, admin roles
+- **Broker**: Trading broker accounts with commission structures (user-scoped)
+- **Trade**: Complete trade lifecycle with rich journaling and assessment system (user-scoped)
+- **Note**: Rich text note-taking system (user-scoped)
+- **Subscription**: Stripe-based subscription management with usage tracking
+- **LoginHistory**: Comprehensive security audit trail
 
 **Key Relationships:**
-- Trades belong to Brokers (foreign key relationship)
-- Each trade includes comprehensive metadata (strategy, notes, risk/reward, tags, assessment)
+- All data is user-scoped for multi-tenant isolation
+- Trades belong to Brokers and Users (foreign key relationships)
+- Comprehensive indexing for performance (email, dates, user queries)
 
-**Assessment System:**
-- Brief trade assessments editable in TradeDetails with auto-save
-- Assessment display in AllTrades with truncated view and hover tooltips
-- Dedicated API endpoints: `PATCH /api/trades/:id/assessment`
+**Performance Features:**
+- Database connection pool with warmup system
+- Optimized queries with proper indexing
+- Singleton Prisma client pattern
+- Connection pool warming on server startup
+
+## Authentication & Security System
+
+**Authentication Flow:**
+- JWT-based authentication with refresh tokens
+- Email verification required for new accounts
+- Password reset with secure token generation
+- Account lockout after failed attempts
+- Rate limiting on auth endpoints
+
+**Security Features:**
+- Account lockout (5 failed attempts = 15 minute lockout)
+- Login history tracking with IP addresses
+- Secure password hashing (bcrypt)
+- Email verification tokens with expiration
+- Password reset tokens with short expiration (15 minutes)
+- Rate limiting on sensitive endpoints
+
+**Key Auth Components:**
+- `AuthContext`: React context for authentication state
+- `AuthWrapper`: Route protection and auth flow management
+- `EnhancedLogin`: Feature-rich login with security feedback
+- `ForgotPassword`: Complete password reset flow
+- `ResetPassword`: Token-based password reset
+
+## Subscription System
+
+**Stripe Integration:**
+- Complete subscription lifecycle management
+- Usage tracking per billing period
+- Plan upgrades/downgrades
+- Webhook handling for payment events
+- Customer portal integration
+
+**Subscription Tiers:**
+- Free tier: Limited trades per month
+- Pro tier: Unlimited trades + advanced features
+- Usage tracking and enforcement
 
 ## Frontend Architecture
 
 **Main Components:**
-- `App.tsx` - Multi-view dashboard with state-based navigation and unified Add Trade workflow
-- `AppShell.tsx` - Layout wrapper with sidebar navigation and "+ Add Trade" header button
+- `App.tsx` - Root component with authentication wrapper
+- `TradingApp.tsx` - Main dashboard with multi-view navigation
+- `AuthWrapper.tsx` - Authentication flow and route protection
 - `AllTrades.tsx` - Trade listing with filtering, search, and assessment display
 - `TradeDetails.tsx` - Rich text editor for notes, assessment input, and trade analysis
-- `EditTrade.tsx` - Trade editing with smart content detection for rich vs plain text
-- `AnalyticsDashboard.tsx` - Comprehensive analytics with collapsible sections
-- `TradingCalendar.tsx` - Calendar-based trade visualization
+- `Dashboard.tsx` - Main dashboard with metrics and recent trades
+- `Admin.tsx` - Administrative interface for user management
 
 **State Management:**
+- React Context for authentication, settings, and Stripe
 - Component-level state with React hooks
-- No global state management system
-- API calls centralized in `/api/trades.ts`
+- API calls centralized in respective API modules
 
 **Key Features:**
+- **Dark Theme**: Consistent dark UI throughout the application
 - **Assessment System**: Brief trade evaluations with auto-save and display integration
-- **Smart Content Handling**: EditTrade detects rich content (images/HTML) and provides appropriate editing experience
-- **Unified Add Trade**: Single "+ Add Trade" button in header that works across all pages
-- **Collapsible Analytics**: Trading Analytics Dashboard with grouped expand/collapse controls
 - **Rich Text Editor**: Tiptap-based editor for detailed trade notes with image support
 - **CSV Import System**: Sophisticated duplicate detection and trade import capabilities
 - **Multi-broker Support**: Complete broker management with commission tracking
+- **Responsive Design**: Mobile-friendly interface
+- **Admin Dashboard**: User management, subscription oversight
 
 ## Backend Architecture
 
@@ -96,19 +150,61 @@ trading-journal/
 - RESTful endpoints with resource-based structure
 - Modular routing with separate route files
 - Comprehensive error handling with proper HTTP status codes
+- JWT middleware for protected routes
+- Rate limiting for security
 
 **Key Endpoints:**
-- `GET /api/trades` - List trades with broker information
+
+**Authentication:**
+- `POST /api/auth/login` - User login with security features
+- `POST /api/auth/register` - User registration with email verification
+- `POST /api/auth/forgot-password` - Password reset initiation
+- `POST /api/auth/reset-password` - Password reset completion
+- `GET /api/auth/me` - Current user information
+- `GET /api/auth/initial-data` - Combined user + subscription + stats for fast loading
+
+**Trading:**
+- `GET /api/trades` - List trades with filtering and pagination
 - `POST /api/trades` - Create new trade
-- `GET /api/trades/stats` - Trading statistics and metrics
-- `POST /api/trades/import/*` - CSV import and processing
+- `GET /api/trades/dashboard` - Dashboard statistics and recent trades
+- `POST /api/trades/import/*` - CSV import with duplicate detection
 - `PATCH /api/trades/:id/notes` - Update trade notes (auto-save)
 - `PATCH /api/trades/:id/assessment` - Update trade assessment (auto-save)
 
+**Administration:**
+- `GET /api/admin/users` - User management (admin only)
+- `PATCH /api/admin/users/:id` - User account management
+- `GET /api/admin/stats` - System-wide statistics
+
+**Subscriptions:**
+- `GET /api/subscriptions/status` - Current subscription status
+- `POST /api/subscriptions/create-checkout` - Stripe checkout creation
+- `POST /api/webhooks/stripe` - Stripe webhook handling
+
 **Utility Classes:**
+- `AuthSecurity` - Account lockout, login history, security monitoring
 - `DuplicateDetection` - Sophisticated duplicate trade detection algorithms
-- `TradeAnalyzer` - Trade matching and analysis business logic
-- CSV processing utilities for file parsing and validation
+- `SubscriptionService` - Stripe integration and usage tracking
+- `EmailService` - Transactional email handling (Resend)
+
+## Performance & Reliability
+
+**Database Performance:**
+- PostgreSQL connection pooling with singleton pattern
+- Database warmup system that initializes both read and write paths
+- Comprehensive indexing strategy
+- Query optimization for user-scoped data
+
+**Security & Monitoring:**
+- Rate limiting on authentication endpoints
+- Login history and security audit trails
+- Account lockout mechanisms
+- Email notifications for security events
+
+**Error Handling:**
+- Comprehensive error handling throughout the application
+- Structured error responses
+- Logging and monitoring capabilities
 
 ## Development Workflow
 
@@ -120,31 +216,58 @@ trading-journal/
 **Database Operations:**
 - Schema changes require `npm run db:generate` and `npm run db:push`
 - Seeding scripts available in `backend/scripts/`
-- SQLite database file located at `backend/dev.db`
+- PostgreSQL database configured via DATABASE_URL environment variable
+
+**Environment Configuration:**
+- Backend requires `.env` file with database, JWT, email, and Stripe configuration
+- Frontend connects to backend API automatically
 
 ## User Workflow
 
-**Adding Trades:**
-- Click "+ Add Trade" button in header (available on all pages)
-- Automatically navigates to AllTrades view and opens EditTrade form
-- Complete trade entry with all required fields
+**Authentication:**
+- User registration with email verification required
+- Secure login with account lockout protection
+- Password reset via email with secure tokens
+- Admin users have additional management capabilities
 
-**Trade Analysis:**
-- Click any symbol in AllTrades to open TradeDetails view
-- Add detailed notes using rich text editor (supports images, formatting)
-- Add brief assessment in header input box with auto-save
-- Assessment appears in AllTrades with hover tooltips for full text
+**Trading Journal:**
+- Add trades via comprehensive trade form
+- Rich text note-taking with image support
+- Trade assessment system with auto-save
+- CSV import with intelligent duplicate detection
+- Multi-broker account management
 
-**Analytics Review:**
-- Navigate to Trading Analytics Dashboard
-- Use Expand/Collapse button (next to Refresh) to show/hide all metric sections
-- Collapsible sections: Key Performance Indicators, Detailed Analytics, Capital & Trading Volume
+**Analytics & Reporting:**
+- Comprehensive dashboard with key metrics
+- Advanced filtering and search capabilities
+- Calendar view of trading activity
+- Performance analytics and insights
 
-## Important Notes
+**Subscription Management:**
+- Usage tracking and limits enforcement
+- Stripe-powered subscription management
+- Plan upgrades and billing portal access
 
-- The application uses SQLite for simplicity - no external database setup required
-- Multiple App.tsx variants exist (App_Wed.tsx, App_backup.tsx) indicating active development
-- Archive components contain previous implementations for reference
-- No authentication system currently implemented
-- **Rich Content Detection**: EditTrade automatically detects notes with images/HTML and provides appropriate editing guidance
-- **Auto-save Functionality**: Notes and assessments save automatically with debounced API calls
+## Important Technical Notes
+
+- **Multi-User Architecture**: All data is properly scoped to individual users
+- **PostgreSQL Database**: Production-ready with proper indexing and performance optimization
+- **Authentication Required**: All main features require user authentication
+- **Subscription Enforcement**: Usage limits enforced based on subscription tier
+- **Dark Theme**: Consistent dark UI design throughout the application
+- **Performance Optimized**: Database warmup, connection pooling, and query optimization
+- **Security First**: Comprehensive security features including rate limiting, account lockout, and audit trails
+- **Email Integration**: Transactional emails for verification, password reset, and security notifications
+
+## Environment Variables Required
+
+Backend requires the following environment variables:
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - JWT token signing secret
+- `JWT_REFRESH_SECRET` - Refresh token secret
+- `RESEND_API_KEY` - Email service API key
+- `STRIPE_SECRET_KEY` - Stripe secret key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
+- `FRONTEND_URL` - Frontend URL for CORS and redirects
+
+This is a production-ready, multi-user SaaS application with comprehensive authentication, subscription management, and security features.
