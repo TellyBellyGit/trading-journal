@@ -51,7 +51,7 @@ const Admin: React.FC = () => {
                 : 'text-gray-300 hover:text-white hover:bg-gray-700'
             }`}
           >
-            📊 Overview
+            Overview
           </button>
           <button
             onClick={() => setCurrentView('users')}
@@ -61,7 +61,7 @@ const Admin: React.FC = () => {
                 : 'text-gray-300 hover:text-white hover:bg-gray-700'
             }`}
           >
-            👥 Users
+            Users
           </button>
         </div>
       </div>

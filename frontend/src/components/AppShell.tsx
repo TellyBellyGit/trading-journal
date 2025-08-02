@@ -18,7 +18,7 @@ const getNavigationItems = (isAdmin: boolean = false) => [
   { id: 'import', label: 'Import', icon: '📤', active: false },
   { id: 'subscription', label: 'Subscription', icon: '💳', active: false },
   { id: 'settings', label: 'Settings', icon: '⚙️', active: false },
-  ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '👑', active: false }] : []),
+  ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: '👥', active: false }] : []),
 ];
 
 interface AppShellProps {
@@ -532,21 +532,21 @@ const AppShell: React.FC<AppShellProps> = ({
                       onClick={() => handleUserAction('profile')}
                       className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                     >
-                      👤 User Profile
+                      User Profile
                     </button>
                     
                     <button
                       onClick={() => handleUserAction('account-settings')}
                       className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                     >
-                      ⚙️ Account Settings
+                      Account Settings
                     </button>
                     
                     <button
                       onClick={() => handleUserAction('billing')}
                       className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                     >
-                      💳 Billing & Subscription
+                      Billing & Subscription
                     </button>
 
                     <div className="border-t border-gray-600 my-1"></div>
@@ -555,14 +555,14 @@ const AppShell: React.FC<AppShellProps> = ({
                       onClick={() => handleUserAction('clear-data')}
                       className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900 hover:text-red-300 transition-colors"
                     >
-                      🗑️ Clear All Data
+                      Clear All Data
                     </button>
                     
                     <button
                       onClick={() => handleUserAction('delete-account')}
                       className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900 hover:text-red-300 transition-colors"
                     >
-                      ❌ Delete Account
+                      Delete Account
                     </button>
 
                     <div className="border-t border-gray-600 my-1"></div>
@@ -571,7 +571,7 @@ const AppShell: React.FC<AppShellProps> = ({
                       onClick={() => handleUserAction('logout')}
                       className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                     >
-                      🚪 Sign Out
+                      Sign Out
                     </button>
                   </div>
                 </div>
@@ -607,7 +607,7 @@ const AppShell: React.FC<AppShellProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-white mb-4">
-              ⚠️ Clear All Trade Data
+              Clear All Trade Data
             </h3>
             <p className="text-gray-300 mb-4">
               This action will permanently delete all your trades, notes, and personal data. 
@@ -678,7 +678,7 @@ const AppShell: React.FC<AppShellProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-white mb-4">
-              ✏️ Edit Profile
+              Edit Profile
             </h3>
             <div className="space-y-4">
               <div>

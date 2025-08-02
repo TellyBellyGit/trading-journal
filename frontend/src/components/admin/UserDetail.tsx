@@ -180,7 +180,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ userId, onBack }) => {
                       : 'bg-red-900 text-red-300 hover:bg-red-800'
                   } ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  {userDetail.isActive ? '✓ Active' : '✗ Inactive'}
+                  {userDetail.isActive ? 'Active' : 'Inactive'}
                 </button>
                 <button
                   onClick={handleAdminToggle}
@@ -191,7 +191,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ userId, onBack }) => {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   } ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  {userDetail.isAdmin ? '👑 Admin' : '👤 User'}
+                  {userDetail.isAdmin ? 'Admin' : 'User'}
                 </button>
               </div>
             </div>
@@ -200,7 +200,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ userId, onBack }) => {
             onClick={loadUserDetail}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
           >
-            🔄 Refresh
+            Refresh
           </button>
         </div>
 
@@ -213,10 +213,9 @@ const UserDetail: React.FC<UserDetailProps> = ({ userId, onBack }) => {
               <button
                 onClick={handleResetTradeCount}
                 disabled={updating}
-                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors flex items-center space-x-1"
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
               >
-                <span>🔄</span>
-                <span>Reset Trade Count</span>
+                Reset Trade Count
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

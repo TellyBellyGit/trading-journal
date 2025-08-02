@@ -61,14 +61,9 @@ const AdminStats: React.FC = () => {
       {/* Overview Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Users</p>
-              <p className="text-2xl font-bold text-white">{stats.overview.totalUsers}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xl">👥</span>
-            </div>
+          <div>
+            <p className="text-gray-400 text-sm">Total Users</p>
+            <p className="text-2xl font-bold text-white">{stats.overview.totalUsers}</p>
           </div>
           <div className="mt-2">
             <span className="text-green-400 text-sm">
@@ -78,14 +73,9 @@ const AdminStats: React.FC = () => {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Trades</p>
-              <p className="text-2xl font-bold text-white">{stats.overview.totalTrades.toLocaleString()}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xl">📈</span>
-            </div>
+          <div>
+            <p className="text-gray-400 text-sm">Total Trades</p>
+            <p className="text-2xl font-bold text-white">{stats.overview.totalTrades.toLocaleString()}</p>
           </div>
           <div className="mt-2">
             <span className="text-gray-400 text-sm">
@@ -95,14 +85,9 @@ const AdminStats: React.FC = () => {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Trading Notes</p>
-              <p className="text-2xl font-bold text-white">{stats.overview.totalNotes.toLocaleString()}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xl">📝</span>
-            </div>
+          <div>
+            <p className="text-gray-400 text-sm">Trading Notes</p>
+            <p className="text-2xl font-bold text-white">{stats.overview.totalNotes.toLocaleString()}</p>
           </div>
           <div className="mt-2">
             <span className="text-gray-400 text-sm">
@@ -112,14 +97,9 @@ const AdminStats: React.FC = () => {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Admin Users</p>
-              <p className="text-2xl font-bold text-white">{stats.overview.adminUsers}</p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xl">👑</span>
-            </div>
+          <div>
+            <p className="text-gray-400 text-sm">Admin Users</p>
+            <p className="text-2xl font-bold text-white">{stats.overview.adminUsers}</p>
           </div>
           <div className="mt-2">
             <span className="text-gray-400 text-sm">

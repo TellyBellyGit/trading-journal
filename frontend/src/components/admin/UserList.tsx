@@ -227,7 +227,7 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                               updating === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                             }`}
                           >
-                            👑 Admin
+                            Admin
                           </button>
                         )}
                       </div>
@@ -258,7 +258,7 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                         : 'bg-orange-900 text-orange-300 hover:bg-orange-800'
                     } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {updating === user.id ? '...' : user.emailVerified ? '✅ Verified' : '⏳ Pending'}
+                    {updating === user.id ? '...' : user.emailVerified ? 'Verified' : 'Pending'}
                   </button>
                 </td>
                 <td className="py-3 px-2">
@@ -312,18 +312,9 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                 </td>
                 <td className="py-3 px-2">
                   <div className="text-sm text-gray-300">
-                    <div className="flex items-center space-x-1">
-                      <span>📈</span>
-                      <span>{user._count.trades} trades</span>
-                    </div>
-                    <div className="flex items-center space-x-1 text-gray-500">
-                      <span>📝</span>
-                      <span>{user._count.notes} notes</span>
-                    </div>
-                    <div className="flex items-center space-x-1 text-gray-500">
-                      <span>🔐</span>
-                      <span>{user._count.loginHistory} logins</span>
-                    </div>
+                    <div>{user._count.trades} trades</div>
+                    <div className="text-gray-500">{user._count.notes} notes</div>
+                    <div className="text-gray-500">{user._count.loginHistory} logins</div>
                   </div>
                 </td>
                 <td className="py-3 px-2">

@@ -180,7 +180,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
     return (
       <div className="p-6">
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-6 text-center">
-          <div className="text-4xl mb-4">⚠️</div>
           <h3 className="text-xl font-semibold text-red-400 mb-2">Error Loading Dashboard</h3>
           <p className="text-gray-300 mb-4">{error}</p>
           <button
@@ -202,26 +201,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
     { 
       title: 'Total Trades', 
       value: stats?.totalTrades?.toString() || '0', 
-      color: 'blue', 
-      icon: '📊' 
+      color: 'blue'
     },
     { 
       title: 'Total P/L', 
       value: stats?.totalPnL ? formatCurrency(stats.totalPnL) : '$0.00', 
-      color: stats?.totalPnL && stats.totalPnL >= 0 ? 'green' : 'red', 
-      icon: '💰' 
+      color: stats?.totalPnL && stats.totalPnL >= 0 ? 'green' : 'red'
     },
     { 
       title: 'Win Rate', 
       value: stats?.winRate ? `${stats.winRate.toFixed(1)}%` : '0%', 
-      color: 'purple', 
-      icon: '🎯' 
+      color: 'purple'
     },
     { 
       title: 'Avg Trade', 
       value: stats?.avgPnL ? formatCurrency(stats.avgPnL) : '$0.00', 
-      color: 'orange', 
-      icon: '📈' 
+      color: 'orange'
     }
   ];
 
@@ -231,9 +226,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {metrics.map((metric, index) => (
           <div key={index} className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-gray-600 transition-colors">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <h3 className="text-gray-400 text-sm font-medium">{metric.title}</h3>
-              <span className="text-2xl">{metric.icon}</span>
             </div>
             <p className={`text-2xl font-bold ${
               metric.color === 'blue' ? 'text-blue-400' :
@@ -258,13 +252,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
               onClick={loadDashboardData}
               className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
             >
-              🔄 Refresh
+              Refresh
             </button>
           </div>
           <div className="p-6">
             {recentTrades.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-4xl mb-4">📊</div>
                 <p className="text-gray-400">No trades found</p>
                 <p className="text-gray-500 text-sm mt-2">Create your first trade to get started!</p>
               </div>
@@ -342,8 +335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
           {/* Current Streak Card */}
           <div className="bg-gray-800 border border-gray-700 rounded-lg">
             <div className="p-6 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-white flex items-center">
-                <span className="text-xl mr-2">📈</span>
+              <h3 className="text-lg font-semibold text-white">
                 Current Streak
               </h3>
             </div>
@@ -369,16 +361,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
             </div>
             <div className="p-6 space-y-4">
             {[
-              { label: 'List Trades', icon: '📝', color: 'blue', action: () => onViewChange?.('all-trades') },
-              { label: 'Analytics', icon: '📊', color: 'purple', action: () => onViewChange?.('analytics') },
-              { label: 'Import Data', icon: '📤', color: 'green', action: () => onViewChange?.('import') },
-              { label: 'Export to AI', icon: '📄', color: 'orange', action: () => onExportToAI?.() }
+              { label: 'List Trades', color: 'blue', action: () => onViewChange?.('all-trades') },
+              { label: 'Analytics', color: 'purple', action: () => onViewChange?.('analytics') },
+              { label: 'Import Data', color: 'green', action: () => onViewChange?.('import') },
+              { label: 'Export to AI', color: 'orange', action: () => onExportToAI?.() }
             ].map((action, index) => (
               <button 
                 key={index} 
                 onClick={action.action}
                 className={`
-                  w-full flex items-center space-x-3 p-3 rounded-lg border transition-colors
+                  w-full flex items-center justify-center p-3 rounded-lg border transition-colors
                   ${action.color === 'blue' ? 'border-blue-600 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400' :
                     action.color === 'purple' ? 'border-purple-600 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400' :
                     action.color === 'green' ? 'border-green-600 bg-green-600/10 hover:bg-green-600/20 text-green-400' :
@@ -386,7 +378,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
                   }
                 `}
               >
-                <span className="text-lg">{action.icon}</span>
                 <span className="font-medium">{action.label}</span>
               </button>
             ))}
@@ -424,7 +415,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {selectedDateTrades.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
-                  <div className="text-4xl mb-4">📅</div>
                   <p>No trades found for this date</p>
                 </div>
               ) : (
