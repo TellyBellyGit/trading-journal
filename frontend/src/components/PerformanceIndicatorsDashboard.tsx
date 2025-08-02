@@ -293,7 +293,7 @@ const PerformanceIndicatorsDashboard: React.FC<PerformanceIndicatorsDashboardPro
       // Fetch data from backend with authentication - using authenticated API
       const response = await fetch(endpoint, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json'
         }
       });

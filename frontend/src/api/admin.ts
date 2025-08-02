@@ -103,7 +103,7 @@ export interface UsersPagination {
 
 class AdminAPI {
   private getAuthHeaders() {
-    const token = localStorage.getItem('auth_token');
+    const token = sessionStorage.getItem('auth_token');
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'

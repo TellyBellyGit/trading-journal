@@ -56,12 +56,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const API_BASE_URL = 'http://localhost:3002/api';
 
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from sessionStorage
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedToken = localStorage.getItem('auth_token');
-        const storedUser = localStorage.getItem('auth_user');
+        const storedToken = sessionStorage.getItem('auth_token');
+        const storedUser = sessionStorage.getItem('auth_user');
 
         if (storedToken && storedUser) {
           setToken(storedToken);
@@ -73,14 +73,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } catch (error) {
         console.error('Failed to initialize auth:', error);
         // Clear invalid stored data
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('auth_user');
       } finally {
         setIsLoading(false);
       }
     };
 
+    // Clear auth data on page unload/navigation
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_user');
+      sessionStorage.removeItem('refresh_token');
+    };
+
+    // Clear auth data when user navigates away or closes tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('auth_user');
+        sessionStorage.removeItem('refresh_token');
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     initializeAuth();
+
+    // Cleanup event listeners
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Login function
@@ -111,9 +137,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Store auth data
       setUser(data.user);
       setToken(data.token);
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
-      localStorage.setItem('refresh_token', data.refreshToken);
+      sessionStorage.setItem('auth_token', data.token);
+      sessionStorage.setItem('auth_user', JSON.stringify(data.user));
+      sessionStorage.setItem('refresh_token', data.refreshToken);
       
     } catch (error) {
       console.error('Login error:', error);
@@ -159,15 +185,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('auth_user');
+    sessionStorage.removeItem('refresh_token');
   };
 
   // Load initial data after login (user + subscription + basic stats)
   const loadInitialData = async (): Promise<{ user: any; subscription: any; stats: any }> => {
     try {
-      const currentToken = token || localStorage.getItem('auth_token');
+      const currentToken = token || sessionStorage.getItem('auth_token');
       
       if (!currentToken) {
         throw new Error('No token available');
@@ -190,7 +216,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = await response.json();
       setUser(data.user);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      sessionStorage.setItem('auth_user', JSON.stringify(data.user));
       
       return data;
       
@@ -204,7 +230,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Refresh user data (lightweight version)
   const refreshUser = async (): Promise<void> => {
     try {
-      const currentToken = token || localStorage.getItem('auth_token');
+      const currentToken = token || sessionStorage.getItem('auth_token');
       
       if (!currentToken) {
         throw new Error('No token available');
@@ -227,7 +253,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = await response.json();
       setUser(data.user);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      sessionStorage.setItem('auth_user', JSON.stringify(data.user));
       
     } catch (error) {
       console.error('Refresh user error:', error);
@@ -263,9 +289,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await response.json();
       const updatedUser = data.user;
 
-      // Update local state and localStorage
+      // Update local state and sessionStorage
       setUser(updatedUser);
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      sessionStorage.setItem('auth_user', JSON.stringify(updatedUser));
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Profile update failed';

@@ -622,7 +622,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
           // Get user's trade count to determine eligibility
           const response = await fetch('http://localhost:3002/api/trades', {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
             }
           });
           const trades = await response.json();

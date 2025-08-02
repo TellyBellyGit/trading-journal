@@ -30,7 +30,7 @@ const TradeForm = () => {
       exitPrice: parseFloat(form.exitPrice),
     };
 
-    const token = localStorage.getItem('auth_token');
+    const token = sessionStorage.getItem('auth_token');
     await fetch('http://localhost:3002/api/trades', {
       method: 'POST',
       headers: { 

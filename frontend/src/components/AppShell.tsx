@@ -108,7 +108,7 @@ const AppShell: React.FC<AppShellProps> = ({
 
     setClearingData(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/admin/clear-user-data`, {
         method: 'DELETE',
         headers: {

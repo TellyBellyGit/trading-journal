@@ -107,7 +107,7 @@ const TradingApp: React.FC = () => {
 
     try {
       // Use the new efficient export API endpoint that filters at the database level
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       const response = await fetch(`${API_BASE_URL}/trades/export?startDate=${startDate}&endDate=${endDate}&status=Closed`, {
         headers: {
           'Authorization': `Bearer ${token}`,
