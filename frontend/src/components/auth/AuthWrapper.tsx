@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import Login from './Login';
+import Login from './EnhancedLogin';
 import Register from './Register';
 import ResetPassword from './ResetPassword';
+import ForgotPassword from './ForgotPassword';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
 }
 
 // Helper function to detect reset token and determine initial auth mode
-const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' => {
+const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' | 'forgot-password' => {
   const urlParams = new URLSearchParams(window.location.search);
   const resetToken = urlParams.get('token');
   
@@ -24,7 +25,7 @@ const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' => {
 
 const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'reset-password'>(getInitialAuthMode());
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'reset-password' | 'forgot-password'>(getInitialAuthMode());
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -53,17 +54,29 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
     );
   }
 
+  // If showing forgot password form
+  if (authMode === 'forgot-password') {
+    return (
+      <div>
+        <ForgotPassword 
+          onBackToLogin={() => setAuthMode('login')}
+        />
+      </div>
+    );
+  }
+
   // If user is authenticated, show the main app
   if (isAuthenticated) {
     return <>{children}</>;
   }
 
-  // If not authenticated, show login or register form (reset is handled above)
+  // If not authenticated, show login or register form (reset and forgot-password are handled above)
   return (
     <div>
       {authMode === 'login' ? (
         <Login
           onSwitchToRegister={() => setAuthMode('register')}
+          onForgotPassword={() => setAuthMode('forgot-password')}
           onSuccess={() => {
             // Authentication success is handled by the AuthContext
             // The component will re-render when isAuthenticated becomes true

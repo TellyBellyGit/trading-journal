@@ -9,7 +9,13 @@ interface LoginError {
   canResendVerification?: boolean;
 }
 
-const EnhancedLogin: React.FC = () => {
+interface EnhancedLoginProps {
+  onSwitchToRegister?: () => void;
+  onForgotPassword?: () => void;
+  onSuccess?: () => void;
+}
+
+const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onForgotPassword, onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,6 +30,7 @@ const EnhancedLogin: React.FC = () => {
 
     try {
       await login(email, password);
+      onSuccess?.();
     } catch (err: any) {
       let errorData: LoginError;
       
@@ -65,32 +72,32 @@ const EnhancedLogin: React.FC = () => {
 
     switch (error.type) {
       case 'rate_limit':
-        classes += " bg-yellow-50 border-yellow-200 text-yellow-800";
+        classes += " bg-yellow-500/10 border-yellow-500/20 text-yellow-400";
         icon = "⏱️";
         title = "Rate Limited";
         break;
       case 'account_locked':
-        classes += " bg-red-50 border-red-200 text-red-800";
+        classes += " bg-red-500/10 border-red-500/20 text-red-400";
         icon = "🔒";
         title = "Account Locked";
         break;
       case 'email_unverified':
-        classes += " bg-blue-50 border-blue-200 text-blue-800";
+        classes += " bg-blue-500/10 border-blue-500/20 text-blue-400";
         icon = "📧";
         title = "Email Verification Required";
         break;
       case 'account_inactive':
-        classes += " bg-gray-50 border-gray-200 text-gray-800";
+        classes += " bg-gray-500/10 border-gray-500/20 text-gray-400";
         icon = "🚫";
         title = "Account Deactivated";
         break;
       case 'authentication_error':
-        classes += " bg-red-50 border-red-200 text-red-800";
+        classes += " bg-red-500/10 border-red-500/20 text-red-400";
         icon = "🔐";
         title = "Authentication Failed";
         break;
       default:
-        classes += " bg-red-50 border-red-200 text-red-800";
+        classes += " bg-red-500/10 border-red-500/20 text-red-400";
     }
 
     return (
@@ -115,7 +122,7 @@ const EnhancedLogin: React.FC = () => {
 
             {error.canResendVerification && (
               <button 
-                className="mt-3 text-blue-600 hover:text-blue-800 underline text-xs"
+                className="mt-3 text-blue-400 hover:text-blue-300 underline text-xs"
                 onClick={() => {
                   // TODO: Implement resend verification
                   alert('Resend verification functionality coming soon');
@@ -131,21 +138,21 @@ const EnhancedLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full bg-gray-800 rounded-lg shadow-xl p-8 space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
+            Welcome Back
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Access your trading journal
+          <p className="mt-2 text-center text-sm text-gray-400">
+            Sign in to your trading journal
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300">
                 Email address
               </label>
               <input
@@ -156,13 +163,13 @@ const EnhancedLogin: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your email"
               />
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                 Password
               </label>
               <div className="mt-1 relative">
@@ -174,7 +181,7 @@ const EnhancedLogin: React.FC = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter your password"
                 />
                 <button
@@ -182,7 +189,7 @@ const EnhancedLogin: React.FC = () => {
                   className="absolute inset-y-0 right-0 px-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  <span className="text-gray-400 hover:text-gray-600">
+                  <span className="text-gray-400 hover:text-gray-300">
                     {showPassword ? '🙈' : '👁️'}
                   </span>
                 </button>
@@ -194,16 +201,15 @@ const EnhancedLogin: React.FC = () => {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <a
-                href="#forgot-password"
-                className="font-medium text-blue-600 hover:text-blue-500"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('Forgot password functionality coming in Phase 4');
+              <button
+                type="button"
+                className="font-medium text-blue-400 hover:text-blue-300 focus:outline-none focus:underline"
+                onClick={() => {
+                  onForgotPassword?.();
                 }}
               >
                 Forgot your password?
-              </a>
+              </button>
             </div>
           </div>
 
@@ -227,21 +233,19 @@ const EnhancedLogin: React.FC = () => {
             </button>
           </div>
 
-          <div className="text-center">
-            <span className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <a
-                href="#register"
-                className="font-medium text-blue-600 hover:text-blue-500"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('Registration with email verification coming in Phase 3');
-                }}
-              >
-                Sign up
-              </a>
-            </span>
-          </div>
+          {onSwitchToRegister && (
+            <div className="text-center">
+              <span className="text-sm text-gray-400">
+                Don't have an account?{' '}
+                <button
+                  onClick={onSwitchToRegister}
+                  className="font-medium text-blue-400 hover:text-blue-300 focus:outline-none focus:underline"
+                >
+                  Sign up
+                </button>
+              </span>
+            </div>
+          )}
         </form>
       </div>
     </div>
