@@ -343,7 +343,7 @@ const SubscriptionPage: React.FC = () => {
                 ))}
                 
                 {/* Development Only: Reset Trade Count */}
-                {process.env.NODE_ENV !== 'production' && subscriptionStatus?.maxTrades > 0 && (
+                {import.meta.env?.MODE !== 'production' && subscriptionStatus?.maxTrades > 0 && (
                   <button
                     onClick={handleResetTradeCount}
                     disabled={actionLoading === 'reset'}
