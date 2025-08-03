@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import TradingCalendar from './TradingCalendar';
+import TradeDetails from './TradeDetails';
 import { Trade, TradeStats } from '../types/Trade';
 import { tradesApi } from '../api/trades';
 
@@ -19,6 +20,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
   const [error, setError] = useState<string | null>(null);
   const [selectedDateTrades, setSelectedDateTrades] = useState<Trade[] | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
 
   // Load dashboard data using new combined endpoint
   const loadDashboardData = async () => {
@@ -53,6 +55,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
   const closeTradeModal = () => {
     setSelectedDateTrades(null);
     setSelectedDate('');
+  };
+
+  // Handle trade symbol click to open rich text editor
+  const handleTradeClick = (tradeId: number) => {
+    setSelectedTradeId(tradeId);
   };
 
   // Format currency
@@ -106,6 +113,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Conditional rendering for TradeDetails - similar to AllTrades
+  if (selectedTradeId !== null) {
+    return (
+      <TradeDetails 
+        tradeId={selectedTradeId} 
+        onBack={() => {
+          setSelectedTradeId(null);
+          // Refresh dashboard data when returning
+          loadDashboardData();
+        }}
+      />
     );
   }
 
@@ -198,12 +219,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
                     {recentTrades.map((trade) => (
                       <tr key={trade.id} className="border-b border-gray-700 last:border-b-0 hover:bg-gray-700/30 transition-colors">
                         <td className="py-3">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                          <button
+                            onClick={() => handleTradeClick(trade.id)}
+                            className="flex items-center space-x-3 hover:bg-gray-600 rounded p-1 transition-colors group w-full text-left"
+                          >
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center group-hover:bg-blue-500">
                               <span className="text-white font-bold text-xs">{trade.symbol.slice(0, 2)}</span>
                             </div>
-                            <span className="text-white font-medium">{trade.symbol}</span>
-                          </div>
+                            <span className="text-white font-medium group-hover:text-blue-400">{trade.symbol}</span>
+                          </button>
                         </td>
                         <td className="py-3">
                           <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${trade.direction === 'Long' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
