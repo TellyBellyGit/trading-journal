@@ -72,7 +72,7 @@ class EmailService {
     firstName: string, 
     verificationToken: string
   ): Promise<boolean> {
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/?verify=email&token=${verificationToken}`;
     
     const htmlContent = `
       <!DOCTYPE html>

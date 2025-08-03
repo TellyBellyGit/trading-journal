@@ -14,16 +14,16 @@ interface AuthWrapperProps {
 const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' | 'forgot-password' | 'verify-email' => {
   const urlParams = new URLSearchParams(window.location.search);
   const resetToken = urlParams.get('token');
-  const currentPath = window.location.pathname;
+  const verifyParam = urlParams.get('verify');
   
-  // Check if we're on the verify-email path
-  if (currentPath.includes('/verify-email') || currentPath.includes('verify-email')) {
+  // Check if we're doing email verification
+  if (verifyParam === 'email') {
     console.log('📧 Email verification detected');
     return 'verify-email';
   }
   
-  // If there's a token parameter, show reset form regardless of path
-  if (resetToken && !currentPath.includes('verify')) {
+  // If there's a token parameter, show reset form
+  if (resetToken && verifyParam !== 'email') {
     console.log('🔑 Reset token detected:', resetToken.substring(0, 8) + '...');
     return 'reset-password';
   }
