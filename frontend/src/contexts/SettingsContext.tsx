@@ -160,7 +160,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Toggle time display between local and eastern
   const toggleTimeDisplay = () => {
-    const newTimeDisplay = settings.timeDisplay === 'local' ? 'eastern' : 'local';
+    const newTimeDisplay: 'local' | 'eastern' = settings.timeDisplay === 'local' ? 'eastern' : 'local';
     const newSettings = {
       ...settings,
       timeDisplay: newTimeDisplay

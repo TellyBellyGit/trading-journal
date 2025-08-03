@@ -15,5 +15,5 @@
     "isolatedModules": true
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist", "src/components/Archive/**/*", "src/WorkingApp.tsx", "src/Applatest.tsx", "src/components/NoFilterAllTrades.tsx", "src/components/ImportTrades.tsx", "src/components/auth/old_shit_register.tsx"]
+  "exclude": ["node_modules", "dist", "src/components/Archive/**/*", "src/WorkingApp.tsx", "src/Applatest.tsx", "src/components/NoFilterAllTrades.tsx", "src/components/ImportTrades.tsx", "src/components/auth/old_shit_register.tsx", "src/components/TradeDetails.tsx"]
 }
