@@ -217,8 +217,7 @@ router.get('/brokers', async (req, res) => {
       select: {
         id: true,
         name: true,
-        displayName: true,
-        accountType: true
+        displayName: true
       },
       orderBy: { name: 'asc' }
     });

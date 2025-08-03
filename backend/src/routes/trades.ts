@@ -93,8 +93,7 @@ router.get('/', authenticateToken, async (req, res) => {
           select: {
             id: true,
             name: true,
-            displayName: true,
-            accountType: true
+            displayName: true
           }
         }
       },
@@ -409,8 +408,7 @@ router.get('/search', authenticateToken, async (req, res) => {
           select: {
             id: true,
             name: true,
-            displayName: true,
-            accountType: true
+            displayName: true
           }
         }
       },
