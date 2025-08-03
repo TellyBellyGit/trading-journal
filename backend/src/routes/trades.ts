@@ -197,7 +197,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
               id: true,
               name: true,
               displayName: true,
-              accountType: true
             }
           }
         },

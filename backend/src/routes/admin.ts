@@ -66,7 +66,7 @@ router.get('/users', requireAdmin, async (req, res) => {
             select: {
               trades: true,
               notes: true,
-              brokers: true,
+              userBrokerAccounts: true,
               loginHistory: true
             }
           }
@@ -135,7 +135,7 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
           select: {
             trades: true,
             notes: true,
-            brokers: true
+            userBrokerAccounts: true
           }
         }
       }
@@ -667,7 +667,7 @@ router.get('/users/:id/deletion-check', requireAdmin, async (req, res) => {
           select: {
             trades: true,
             notes: true,
-            brokers: true,
+            userBrokerAccounts: true,
             loginHistory: true
           }
         }
@@ -676,7 +676,7 @@ router.get('/users/:id/deletion-check', requireAdmin, async (req, res) => {
 
     const tradeCount = counts?._count.trades || 0;
     const noteCount = counts?._count.notes || 0;
-    const brokerCount = counts?._count.brokers || 0;
+    const brokerCount = counts?._count.userBrokerAccounts || 0;
 
     res.json({
       canDelete: true,
@@ -719,7 +719,7 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
           select: {
             trades: true,
             notes: true,
-            brokers: true,
+            userBrokerAccounts: true,
             loginHistory: true
           }
         }
@@ -754,8 +754,8 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
         where: { userId }
       });
 
-      // 4. Delete brokers
-      const deletedBrokers = await tx.broker.deleteMany({
+      // 4. Delete user broker accounts (not global brokers)
+      const deletedBrokers = await tx.userBrokerAccount.deleteMany({
         where: { userId }
       });
 
