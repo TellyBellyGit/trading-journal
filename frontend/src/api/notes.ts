@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { Note, CreateNoteData, UpdateNoteData, NotesSearchParams } from '../types/notes';
 import { sanitizeJsonPayload } from '../utils/jsonSanitizer';
 
-const API_BASE_URL = 'http://localhost:3002/api';
+import { API_BASE_URL } from '../config/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -65,7 +65,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
     
     try {
       console.log('🔍 Checking if email exists:', email);
-      const response = await fetch('http://localhost:3002/api/auth/register', {
+      const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

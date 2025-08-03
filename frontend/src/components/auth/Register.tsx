@@ -23,7 +23,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
     if (!email || !/\S+@\S+\.\S+/.test(email)) return;
     
     try {
-      const response = await fetch('http://localhost:3002/api/auth/check-email', {
+      const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/auth/check-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -90,7 +90,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
     setSubmitError('');
     
     try {
-      const response = await fetch('http://localhost:3002/api/auth/register', {
+      const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

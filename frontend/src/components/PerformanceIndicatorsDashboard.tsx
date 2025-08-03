@@ -264,7 +264,7 @@ const PerformanceIndicatorsDashboard: React.FC<PerformanceIndicatorsDashboardPro
 
       // Build API endpoint based on selected period (exact same logic)
       let endpoint = '';
-      const baseUrl = 'http://localhost:3002/api';
+      const baseUrl = 'https://trading-journal-backend-5fi2.onrender.com/api';
       
       switch (selectedPeriod) {
         case 'daily':

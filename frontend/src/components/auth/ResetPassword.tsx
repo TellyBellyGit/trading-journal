@@ -59,7 +59,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onBackToLogin }) => {
     console.log('🚀 CALLING API: validate-reset-token with token:', token.substring(0, 8) + '...');
     
     try {
-      const response = await fetch(`http://localhost:3002/api/auth/validate-reset-token/${token}`);
+      const response = await fetch(`https://trading-journal-backend-5fi2.onrender.com/api/auth/validate-reset-token/${token}`);
       console.log('📡 API RETURNED STATUS:', response.status, response.ok ? 'OK' : 'ERROR');
       
       const data = await response.json();
@@ -139,7 +139,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onBackToLogin }) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await fetch('http://localhost:3002/api/auth/reset-password', {
+      const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

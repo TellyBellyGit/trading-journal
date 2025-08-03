@@ -64,7 +64,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ loading = false
 
       // Build API endpoint based on selected period
       let endpoint = '';
-      const baseUrl = 'http://localhost:3002/api';
+      const baseUrl = 'https://trading-journal-backend-5fi2.onrender.com/api';
       
       switch (selectedPeriod) {
         case 'daily':

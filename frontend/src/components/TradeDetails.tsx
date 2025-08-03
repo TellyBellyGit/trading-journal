@@ -15,7 +15,7 @@ import { tradesApi } from '../api/trades';
 import { subscriptionsApi } from '../api/subscriptions';
 
 // API configuration
-const API_BASE_URL = 'http://localhost:3002/api';
+const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
 
 // Extend window object for timeout
 declare global {
@@ -620,7 +620,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         // Free users: only first 10 trades get rich text notes
         if (status.plan === 'free') {
           // Get user's trade count to determine eligibility
-          const response = await fetch('http://localhost:3002/api/trades', {
+          const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/trades', {
             headers: {
               'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
             }

@@ -70,7 +70,7 @@ interface ImportSaveResponse {
 
 
 
-const API_BASE_URL = 'http://localhost:3002/api'; // Updated to match your backend port
+import { API_BASE_URL } from '../config/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

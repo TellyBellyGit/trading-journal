@@ -31,7 +31,7 @@ const TradeForm = () => {
     };
 
     const token = sessionStorage.getItem('auth_token');
-    await fetch('http://localhost:3002/api/trades', {
+    await fetch('https://trading-journal-backend-5fi2.onrender.com/api/trades', {
       method: 'POST',
       headers: { 
         'Authorization': `Bearer ${token}`,

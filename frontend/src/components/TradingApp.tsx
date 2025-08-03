@@ -15,7 +15,7 @@ import { subscriptionsApi } from '../api/subscriptions';
 import { useEffect } from 'react';
 
 // API configuration
-const API_BASE_URL = 'http://localhost:3002/api';
+const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
 
 
 // Main Trading App Component (authenticated content)
