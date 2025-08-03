@@ -201,7 +201,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
           }
         },
         orderBy: { entryDate: 'desc' },
-        take: 4
+        take: 12
       }),
       // Only fetch last 10 trades for streak calculation (not ALL trades!)
       prisma.trade.findMany({
