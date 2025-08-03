@@ -8,6 +8,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 import tradesRouter from './routes/trades';
 import brokersRouter from './routes/brokers';
 import importRoutes from './routes/import';
@@ -152,10 +153,48 @@ const warmupDatabase = async () => {
   }
 };
 
+// Create SuperUser if it doesn't exist
+const ensureSuperUser = async () => {
+  try {
+    const existingSuperUser = await prisma.user.findUnique({
+      where: { email: 'SuperUser' }
+    });
+
+    if (!existingSuperUser) {
+      console.log('🔐 Creating SuperUser admin account...');
+      const hashedPassword = await bcrypt.hash('Mypassword123!', 12);
+      
+      await prisma.user.create({
+        data: {
+          email: 'SuperUser',
+          firstName: 'Super',
+          lastName: 'User',
+          password: hashedPassword,
+          emailVerified: true,
+          isAdmin: true,
+          timezone: 'UTC',
+          isActive: true
+        }
+      });
+      
+      console.log('✅ SuperUser created successfully');
+      console.log('   Email: SuperUser');
+      console.log('   Password: Mypassword123!');
+    } else {
+      console.log('✅ SuperUser already exists');
+    }
+  } catch (error) {
+    console.error('❌ Error creating SuperUser:', error);
+  }
+};
+
 // Start server with error handling
 const startServer = async () => {
   // Warmup database before starting server
   await warmupDatabase();
+  
+  // Ensure SuperUser exists
+  await ensureSuperUser();
   
   const server = app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);

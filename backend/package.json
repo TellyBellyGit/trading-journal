@@ -7,7 +7,9 @@
     "build": "tsc",
     "start": "npx prisma generate && npx prisma db push && node dist/index.js",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "create-admin": "node scripts/createAdmin.js",
+    "cleanup-users": "node scripts/cleanupUsers.js"
   },
   "keywords": [],
   "author": "",
