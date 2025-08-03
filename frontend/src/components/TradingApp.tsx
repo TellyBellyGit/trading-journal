@@ -13,6 +13,7 @@ import SubscriptionPage from '../pages/SubscriptionPage';
 import Admin from '../pages/Admin';
 import { subscriptionsApi } from '../api/subscriptions';
 import { useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 // API configuration
 const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
@@ -20,7 +21,14 @@ const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
 
 // Main Trading App Component (authenticated content)
 const TradingApp: React.FC = () => {
-  const [currentView, setCurrentView] = useState('original');
+  const { user } = useAuth();
+  
+  // Set initial view based on user role: Admin users start on Admin Dashboard, regular users on Trading Dashboard
+  const getInitialView = () => {
+    return user?.isAdmin ? 'admin' : 'original';
+  };
+  
+  const [currentView, setCurrentView] = useState(getInitialView());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [upgradeNotification, setUpgradeNotification] = useState<{
     show: boolean;
