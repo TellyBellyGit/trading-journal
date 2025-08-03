@@ -4,18 +4,26 @@ import Login from './EnhancedLogin';
 import Register from './Register';
 import ResetPassword from './ResetPassword';
 import ForgotPassword from './ForgotPassword';
+import SimpleEmailVerification from './SimpleEmailVerification';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
 }
 
 // Helper function to detect reset token and determine initial auth mode
-const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' | 'forgot-password' => {
+const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' | 'forgot-password' | 'verify-email' => {
   const urlParams = new URLSearchParams(window.location.search);
   const resetToken = urlParams.get('token');
+  const currentPath = window.location.pathname;
+  
+  // Check if we're on the verify-email path
+  if (currentPath.includes('/verify-email') || currentPath.includes('verify-email')) {
+    console.log('📧 Email verification detected');
+    return 'verify-email';
+  }
   
   // If there's a token parameter, show reset form regardless of path
-  if (resetToken) {
+  if (resetToken && !currentPath.includes('verify')) {
     console.log('🔑 Reset token detected:', resetToken.substring(0, 8) + '...');
     return 'reset-password';
   }
@@ -25,7 +33,7 @@ const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' | 'forgot
 
 const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'reset-password' | 'forgot-password'>(getInitialAuthMode());
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'reset-password' | 'forgot-password' | 'verify-email'>(getInitialAuthMode());
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -63,6 +71,11 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
         />
       </div>
     );
+  }
+
+  // If showing email verification
+  if (authMode === 'verify-email') {
+    return <SimpleEmailVerification />;
   }
 
   // If user is authenticated, show the main app
