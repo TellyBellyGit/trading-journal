@@ -8,6 +8,8 @@
     "start": "npx prisma generate && npx prisma db push && node dist/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "migrate-brokers": "npx ts-node scripts/migrateBrokersToGlobal.ts && npx prisma db push",
+    "build-with-migration": "npm run migrate-brokers && npm run build",
     "create-admin": "node scripts/createAdmin.js",
     "cleanup-users": "node scripts/cleanupUsers.js"
   },

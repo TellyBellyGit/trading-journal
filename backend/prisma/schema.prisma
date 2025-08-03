@@ -37,11 +37,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   // Relations
-  brokers      Broker[]
-  trades       Trade[]
-  notes        Note[]
-  subscription Subscription?
-  loginHistory LoginHistory[]
+  userBrokerAccounts UserBrokerAccount[]
+  trades             Trade[]
+  notes              Note[]
+  subscription       Subscription?
+  loginHistory       LoginHistory[]
   
   // Performance indexes for login and user queries
   @@index([email])                        // Critical: login performance
@@ -50,28 +50,43 @@ model User {
   @@index([emailVerified])                // Email verification status
 }
 
-// 4. Define the Broker model
+// 4. Define the Global Broker model (shared across all users)
 model Broker {
   id          Int     @id @default(autoincrement())
-  name        String  // e.g., "TD Ameritrade", "Interactive Brokers" (removed @unique for multi-user)
-  displayName String  // e.g., "TD Ameritrade - Main Account"
-  accountType String? // e.g., "IRA", "Taxable", "Business"
-  accountId   String? // Broker's account identifier
+  name        String  @unique // e.g., "TD Ameritrade", "Interactive Brokers" - globally unique
+  displayName String  // e.g., "TD Ameritrade"
   isActive    Boolean @default(true)
-  // Commission structure (optional)
+  // Default commission structure for this broker
   defaultCommission Float?       // Default commission per trade
   commissionType    String?      // "per_trade", "per_share", "percentage"
-  // User relationship
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   // Relations
   trades      Trade[]
+  userBrokerAccounts UserBrokerAccount[]
+}
+
+// 4b. User-specific broker account settings (optional)
+model UserBrokerAccount {
+  id        Int    @id @default(autoincrement())
+  userId    Int
+  brokerId  Int  
+  // User-specific settings for this broker
+  accountType       String? // e.g., "IRA", "Taxable", "Business"
+  accountId         String? // User's account identifier with this broker
+  customCommission  Float?  // Override broker's default commission
+  displayName       String? // User's custom name for this account
+  isActive          Boolean @default(true)
+  // Relationships
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  broker            Broker  @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   
-  // Unique constraint: user can't have duplicate broker names
-  @@unique([userId, name])
+  // Unique constraint: user can't have duplicate accounts for same broker
+  @@unique([userId, brokerId])
 }
 
 // 5. Define the Trade model

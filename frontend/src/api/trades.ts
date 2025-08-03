@@ -243,41 +243,76 @@ import: {
 
 };
 
-// 🔥 NEW: Brokers API
+// 🔥 UPDATED: Brokers API for Global Broker System
 export const brokersApi = {
-  // Get all brokers
+  // Get all available brokers (global list with user account info)
   getAll: async (): Promise<Broker[]> => {
     const response = await api.get('/brokers');
     return response.data;
   },
 
-  // Get single broker with trade count
+  // Get single broker with user account details
   getById: async (id: number): Promise<Broker> => {
     const response = await api.get(`/brokers/${id}`);
     return response.data;
   },
 
-  // Create new broker
-  create: async (broker: Omit<Broker, 'id' | 'createdAt' | 'updatedAt' | '_count'>): Promise<Broker> => {
-    const response = await api.post('/brokers', broker);
+  // Create or update user's broker account for a global broker
+  createAccount: async (id: number, accountData: {
+    accountType?: string;
+    accountId?: string;
+    customCommission?: number;
+    displayName?: string;
+  }): Promise<Broker> => {
+    const response = await api.post(`/brokers/${id}/account`, accountData);
     return response.data;
   },
 
-  // Update broker
-  update: async (id: number, broker: Partial<Omit<Broker, 'id' | 'createdAt' | 'updatedAt' | '_count'>>): Promise<Broker> => {
-    const response = await api.put(`/brokers/${id}`, broker);
+  // Update user's broker account
+  updateAccount: async (id: number, accountData: {
+    accountType?: string;
+    accountId?: string;
+    customCommission?: number;
+    displayName?: string;
+    isActive?: boolean;
+  }): Promise<Broker> => {
+    const response = await api.put(`/brokers/${id}/account`, accountData);
     return response.data;
   },
 
-  // Get broker performance stats
-  getStats: async (id: number): Promise<BrokerStats> => {
-    const response = await api.get(`/brokers/${id}/stats`);
+  // Delete user's broker account (not the global broker)
+  deleteAccount: async (id: number): Promise<void> => {
+    await api.delete(`/brokers/${id}/account`);
+  },
+
+  // Admin-only: Get all global brokers
+  getAllGlobal: async (): Promise<Broker[]> => {
+    const response = await api.get('/brokers/admin/global');
     return response.data;
   },
 
-  // Delete broker (only if no trades)
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`/brokers/${id}`);
+  // Admin-only: Create new global broker
+  createGlobal: async (broker: {
+    name: string;
+    displayName?: string;
+    defaultCommission?: number;
+    commissionType?: string;
+    isActive?: boolean;
+  }): Promise<Broker> => {
+    const response = await api.post('/brokers/admin/global', broker);
+    return response.data;
+  },
+
+  // Admin-only: Update global broker
+  updateGlobal: async (id: number, broker: {
+    name?: string;
+    displayName?: string;
+    defaultCommission?: number;
+    commissionType?: string;
+    isActive?: boolean;
+  }): Promise<Broker> => {
+    const response = await api.put(`/brokers/admin/global/${id}`, broker);
+    return response.data;
   },
 };
 

@@ -1231,24 +1231,9 @@ router.post('/import/process', authenticateToken, upload.single('csvFile'), asyn
       });
     }
 
-    // Get or create a default broker for the user
-    let userBroker = await prisma.broker.findFirst({
-      where: { userId: req.user!.userId }
-    });
-    
-    if (!userBroker) {
-      // Create a default broker for the user
-      userBroker = await prisma.broker.create({
-        data: {
-          name: 'Default Broker',
-          displayName: 'Default Trading Account',
-          userId: req.user!.userId,
-          isActive: true
-        }
-      });
-    }
-    
-    const brokerId = userBroker.id;
+    // Use the new global broker system with auto-creation
+    const { findOrCreateBroker } = await import('./brokers');
+    const brokerId = await findOrCreateBroker('Default Broker');
     
     logger.import(`Processing CSV file with ${parsedTrades.length} trades`, parsedTrades.length, req);
     
@@ -1297,36 +1282,23 @@ router.post('/import/save', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get or create a default broker for the user
+    // Get or create broker using the new global system
+    const { findOrCreateBroker } = await import('./brokers');
     let userBrokerId = brokerId;
+    
     if (!userBrokerId) {
-      // Find user's first broker or create a default one
-      let userBroker = await prisma.broker.findFirst({
-        where: { userId }
-      });
-      
-      if (!userBroker) {
-        // Create a default broker for the user
-        userBroker = await prisma.broker.create({
-          data: {
-            name: 'Default Broker',
-            displayName: 'Default Trading Account',
-            userId,
-            isActive: true
-          }
-        });
-      }
-      userBrokerId = userBroker.id;
+      // Use default broker
+      userBrokerId = await findOrCreateBroker('Default Broker');
     } else {
-      // Verify the provided brokerId belongs to this user
-      const brokerExists = await prisma.broker.findFirst({
-        where: { id: userBrokerId, userId }
+      // Verify the provided brokerId exists (no user ownership check needed for global brokers)
+      const brokerExists = await prisma.broker.findUnique({
+        where: { id: userBrokerId }
       });
       if (!brokerExists) {
         return res.status(400).json({
           error: {
             message: 'Invalid broker ID',
-            details: ['Broker does not exist or does not belong to this user']
+            details: ['Broker does not exist']
           }
         });
       }

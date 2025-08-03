@@ -9,8 +9,10 @@ export interface Broker {
   isActive: boolean;
   defaultCommission?: number;
   commissionType?: string;
-  createdAt: string;
-  updatedAt: string;
+  hasUserAccount?: boolean;
+  userAccountActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   _count?: {
     trades: number;
   };
