@@ -853,7 +853,7 @@ router.patch('/users/:id/subscription', requireAdmin, async (req, res) => {
       subscription = await prisma.subscription.create({
         data: {
           userId,
-          stripeCustomerId: null, // Admin-created subscriptions don't have Stripe customer
+          stripeCustomerId: `admin_created_${userId}_${Date.now()}`, // Admin-created subscriptions get unique ID
           plan: plan || 'free',
           status: status || 'active',
           maxTrades: plan === 'pro' ? -1 : (maxTrades || 50),
