@@ -1231,7 +1231,24 @@ router.post('/import/process', authenticateToken, upload.single('csvFile'), asyn
       });
     }
 
-    const brokerId = 1;
+    // Get or create a default broker for the user
+    let userBroker = await prisma.broker.findFirst({
+      where: { userId: req.user!.userId }
+    });
+    
+    if (!userBroker) {
+      // Create a default broker for the user
+      userBroker = await prisma.broker.create({
+        data: {
+          name: 'Default Broker',
+          displayName: 'Default Trading Account',
+          userId: req.user!.userId,
+          isActive: true
+        }
+      });
+    }
+    
+    const brokerId = userBroker.id;
     
     logger.import(`Processing CSV file with ${parsedTrades.length} trades`, parsedTrades.length, req);
     
@@ -1280,7 +1297,42 @@ router.post('/import/save', authenticateToken, async (req, res) => {
       });
     }
 
-    const duplicateResult = await duplicateDetection.detectDuplicatesBatch(trades, brokerId || 1, req.user!.userId);
+    // Get or create a default broker for the user
+    let userBrokerId = brokerId;
+    if (!userBrokerId) {
+      // Find user's first broker or create a default one
+      let userBroker = await prisma.broker.findFirst({
+        where: { userId }
+      });
+      
+      if (!userBroker) {
+        // Create a default broker for the user
+        userBroker = await prisma.broker.create({
+          data: {
+            name: 'Default Broker',
+            displayName: 'Default Trading Account',
+            userId,
+            isActive: true
+          }
+        });
+      }
+      userBrokerId = userBroker.id;
+    } else {
+      // Verify the provided brokerId belongs to this user
+      const brokerExists = await prisma.broker.findFirst({
+        where: { id: userBrokerId, userId }
+      });
+      if (!brokerExists) {
+        return res.status(400).json({
+          error: {
+            message: 'Invalid broker ID',
+            details: ['Broker does not exist or does not belong to this user']
+          }
+        });
+      }
+    }
+
+    const duplicateResult = await duplicateDetection.detectDuplicatesBatch(trades, userBrokerId, req.user!.userId);
     
     if (duplicateResult.uniqueTrades.length === 0) {
       return res.json({
@@ -1362,7 +1414,7 @@ router.post('/import/save', authenticateToken, async (req, res) => {
       orderType: trade.orderType,
       status: trade.status,
       userId: req.user!.userId,
-      brokerId: brokerId || 1,
+      brokerId: userBrokerId,
       assessment: null,
       capital: trade.entryPrice * trade.quantity,
       notes: null,
