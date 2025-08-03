@@ -20,8 +20,8 @@ const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
 // Extend window object for timeout
 declare global {
   interface Window {
-    assessmentTimeout: NodeJS.Timeout;
-    strategyTimeout: NodeJS.Timeout;
+    assessmentTimeout: number;
+    strategyTimeout: number;
   }
 }
 

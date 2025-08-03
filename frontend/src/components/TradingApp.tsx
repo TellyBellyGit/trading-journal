@@ -140,7 +140,7 @@ const TradingApp: React.FC = () => {
       // Convert to CSV format
       const csvContent = [
         Object.keys(formattedData[0]).join(','),
-        ...formattedData.map(row => Object.values(row).join(','))
+        ...formattedData.map((row: any) => Object.values(row).join(','))
       ].join('\n');
 
       // Create and download the file

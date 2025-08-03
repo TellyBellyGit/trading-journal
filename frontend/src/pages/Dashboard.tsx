@@ -163,7 +163,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                   formatter="currency"
                   color={metrics.totalPnL >= 0 ? 'green' : 'red'}
                   size="xl"
-                  loading={loading}
                 />
                 <div className="flex items-center mt-2 space-x-2">
                   <div className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -268,7 +267,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                   color="blue"
                   size="xl"
                   decimals={0}
-                  loading={loading}
                 />
                 <div className="text-sm text-gray-500 mt-2">
                   {metrics.openTrades} open • {metrics.closedTrades} closed
