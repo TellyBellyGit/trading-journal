@@ -98,7 +98,7 @@ async function migrateBrokersToGlobal() {
       
       // 5. Create global brokers and user broker accounts
       for (const consolidated of consolidatedBrokers) {
-        // Create global broker
+        // Create global broker (schema should be updated by now)
         const globalBroker = await tx.broker.create({
           data: {
             name: consolidated.name,
