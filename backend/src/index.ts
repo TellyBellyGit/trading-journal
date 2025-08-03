@@ -157,7 +157,7 @@ const warmupDatabase = async () => {
 const ensureSuperUser = async () => {
   try {
     const existingSuperUser = await prisma.user.findUnique({
-      where: { email: 'SuperUser' }
+      where: { email: 'superuser@tradrdash.com' }
     });
 
     if (!existingSuperUser) {
@@ -166,7 +166,7 @@ const ensureSuperUser = async () => {
       
       await prisma.user.create({
         data: {
-          email: 'SuperUser',
+          email: 'superuser@tradrdash.com',
           firstName: 'Super',
           lastName: 'User',
           password: hashedPassword,
@@ -178,7 +178,7 @@ const ensureSuperUser = async () => {
       });
       
       console.log('✅ SuperUser created successfully');
-      console.log('   Email: SuperUser');
+      console.log('   Email: superuser@tradrdash.com');
       console.log('   Password: Mypassword123!');
     } else {
       console.log('✅ SuperUser already exists');
