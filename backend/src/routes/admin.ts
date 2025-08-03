@@ -731,7 +731,7 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     }
 
     // Prevent deletion of current admin user
-    if (req.user?.id === userId) {
+    if ((req.user as any)?.userId === userId) {
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
 
@@ -781,7 +781,7 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
       };
     });
 
-    logger.info(`Admin ${req.user?.email} deleted user ${user.email} and all associated data`, req);
+    logger.info(`Admin ${(req.user as any)?.email} deleted user ${user.email} and all associated data`, req);
 
     res.json({
       message: 'User and all associated data deleted successfully',
@@ -853,6 +853,7 @@ router.patch('/users/:id/subscription', requireAdmin, async (req, res) => {
       subscription = await prisma.subscription.create({
         data: {
           userId,
+          stripeCustomerId: null, // Admin-created subscriptions don't have Stripe customer
           plan: plan || 'free',
           status: status || 'active',
           maxTrades: plan === 'pro' ? -1 : (maxTrades || 50),
@@ -863,7 +864,7 @@ router.patch('/users/:id/subscription', requireAdmin, async (req, res) => {
       });
     }
 
-    logger.info(`Admin ${req.user?.email} updated subscription for user ${user.email}`, req);
+    logger.info(`Admin ${(req.user as any)?.email} updated subscription for user ${user.email}`, req);
 
     res.json({
       message: 'Subscription updated successfully',
@@ -872,7 +873,7 @@ router.patch('/users/:id/subscription', requireAdmin, async (req, res) => {
         status: subscription.status,
         maxTrades: subscription.maxTrades,
         tradeCount: subscription.tradeCount,
-        currentPeriodEnd: subscription.currentPeriodEnd.toISOString()
+        currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       }
     });
 
