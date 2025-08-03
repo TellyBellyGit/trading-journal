@@ -640,4 +640,249 @@ router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
   }
 });
 
+// 🔥 NEW: Check user deletion impact
+router.get('/users/:id/deletion-check', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, firstName: true, lastName: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Count related data
+    const counts = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        _count: {
+          select: {
+            trades: true,
+            notes: true,
+            brokers: true,
+            loginHistory: true
+          }
+        }
+      }
+    });
+
+    const tradeCount = counts?._count.trades || 0;
+    const noteCount = counts?._count.notes || 0;
+    const brokerCount = counts?._count.brokers || 0;
+
+    res.json({
+      canDelete: true,
+      tradeCount,
+      noteCount,
+      brokerCount,
+      message: tradeCount > 0 || noteCount > 0 || brokerCount > 0 
+        ? `User has ${tradeCount} trades, ${noteCount} notes, and ${brokerCount} broker accounts that will be deleted.`
+        : 'User has no associated data.'
+    });
+
+  } catch (error) {
+    logger.error('Failed to check user deletion', error, req);
+    res.status(500).json({ 
+      error: 'Failed to check user deletion',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 🔥 NEW: Delete user and all associated data
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { force } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { 
+        id: true, 
+        email: true, 
+        firstName: true, 
+        lastName: true,
+        _count: {
+          select: {
+            trades: true,
+            notes: true,
+            brokers: true,
+            loginHistory: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent deletion of current admin user
+    if (req.user?.id === userId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    // Use transaction to ensure all data is deleted atomically
+    const result = await prisma.$transaction(async (tx) => {
+      // Delete in correct order due to foreign key constraints
+      
+      // 1. Delete login history
+      const deletedLoginHistory = await tx.loginHistory.deleteMany({
+        where: { userId }
+      });
+
+      // 2. Delete notes
+      const deletedNotes = await tx.note.deleteMany({
+        where: { userId }
+      });
+
+      // 3. Delete trades
+      const deletedTrades = await tx.trade.deleteMany({
+        where: { userId }
+      });
+
+      // 4. Delete brokers
+      const deletedBrokers = await tx.broker.deleteMany({
+        where: { userId }
+      });
+
+      // 5. Delete subscription
+      const deletedSubscription = await tx.subscription.deleteMany({
+        where: { userId }
+      });
+
+      // 6. Finally delete the user
+      const deletedUser = await tx.user.delete({
+        where: { id: userId }
+      });
+
+      return {
+        deletedUser,
+        deletedData: {
+          trades: deletedTrades.count,
+          notes: deletedNotes.count,
+          brokers: deletedBrokers.count,
+          loginHistory: deletedLoginHistory.count,
+          subscription: deletedSubscription.count > 0
+        }
+      };
+    });
+
+    logger.info(`Admin ${req.user?.email} deleted user ${user.email} and all associated data`, req);
+
+    res.json({
+      message: 'User and all associated data deleted successfully',
+      deletedUser: {
+        id: user.id,
+        email: user.email,
+        name: `${user.firstName} ${user.lastName}`
+      },
+      deletedData: result.deletedData
+    });
+
+  } catch (error) {
+    logger.error('Failed to delete user', error, req);
+    res.status(500).json({ 
+      error: 'Failed to delete user',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 🔥 NEW: Update user subscription
+router.patch('/users/:id/subscription', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { plan, status, maxTrades } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, firstName: true, lastName: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get or create subscription
+    let subscription = await prisma.subscription.findUnique({
+      where: { userId }
+    });
+
+    const subscriptionData: any = {};
+    
+    if (plan !== undefined) {
+      subscriptionData.plan = plan;
+      subscriptionData.maxTrades = plan === 'pro' ? -1 : (maxTrades || 50);
+    }
+    
+    if (status !== undefined) {
+      subscriptionData.status = status;
+    }
+    
+    if (maxTrades !== undefined && plan !== 'pro') {
+      subscriptionData.maxTrades = maxTrades;
+    }
+
+    if (subscription) {
+      // Update existing subscription
+      subscription = await prisma.subscription.update({
+        where: { userId },
+        data: subscriptionData
+      });
+    } else {
+      // Create new subscription
+      subscription = await prisma.subscription.create({
+        data: {
+          userId,
+          plan: plan || 'free',
+          status: status || 'active',
+          maxTrades: plan === 'pro' ? -1 : (maxTrades || 50),
+          tradeCount: 0,
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        }
+      });
+    }
+
+    logger.info(`Admin ${req.user?.email} updated subscription for user ${user.email}`, req);
+
+    res.json({
+      message: 'Subscription updated successfully',
+      subscription: {
+        plan: subscription.plan,
+        status: subscription.status,
+        maxTrades: subscription.maxTrades,
+        tradeCount: subscription.tradeCount,
+        currentPeriodEnd: subscription.currentPeriodEnd.toISOString()
+      }
+    });
+
+  } catch (error) {
+    logger.error('Failed to update subscription', error, req);
+    res.status(500).json({ 
+      error: 'Failed to update subscription',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

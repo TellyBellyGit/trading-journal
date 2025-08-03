@@ -269,6 +269,82 @@ class AdminAPI {
 
     return response.json();
   }
+
+  // 🔥 NEW: Check if user has trades before deletion
+  async checkUserDeletion(userId: number): Promise<{
+    canDelete: boolean;
+    tradeCount: number;
+    noteCount: number;
+    brokerCount: number;
+    message: string;
+  }> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/deletion-check`, {
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to check user deletion: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // 🔥 NEW: Delete user and all associated data
+  async deleteUser(userId: number, force: boolean = false): Promise<{
+    message: string;
+    deletedUser: {
+      id: number;
+      email: string;
+      name: string;
+    };
+    deletedData: {
+      trades: number;
+      notes: number;
+      brokers: number;
+      loginHistory: number;
+      subscription: boolean;
+    };
+  }> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ force })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete user: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // 🔥 NEW: Update user subscription
+  async updateSubscription(userId: number, subscriptionData: {
+    plan?: 'free' | 'pro';
+    status?: 'active' | 'inactive' | 'cancelled';
+    maxTrades?: number;
+  }): Promise<{
+    message: string;
+    subscription: {
+      plan: string;
+      status: string;
+      maxTrades: number;
+      tradeCount: number;
+      currentPeriodEnd: string;
+    };
+  }> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(subscriptionData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update subscription: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 }
 
 export const adminAPI = new AdminAPI();

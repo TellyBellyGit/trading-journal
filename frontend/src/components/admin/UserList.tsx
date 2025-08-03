@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI, AdminUser } from '../../api/admin';
+import DeleteUserModal from './DeleteUserModal';
+import SubscriptionModal from './SubscriptionModal';
 
 interface UserListProps {
   onUserSelect?: (user: AdminUser) => void;
@@ -15,6 +17,31 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [updating, setUpdating] = useState<number | null>(null);
+  
+  // Modal states
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    user: AdminUser | null;
+    tradeCount: number;
+    noteCount: number;
+    brokerCount: number;
+  }>({
+    isOpen: false,
+    user: null,
+    tradeCount: 0,
+    noteCount: 0,
+    brokerCount: 0
+  });
+  
+  const [subscriptionModal, setSubscriptionModal] = useState<{
+    isOpen: boolean;
+    user: AdminUser | null;
+  }>({
+    isOpen: false,
+    user: null
+  });
+  
+  const [modalLoading, setModalLoading] = useState(false);
 
   const loadUsers = async () => {
     try {
@@ -129,6 +156,80 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
       alert(`Failed to reset password: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setUpdating(null);
+    }
+  };
+
+  // 🔥 NEW: Handle user deletion
+  const handleDeleteUser = async (user: AdminUser) => {
+    try {
+      setModalLoading(true);
+      
+      // Check if user has data before showing delete confirmation
+      const deletionCheck = await adminAPI.checkUserDeletion(user.id);
+      
+      setDeleteModal({
+        isOpen: true,
+        user,
+        tradeCount: deletionCheck.tradeCount,
+        noteCount: deletionCheck.noteCount,
+        brokerCount: deletionCheck.brokerCount
+      });
+    } catch (err) {
+      alert(`Failed to check user data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Handle confirmed user deletion
+  const handleConfirmDeleteUser = async (force: boolean) => {
+    if (!deleteModal.user) return;
+    
+    try {
+      setModalLoading(true);
+      const result = await adminAPI.deleteUser(deleteModal.user.id, force);
+      
+      // Close modal and refresh users list
+      setDeleteModal({ isOpen: false, user: null, tradeCount: 0, noteCount: 0, brokerCount: 0 });
+      await loadUsers();
+      
+      alert(`✅ User deleted successfully!\n\nDeleted:\n• User account\n• ${result.deletedData.trades} trades\n• ${result.deletedData.notes} notes\n• ${result.deletedData.brokers} brokers\n• ${result.deletedData.loginHistory} login records`);
+    } catch (err) {
+      alert(`Failed to delete user: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // 🔥 NEW: Handle subscription management
+  const handleManageSubscription = (user: AdminUser) => {
+    setSubscriptionModal({
+      isOpen: true,
+      user
+    });
+  };
+
+  // Handle subscription update
+  const handleUpdateSubscription = async (subscriptionData: {
+    plan?: 'free' | 'pro';
+    status?: 'active' | 'inactive' | 'cancelled';
+    maxTrades?: number;
+  }) => {
+    if (!subscriptionModal.user) return;
+    
+    try {
+      setModalLoading(true);
+      await adminAPI.updateSubscription(subscriptionModal.user.id, subscriptionData);
+      
+      // Close modal and refresh users list
+      setSubscriptionModal({ isOpen: false, user: null });
+      await loadUsers();
+      
+      alert('✅ Subscription updated successfully!');
+    } catch (err) {
+      alert(`Failed to update subscription: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -320,6 +421,19 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                 <td className="py-3 px-2">
                   <div className="flex flex-col space-y-1">
                     <button
+                      onClick={() => onUserSelect?.(user)}
+                      className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => handleManageSubscription(user)}
+                      disabled={updating === user.id}
+                      className="text-green-400 hover:text-green-300 text-sm transition-colors disabled:opacity-50"
+                    >
+                      Subscription
+                    </button>
+                    <button
                       onClick={() => handlePasswordReset(user.id, user.email)}
                       disabled={updating === user.id}
                       className="text-orange-400 hover:text-orange-300 text-sm transition-colors disabled:opacity-50"
@@ -327,10 +441,11 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
                       Reset Password
                     </button>
                     <button
-                      onClick={() => onUserSelect?.(user)}
-                      className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                      onClick={() => handleDeleteUser(user)}
+                      disabled={updating === user.id || modalLoading}
+                      className="text-red-400 hover:text-red-300 text-sm transition-colors disabled:opacity-50"
                     >
-                      View Details
+                      Delete User
                     </button>
                   </div>
                 </td>
@@ -364,6 +479,27 @@ const UserList: React.FC<UserListProps> = ({ onUserSelect }) => {
           </button>
         </div>
       )}
+
+      {/* Delete User Modal */}
+      <DeleteUserModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, user: null, tradeCount: 0, noteCount: 0, brokerCount: 0 })}
+        onConfirm={handleConfirmDeleteUser}
+        user={deleteModal.user}
+        tradeCount={deleteModal.tradeCount}
+        noteCount={deleteModal.noteCount}
+        brokerCount={deleteModal.brokerCount}
+        loading={modalLoading}
+      />
+
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        isOpen={subscriptionModal.isOpen}
+        onClose={() => setSubscriptionModal({ isOpen: false, user: null })}
+        onSave={handleUpdateSubscription}
+        user={subscriptionModal.user}
+        loading={modalLoading}
+      />
     </div>
   );
 };
