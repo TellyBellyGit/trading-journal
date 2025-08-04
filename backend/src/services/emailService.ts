@@ -25,8 +25,15 @@ class EmailService {
    * Send a generic email using Resend
    */
   async sendEmail(emailData: EmailData): Promise<boolean> {
+    console.log('🔍 EMAIL DEBUG: Starting sendEmail function');
+    console.log('🔍 EMAIL DEBUG: RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
+    console.log('🔍 EMAIL DEBUG: RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length || 0);
+    console.log('🔍 EMAIL DEBUG: RESEND_API_KEY starts with re_:', process.env.RESEND_API_KEY?.startsWith('re_') || false);
+    console.log('🔍 EMAIL DEBUG: resend object exists:', !!resend);
+    
     try {
       if (!resend || !process.env.RESEND_API_KEY) {
+        console.log('❌ EMAIL DEBUG: Missing Resend API key or resend object');
         logger.warning('Resend API key not configured, skipping email send', undefined);
         console.log('📧 Email would be sent:', {
           to: emailData.to,
@@ -36,6 +43,10 @@ class EmailService {
         return true; // Return true in development so registration doesn't fail
       }
 
+      console.log('✅ EMAIL DEBUG: Resend configured, preparing to send email');
+      console.log('🔍 EMAIL DEBUG: Email recipient:', emailData.to);
+      console.log('🔍 EMAIL DEBUG: Email subject:', emailData.subject);
+
       const emailOptions: any = {
         from: emailData.from || `${this.fromName} <${this.fromEmail}>`,
         to: [emailData.to],
@@ -44,21 +55,41 @@ class EmailService {
 
       if (emailData.html) {
         emailOptions.html = emailData.html;
+        console.log('🔍 EMAIL DEBUG: HTML content length:', emailData.html.length);
       }
       if (emailData.text) {
         emailOptions.text = emailData.text;
+        console.log('🔍 EMAIL DEBUG: Text content length:', emailData.text.length);
       }
 
+      console.log('🔍 EMAIL DEBUG: Final email options:', {
+        from: emailOptions.from,
+        to: emailOptions.to,
+        subject: emailOptions.subject,
+        hasHtml: !!emailOptions.html,
+        hasText: !!emailOptions.text
+      });
+
+      console.log('📤 EMAIL DEBUG: Calling resend.emails.send...');
       const result = await resend.emails.send(emailOptions);
+      console.log('📥 EMAIL DEBUG: Resend API response:', result);
       
       if (result.error) {
+        console.log('❌ EMAIL DEBUG: Resend returned error:', result.error);
         logger.error('Resend email error', result.error, undefined);
         return false;
       }
 
+      console.log('✅ EMAIL DEBUG: Email sent successfully!');
+      console.log('🔍 EMAIL DEBUG: Success result:', result);
       logger.info(`Email sent successfully to ${emailData.to}`, undefined);
       return true;
     } catch (error) {
+      console.log('❌ EMAIL DEBUG: Exception occurred:', error);
+      console.log('🔍 EMAIL DEBUG: Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
       logger.error('Failed to send email via Resend', error, undefined);
       return false;
     }

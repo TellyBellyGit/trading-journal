@@ -121,14 +121,31 @@ router.post('/register', async (req, res) => {
     });
 
     // Send email verification
+    console.log('🔍 REGISTRATION DEBUG: About to send email verification');
+    console.log('🔍 REGISTRATION DEBUG: User email:', user.email);
+    console.log('🔍 REGISTRATION DEBUG: User firstName:', user.firstName);
+    console.log('🔍 REGISTRATION DEBUG: Verification token length:', emailVerificationToken?.length || 0);
+    
     try {
-      await emailService.sendEmailVerification(
+      console.log('📤 REGISTRATION DEBUG: Calling emailService.sendEmailVerification...');
+      const emailResult = await emailService.sendEmailVerification(
         user.email,
         user.firstName,
         emailVerificationToken
       );
+      console.log('📥 REGISTRATION DEBUG: Email service returned:', emailResult);
+      
+      if (emailResult) {
+        console.log('✅ REGISTRATION DEBUG: Email verification sent successfully');
+      } else {
+        console.log('❌ REGISTRATION DEBUG: Email service returned false');
+      }
     } catch (emailError) {
-      console.error('Error sending verification email:', emailError);
+      console.error('❌ REGISTRATION DEBUG: Exception sending verification email:', emailError);
+      console.error('🔍 REGISTRATION DEBUG: Error details:', {
+        message: emailError instanceof Error ? emailError.message : 'Unknown error',
+        stack: emailError instanceof Error ? emailError.stack : 'No stack trace'
+      });
       // Continue with registration even if email fails
     }
 
