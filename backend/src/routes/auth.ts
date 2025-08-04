@@ -788,14 +788,10 @@ router.post('/reset-password', async (req, res) => {
       });
     }
 
-    // Hash the token to match stored format (admin-generated tokens are hashed)
-    const crypto = await import('crypto');
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    // Find user with valid reset token
+    // Find user with valid reset token (compare raw token)
     const user = await prisma.user.findFirst({
       where: {
-        passwordResetToken: hashedToken,
+        passwordResetToken: token,
         passwordResetExpires: {
           gt: new Date() // Token must not be expired
         }
@@ -888,16 +884,12 @@ router.get('/validate-reset-token/:token', async (req, res) => {
       });
     }
 
-    // Hash the token to match stored format (admin-generated tokens are hashed)
-    const crypto = await import('crypto');
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    console.log('🔍 TOKEN LOOKUP - Raw token:', token.substring(0, 8) + '... [v1.1]');
 
-    console.log('🔍 TOKEN LOOKUP - Hashed token:', hashedToken.substring(0, 8) + '... [v1.1]');
-
-    // Find user with valid reset token
+    // Find user with valid reset token (compare raw token)
     const user = await prisma.user.findFirst({
       where: {
-        passwordResetToken: hashedToken,
+        passwordResetToken: token,
         passwordResetExpires: {
           gt: new Date()
         }
@@ -922,7 +914,6 @@ router.get('/validate-reset-token/:token', async (req, res) => {
         debug: {
           version: 'v1.1',
           rawToken: token.substring(0, 8) + '...',
-          hashedToken: hashedToken.substring(0, 8) + '...',
           currentTime: new Date().toISOString(),
           userFound: false,
           message: 'No user record found with matching passwordResetToken'
