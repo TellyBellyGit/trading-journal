@@ -25,8 +25,19 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3002; // 🔥 CHANGED: Use 3002 instead of 3001
 
-// Middleware
-app.use(cors());
+// Middleware - CORS configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:5173', // Local development
+    'https://trading-journal-frontend-2zj6.onrender.com', // Production frontend
+    process.env.FRONTEND_URL // From environment variable
+  ].filter(Boolean), // Remove any undefined values
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
+
+app.use(cors(corsOptions));
 
 // Special webhook route (needs raw body for Stripe signature verification)
 app.use('/api/webhooks', webhooksRouter);
