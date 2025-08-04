@@ -183,7 +183,7 @@ If you didn't create an account with Trading Journal, you can safely ignore this
     firstName: string, 
     resetToken: string
   ): Promise<boolean> {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/?token=${resetToken}`;
     
     const htmlContent = `
       <!DOCTYPE html>
