@@ -20,6 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
+  showSessionTimeoutModal: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<{ error?: string }>;
   logout: () => void;
@@ -27,6 +28,7 @@ interface AuthContextType {
   loadInitialData: () => Promise<{ user: any; subscription: any; stats: any }>;
   updateProfile: (firstName: string, lastName: string) => Promise<void>;
   clearError: () => void;
+  handleSessionTimeoutConfirm: () => void;
 }
 
 interface RegisterData {
@@ -53,6 +55,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSessionTimeoutModal, setShowSessionTimeoutModal] = useState(false);
 
 
 
@@ -87,12 +90,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       sessionStorage.removeItem('refresh_token');
     };
 
-    // Clear auth data when user navigates away or closes tab
+    // Enhanced visibility change handler with timer
+    let visibilityTimer: NodeJS.Timeout | null = null;
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        sessionStorage.removeItem('auth_token');
-        sessionStorage.removeItem('auth_user');
-        sessionStorage.removeItem('refresh_token');
+        // Start 5-minute timeout when user switches away
+        visibilityTimer = setTimeout(() => {
+          // Clear session data
+          sessionStorage.removeItem('auth_token');
+          sessionStorage.removeItem('auth_user');
+          sessionStorage.removeItem('refresh_token');
+          
+          // Clear local auth state
+          setToken(null);
+          setUser(null);
+          
+          // Show session timeout modal
+          setShowSessionTimeoutModal(true);
+        }, 5 * 60 * 1000); // 5 minutes
+      } else {
+        // User returned - cancel logout timer
+        if (visibilityTimer) {
+          clearTimeout(visibilityTimer);
+          visibilityTimer = null;
+        }
       }
     };
 
@@ -102,8 +124,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     initializeAuth();
 
-    // Cleanup event listeners
+    // Cleanup event listeners and timer
     return () => {
+      if (visibilityTimer) {
+        clearTimeout(visibilityTimer);
+      }
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -307,12 +332,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
   };
 
+  // Handle session timeout modal confirmation
+  const handleSessionTimeoutConfirm = () => {
+    setShowSessionTimeoutModal(false);
+    // Force redirect to login by clearing everything and reloading
+    window.location.href = '/';
+  };
+
   const value: AuthContextType = {
     user,
     token,
     isLoading,
     isAuthenticated: !!user && !!token,
     error,
+    showSessionTimeoutModal,
     login,
     register,
     logout,
@@ -320,6 +353,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadInitialData,
     updateProfile,
     clearError,
+    handleSessionTimeoutConfirm,
   };
 
   return (

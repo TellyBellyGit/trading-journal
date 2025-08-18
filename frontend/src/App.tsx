@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthWrapper from './components/auth/AuthWrapper';
 import TradingApp from './components/TradingApp';
+import SessionTimeoutModal from './components/auth/SessionTimeoutModal';
 import './index.css';
 
-// Main App Component - Now with Authentication
-function App() {
+// Inner App Component that can use useAuth
+function AppContent() {
+  const { showSessionTimeoutModal, handleSessionTimeoutConfirm } = useAuth();
+  
   useEffect(() => {
     // Push an initial state to create history entry for back button interception
     history.pushState(null, '', window.location.href);
@@ -29,10 +32,23 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
+    <>
       <AuthWrapper>
         <TradingApp />
       </AuthWrapper>
+      <SessionTimeoutModal 
+        isOpen={showSessionTimeoutModal}
+        onConfirm={handleSessionTimeoutConfirm}
+      />
+    </>
+  );
+}
+
+// Main App Component - Now with Authentication
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
