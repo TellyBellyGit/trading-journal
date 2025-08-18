@@ -899,21 +899,22 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         // Check if user can use rich text features
         // Free users: only first 10 trades get rich text notes
         if (status.plan === 'free') {
-          // Get user's trade count to determine eligibility
-          const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/trades', {
-            headers: {
-              'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
-            }
-          });
-          const trades = await response.json();
-          
-          // Sort trades by creation date and check if current trade is in first 10
-          const sortedTrades = trades.sort((a: any, b: any) => 
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-          const currentTradeIndex = sortedTrades.findIndex((t: any) => t.id === tradeId);
-          
-          setCanUseRichText(currentTradeIndex < 10 && currentTradeIndex !== -1);
+          // Get user's trade count to determine eligibility using centralized API
+          try {
+            const trades = await tradesApi.getAllLegacy();
+            
+            // Sort trades by creation date and check if current trade is in first 10
+            const sortedTrades = trades.sort((a: any, b: any) => 
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+            const currentTradeIndex = sortedTrades.findIndex((t: any) => t.id === tradeId);
+            
+            setCanUseRichText(currentTradeIndex < 10 && currentTradeIndex !== -1);
+          } catch (tradesError) {
+            console.error('Error fetching trades for rich text eligibility:', tradesError);
+            // Default to allowing rich text if trades fetch fails
+            setCanUseRichText(true);
+          }
         } else {
           // Paid users get full rich text access
           setCanUseRichText(true);

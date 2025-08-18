@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { tradesApi } from '../api/trades';
 
 const TradeForm = () => {
   const [form, setForm] = useState({
@@ -23,37 +24,34 @@ const TradeForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const tradeData = {
-      ...form,
-      quantity: Number(form.quantity),
-      entryPrice: parseFloat(form.entryPrice),
-      exitPrice: parseFloat(form.exitPrice),
-    };
+    try {
+      const tradeData = {
+        ...form,
+        quantity: Number(form.quantity),
+        entryPrice: parseFloat(form.entryPrice),
+        exitPrice: parseFloat(form.exitPrice),
+      };
 
-    const token = sessionStorage.getItem('auth_token');
-    await fetch('https://trading-journal-backend-5fi2.onrender.com/api/trades', {
-      method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json' 
-      },
-      body: JSON.stringify(tradeData)
-    });
-
-    alert('Trade submitted');
-    setForm({
-      symbol: '',
-      direction: '',
-      quantity: 0,
-      entryDate: '',
-      entryTime: '',
-      entryPrice: '',
-      exitDate: '',
-      exitTime: '',
-      exitPrice: '',
-      orderType: '',
-      assessment: ''
-    });
+      await tradesApi.create(tradeData);
+      alert('Trade submitted successfully!');
+      
+      setForm({
+        symbol: '',
+        direction: '',
+        quantity: 0,
+        entryDate: '',
+        entryTime: '',
+        entryPrice: '',
+        exitDate: '',
+        exitTime: '',
+        exitPrice: '',
+        orderType: '',
+        assessment: ''
+      });
+    } catch (error) {
+      console.error('Error submitting trade:', error);
+      alert('Failed to submit trade. Please try again.');
+    }
   };
 
   return (
