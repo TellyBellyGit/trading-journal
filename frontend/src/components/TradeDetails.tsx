@@ -339,7 +339,7 @@ interface TradeDetailsProps {
 }
 
 // FULL-FEATURED Enhanced Toolbar component for Tiptap with ALL functionality
-const EditorToolbar = ({ editor }: { editor: any }) => {
+const EditorToolbar = ({ editor, trade }: { editor: any; trade: Trade | null }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
@@ -373,6 +373,275 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 
   const addImage = () => {
     fileInputRef.current?.click();
+  };
+
+  const exportToHtml = () => {
+    if (!editor || !trade) return;
+
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = currentDate.getDate().toString().padStart(2, '0');
+    const hours = currentDate.getHours().toString().padStart(2, '0');
+    const minutes = currentDate.getMinutes().toString().padStart(2, '0');
+    
+    const filename = `${trade.symbol}-${year}-${month}-${day}-${hours}-${minutes}.html`;
+    
+    // Get the editor content
+    const notesContent = editor.getHTML();
+    
+    // Format currency
+    const formatCurrency = (value: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2
+      }).format(value);
+    };
+    
+    // Create HTML content
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trade Export: ${trade.symbol}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .header .direction {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .trade-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 30px;
+        }
+        .detail-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .detail-section h3 {
+            margin: 0 0 20px 0;
+            color: #667eea;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+        .detail-value {
+            font-weight: 600;
+            color: #495057;
+        }
+        .pnl-positive {
+            color: #28a745;
+        }
+        .pnl-negative {
+            color: #dc3545;
+        }
+        .notes-section {
+            padding: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+        .notes-section h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        .notes-content {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            min-height: 200px;
+        }
+        .notes-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .export-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #bee5eb;
+            text-align: center;
+            color: #0c5460;
+            font-size: 0.9rem;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>${trade.symbol}</h1>
+            <div class="direction">${trade.direction} Position</div>
+        </div>
+        
+        <div class="export-info">
+            📄 Trade Export Generated on ${currentDate.toLocaleString()} | 🚀 TradrDash Trading Journal
+        </div>
+        
+        <div class="trade-details">
+            <div class="detail-section">
+                <h3>📈 Entry Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Date:</span>
+                    <span class="detail-value">${new Date(trade.entryDate).toLocaleDateString()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Time:</span>
+                    <span class="detail-value">${trade.entryTime}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Price:</span>
+                    <span class="detail-value">${formatCurrency(trade.entryPrice)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Quantity:</span>
+                    <span class="detail-value">${trade.quantity}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Total Cost:</span>
+                    <span class="detail-value">${formatCurrency(trade.entryPrice * trade.quantity)}</span>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>📉 Exit Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Date:</span>
+                    <span class="detail-value">${trade.exitDate ? new Date(trade.exitDate).toLocaleDateString() : 'Position Open'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Time:</span>
+                    <span class="detail-value">${trade.exitTime || 'Position Open'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Price:</span>
+                    <span class="detail-value">${trade.exitPrice ? formatCurrency(trade.exitPrice) : 'Position Open'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">${trade.status}</span>
+                </div>
+                ${trade.exitPrice ? `<div class="detail-row">
+                    <span class="detail-label">Total Return:</span>
+                    <span class="detail-value">${formatCurrency(trade.exitPrice * trade.quantity)}</span>
+                </div>` : ''}
+            </div>
+            
+            <div class="detail-section">
+                <h3>💰 Performance</h3>
+                <div class="detail-row">
+                    <span class="detail-label">P&L:</span>
+                    <span class="detail-value ${trade.pnl && trade.pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}">${formatCurrency(trade.pnl || 0)}</span>
+                </div>
+                ${trade.percentChange ? `<div class="detail-row">
+                    <span class="detail-label">Percentage Change:</span>
+                    <span class="detail-value ${trade.percentChange >= 0 ? 'pnl-positive' : 'pnl-negative'}">${trade.percentChange > 0 ? '+' : ''}${trade.percentChange.toFixed(2)}%</span>
+                </div>` : ''}
+                <div class="detail-row">
+                    <span class="detail-label">Order Type:</span>
+                    <span class="detail-value">${trade.orderType}</span>
+                </div>
+                ${trade.assessment ? `<div class="detail-row">
+                    <span class="detail-label">Assessment:</span>
+                    <span class="detail-value">${trade.assessment}</span>
+                </div>` : ''}
+                ${trade.strategy ? `<div class="detail-row">
+                    <span class="detail-label">Strategy:</span>
+                    <span class="detail-value">${trade.strategy}</span>
+                </div>` : ''}
+                ${trade.broker ? `<div class="detail-row">
+                    <span class="detail-label">Broker:</span>
+                    <span class="detail-value">${trade.broker.name}</span>
+                </div>` : ''}
+            </div>
+        </div>
+        
+        ${notesContent && notesContent.trim() !== '<p></p>' && notesContent.trim() !== '' ? `
+        <div class="notes-section">
+            <h2>📝 Trade Notes & Analysis</h2>
+            <div class="notes-content">
+                ${notesContent}
+            </div>
+        </div>` : ''}
+    </div>
+</body>
+</html>`;
+    
+    // Create and download the file
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log(`📄 Trade exported to ${filename}`);
   };
 
   return (
@@ -544,6 +813,17 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
           title="Redo"
         >
           ↷
+        </button>
+      </div>
+
+      {/* Export Button - Extreme Right */}
+      <div className="flex gap-1 ml-auto">
+        <button
+          onClick={exportToHtml}
+          className="px-4 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors border border-blue-600"
+          title="Export trade details and notes to HTML file"
+        >
+          📄 Export
         </button>
       </div>
 
@@ -1225,7 +1505,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 </div>
               </div>
             )}
-            <EditorToolbar editor={editor} />
+            <EditorToolbar editor={editor} trade={trade} />
             <EditorContent 
               editor={editor} 
               className="min-h-[400px] max-h-[600px] overflow-y-auto"

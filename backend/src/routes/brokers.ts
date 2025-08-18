@@ -28,9 +28,8 @@ router.get('/', authenticateToken, async (req, res) => {
         },
         _count: {
           select: { 
-            trades: {
-              where: { userId: req.user!.userId }
-            }
+            trades: true,
+            userBrokerAccounts: true
           }
         }
       }
@@ -74,9 +73,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
         },
         _count: {
           select: { 
-            trades: {
-              where: { userId: req.user!.userId }
-            }
+            trades: true,
+            userBrokerAccounts: true
           }
         }
       }
