@@ -238,6 +238,17 @@ const AllTrades: React.FC<AllTradesProps> = ({
         setPagination(tradesResponse.pagination);
         setDateContext(tradesResponse.dateContext);
       }
+      
+      // Scroll to top after successful sort
+      setTimeout(() => {
+        if (topPaginationRef.current) {
+          topPaginationRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100); // Small delay to ensure data is rendered
+      
     } catch (err) {
       console.error('Error sorting trades:', err);
       setError('Failed to sort trades. Please try again.');

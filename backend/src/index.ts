@@ -31,6 +31,7 @@ const corsOptions = {
   origin: [
     'http://localhost:5173', // Local development
     'https://trading-journal-frontend-2zj6.onrender.com', // Production frontend
+    'https://app.tradrdash.com', // Custom domain frontend
     process.env.FRONTEND_URL // From environment variable
   ].filter(Boolean), // Remove any undefined values
   credentials: true,
