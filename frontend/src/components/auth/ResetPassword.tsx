@@ -338,7 +338,22 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onBackToLogin }) => {
                   onClick={() => setState(prev => ({ ...prev, showPassword: !prev.showPassword }))}
                 >
                   <span className="text-gray-400 hover:text-gray-600">
-                    {state.showPassword ? '🙈' : '👁️'}
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      {state.showPassword ? (
+                        // Eye with slash (hidden)
+                        <>
+                          <path d="M12 4.5c7 0 10 7.5 10 7.5s-3 7.5-10 7.5-10-7.5-10-7.5 3-7.5 10-7.5z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                          <path d="M4 4l16 16" stroke="currentColor" strokeWidth="2"/>
+                        </>
+                      ) : (
+                        // Simple eye (visible)
+                        <>
+                          <path d="M12 4.5c7 0 10 7.5 10 7.5s-3 7.5-10 7.5-10-7.5-10-7.5 3-7.5 10-7.5z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                        </>
+                      )}
+                    </svg>
                   </span>
                 </button>
               </div>
@@ -371,7 +386,22 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ onBackToLogin }) => {
                   onClick={() => setState(prev => ({ ...prev, showConfirmPassword: !prev.showConfirmPassword }))}
                 >
                   <span className="text-gray-400 hover:text-gray-600">
-                    {state.showConfirmPassword ? '🙈' : '👁️'}
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      {state.showConfirmPassword ? (
+                        // Eye with slash (hidden)
+                        <>
+                          <path d="M12 4.5c7 0 10 7.5 10 7.5s-3 7.5-10 7.5-10-7.5-10-7.5 3-7.5 10-7.5z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                          <path d="M4 4l16 16" stroke="currentColor" strokeWidth="2"/>
+                        </>
+                      ) : (
+                        // Simple eye (visible)
+                        <>
+                          <path d="M12 4.5c7 0 10 7.5 10 7.5s-3 7.5-10 7.5-10-7.5-10-7.5 3-7.5 10-7.5z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                        </>
+                      )}
+                    </svg>
                   </span>
                 </button>
               </div>

@@ -1,6 +1,6 @@
 // backend/src/routes/admin.ts
 import express from 'express';
-import { requireAdmin } from '../middleware/auth';
+import { requireAdmin, authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { prisma } from '../lib/prisma';
 
@@ -411,7 +411,7 @@ router.get('/stats', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/admin/clear-user-data - Clear all user-specific data (keep brokers global)
-router.delete('/clear-user-data', requireAdmin, async (req, res) => {
+router.delete('/clear-user-data', authenticateToken, async (req, res) => {
   try {
     const userId = req.user!.userId;
     
@@ -457,7 +457,7 @@ router.delete('/clear-user-data', requireAdmin, async (req, res) => {
 });
 
 // GET /api/admin/user-stats - Get user data statistics (for verification)
-router.get('/user-stats', requireAdmin, async (req, res) => {
+router.get('/user-stats', authenticateToken, async (req, res) => {
   try {
     const userId = req.user!.userId;
 

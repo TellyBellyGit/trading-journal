@@ -189,9 +189,22 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
                   className="absolute inset-y-0 right-0 px-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  <span className="text-gray-400 hover:text-gray-300">
-                    {showPassword ? '🙈' : '👁️'}
-                  </span>
+                  <svg className="w-5 h-5 text-gray-400 hover:text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+                    {showPassword ? (
+                      // Eye with slash (hidden)
+                      <>
+                        <path d="M12 4.5c7 0 10 7.5 10 7.5s-3 7.5-10 7.5-10-7.5-10-7.5 3-7.5 10-7.5z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M4 4l16 16" stroke="currentColor" strokeWidth="2"/>
+                      </>
+                    ) : (
+                      // Simple eye (visible)
+                      <>
+                        <path d="M12 4.5c7 0 10 7.5 10 7.5s-3 7.5-10 7.5-10-7.5-10-7.5 3-7.5 10-7.5z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2"/>
+                      </>
+                    )}
+                  </svg>
                 </button>
               </div>
             </div>
