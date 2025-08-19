@@ -211,48 +211,64 @@ const AllTrades: React.FC<AllTradesProps> = ({
   };
 
   const handleSort = async (key: keyof Trade) => {
+    console.log('🔄 Starting sort operation for key:', key);
     const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    console.log('🔄 Sort direction:', direction);
     setSortConfig({ key, direction });
 
     // Server-side sorting: reload data with new sort parameters
     try {
+      console.log('🔄 Setting loading to true');
       setLoading(true);
       
       // Check if we have active filters
       const hasFilters = Object.values(filters).some(value => 
         value !== undefined && value !== '' && value !== null
       );
+      console.log('🔄 Has filters:', hasFilters);
 
       if (hasFilters) {
         // Use search API with new sort order
+        console.log('🔄 Using search API with filters');
         const searchResponse = await api.trades.search(filters, currentPage, itemsPerPage, key, direction);
         setTrades(searchResponse.trades);
         setFilteredTrades(searchResponse.trades);
         setPagination(searchResponse.pagination);
         setDateContext(searchResponse.dateContext);
+        console.log('🔄 Search API response processed, trades count:', searchResponse.trades.length);
       } else {
         // Use regular API with new sort order
+        console.log('🔄 Using regular API without filters');
         const tradesResponse = await api.trades.getAll(undefined, currentPage, itemsPerPage, key, direction);
         setTrades(tradesResponse.trades);
         setFilteredTrades(tradesResponse.trades);
         setPagination(tradesResponse.pagination);
         setDateContext(tradesResponse.dateContext);
+        console.log('🔄 Regular API response processed, trades count:', tradesResponse.trades.length);
       }
       
+      console.log('📍 About to start scroll timeout. topPaginationRef.current exists:', !!topPaginationRef.current);
       // Scroll to top after successful sort
       setTimeout(() => {
+        console.log('📍 Scroll timeout executing. topPaginationRef.current exists:', !!topPaginationRef.current);
+        console.log('📍 Loading state at scroll time:', loading);
         if (topPaginationRef.current) {
+          console.log('📍 Attempting scroll now');
           topPaginationRef.current.scrollIntoView({ 
             behavior: 'smooth',
             block: 'start'
           });
+          console.log('📍 Scroll command sent');
+        } else {
+          console.log('📍 topPaginationRef.current is null, cannot scroll');
         }
       }, 100); // Small delay to ensure data is rendered
       
     } catch (err) {
-      console.error('Error sorting trades:', err);
+      console.error('❌ Error sorting trades:', err);
       setError('Failed to sort trades. Please try again.');
     } finally {
+      console.log('🔄 Setting loading to false');
       setLoading(false);
     }
   };
