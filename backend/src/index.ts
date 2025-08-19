@@ -62,6 +62,31 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Trading Journal API is running' });
 });
 
+// TEMPORARY: Admin password reset endpoint - REMOVE AFTER USE
+app.post('/api/temp-reset-admin', async (req, res) => {
+  try {
+    const hashedPassword = await bcrypt.hash('admin123', 12);
+    
+    const admin = await prisma.user.update({
+      where: { email: 'admin@tradingjournal.com' },
+      data: {
+        password: hashedPassword,
+        emailVerified: true,
+        isAdmin: true,
+        isActive: true
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Admin password reset to: admin123',
+      email: 'admin@tradingjournal.com'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to reset password' });
+  }
+});
+
 // Global error handler for JSON parsing and other errors
 app.use((error: any, req: any, res: any, next: any) => {
   console.error('Global error handler:', {
