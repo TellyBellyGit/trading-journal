@@ -101,9 +101,15 @@ api.interceptors.request.use(
 
 // Enhanced Trades API
 export const tradesApi = {
-  // Get all trades (with optional broker filter and pagination)
-  getAll: async (brokerId?: number, page: number = 1, limit: number = 20): Promise<PaginatedResponse<Trade>> => {
-    const params: any = { page, limit };
+  // Get all trades (with optional broker filter, pagination, and sorting)
+  getAll: async (
+    brokerId?: number, 
+    page: number = 1, 
+    limit: number = 20,
+    sortBy: string = 'entryDate',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Promise<PaginatedResponse<Trade> & { sorting?: any }> => {
+    const params: any = { page, limit, sortBy, sortOrder };
     if (brokerId) params.brokerId = brokerId;
     const response = await api.get('/trades', { params });
     return response.data;
@@ -152,9 +158,15 @@ export const tradesApi = {
     return response.data;
   },
 
-  // 🔥 NEW: Search trades with advanced filtering and pagination
-  search: async (filters: TradeFilters, page: number = 1, limit: number = 20): Promise<PaginatedResponse<Trade>> => {
-    const params = { ...filters, page, limit };
+  // 🔥 NEW: Search trades with advanced filtering, pagination, and sorting
+  search: async (
+    filters: TradeFilters, 
+    page: number = 1, 
+    limit: number = 20,
+    sortBy: string = 'entryDate',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Promise<PaginatedResponse<Trade> & { sorting?: any }> => {
+    const params = { ...filters, page, limit, sortBy, sortOrder };
     const response = await api.get('/trades/search', { params });
     return response.data;
   },

@@ -69,10 +69,16 @@ interface AnalyzedTrade {
   status: 'Open' | 'Closed';
 }
 
-// 🔥 ENHANCED: Get all trades with broker information and pagination
+// 🔥 ENHANCED: Get all trades with broker information, pagination, and sorting
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { brokerId, page = '1', limit = '20' } = req.query;
+    const { 
+      brokerId, 
+      page = '1', 
+      limit = '20', 
+      sortBy = 'entryDate', 
+      sortOrder = 'desc' 
+    } = req.query;
     
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
@@ -82,6 +88,26 @@ router.get('/', authenticateToken, async (req, res) => {
     if (brokerId) {
       whereClause.brokerId = parseInt(brokerId as string);
     }
+    
+    // Define valid sort fields and their Prisma field mappings
+    const validSortFields: Record<string, string> = {
+      'symbol': 'symbol',
+      'entryDate': 'entryDate',
+      'exitDate': 'exitDate', 
+      'pnl': 'pnl',
+      'percentChange': 'percentChange',
+      'direction': 'direction',
+      'quantity': 'quantity',
+      'entryPrice': 'entryPrice',
+      'exitPrice': 'exitPrice',
+      'duration': 'duration',
+      'status': 'status',
+      'broker': 'brokerId' // Sort by broker ID for database efficiency
+    };
+    
+    // Validate sort parameters
+    const sortField = validSortFields[sortBy as string] || 'entryDate';
+    const sortDirection = (sortOrder as string)?.toLowerCase() === 'asc' ? 'asc' : 'desc';
     
     // Get total count for pagination metadata
     const totalCount = await prisma.trade.count({ where: whereClause });
@@ -97,7 +123,7 @@ router.get('/', authenticateToken, async (req, res) => {
           }
         }
       },
-      orderBy: { entryDate: 'desc' },
+      orderBy: { [sortField]: sortDirection },
       skip,
       take: limitNum
     });
@@ -110,6 +136,11 @@ router.get('/', authenticateToken, async (req, res) => {
         totalCount,
         hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
         hasPreviousPage: pageNum > 1
+      },
+      sorting: {
+        sortBy: sortBy as string,
+        sortOrder: sortDirection,
+        availableFields: Object.keys(validSortFields)
       }
     });
   } catch (error) {
@@ -302,7 +333,9 @@ router.get('/search', authenticateToken, async (req, res) => {
       hasNotes,
       hasAssessment,
       page = '1',
-      limit = '20'
+      limit = '20',
+      sortBy = 'entryDate',
+      sortOrder = 'desc'
     } = req.query;
 
     const pageNum = parseInt(page as string);
@@ -392,10 +425,27 @@ router.get('/search', authenticateToken, async (req, res) => {
 
     console.log('🔍 Search filters applied:', where);
 
-    // Smart sorting: if date filtering is active, sort by entryDate ASC (oldest first)
-    // This ensures users see trades starting from their selected date
-    const hasDateFilter = fromDate;
-    const orderBy = hasDateFilter ? { entryDate: 'asc' as const } : { entryDate: 'desc' as const };
+    // Define valid sort fields and their Prisma field mappings
+    const validSortFields: Record<string, string> = {
+      'symbol': 'symbol',
+      'entryDate': 'entryDate',
+      'exitDate': 'exitDate', 
+      'pnl': 'pnl',
+      'percentChange': 'percentChange',
+      'direction': 'direction',
+      'quantity': 'quantity',
+      'entryPrice': 'entryPrice',
+      'exitPrice': 'exitPrice',
+      'duration': 'duration',
+      'status': 'status',
+      'broker': 'brokerId'
+    };
+    
+    // Validate sort parameters
+    const sortField = validSortFields[sortBy as string] || 'entryDate';
+    const sortDirection = (sortOrder as string)?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+    
+    const orderBy = { [sortField]: sortDirection };
 
     // Get total count for pagination metadata
     const totalCount = await prisma.trade.count({ where });
@@ -418,6 +468,7 @@ router.get('/search', authenticateToken, async (req, res) => {
 
     // Calculate date context for enhanced pagination
     let dateContext = undefined;
+    const hasDateFilter = fromDate;
     if (hasDateFilter && trades.length > 0) {
       const pageStartDate = trades[0].entryDate;
       const pageEndDate = trades[trades.length - 1].entryDate;
@@ -442,6 +493,11 @@ router.get('/search', authenticateToken, async (req, res) => {
         totalCount,
         hasNextPage: pageNum < Math.ceil(totalCount / limitNum),
         hasPreviousPage: pageNum > 1
+      },
+      sorting: {
+        sortBy: sortBy as string,
+        sortOrder: sortDirection,
+        availableFields: Object.keys(validSortFields)
       },
       dateContext
     });

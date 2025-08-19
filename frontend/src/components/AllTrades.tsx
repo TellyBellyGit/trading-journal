@@ -146,14 +146,18 @@ const AllTrades: React.FC<AllTradesProps> = ({
 
   
 
-  const loadInitialData = async (page: number = 1) => {
+  const loadInitialData = async (page: number = 1, sortBy?: string, sortOrder?: 'asc' | 'desc') => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load trades with pagination, brokers, and stats in parallel
+      // Use current sort config if no sort parameters provided
+      const finalSortBy = sortBy || sortConfig.key;
+      const finalSortOrder = sortOrder || sortConfig.direction;
+
+      // Load trades with pagination, sorting, brokers, and stats in parallel
       const [tradesResponse, brokersData, statsData] = await Promise.all([
-        api.trades.getAll(undefined, page, itemsPerPage),
+        api.trades.getAll(undefined, page, itemsPerPage, finalSortBy, finalSortOrder),
         api.brokers.getAll(),
         api.trades.getStats(),
       ]);
@@ -183,8 +187,8 @@ const AllTrades: React.FC<AllTradesProps> = ({
       );
 
       if (!hasFilters) {
-        // Load normal paginated data
-        const tradesResponse = await api.trades.getAll(undefined, page, itemsPerPage);
+        // Load normal paginated data with current sorting
+        const tradesResponse = await api.trades.getAll(undefined, page, itemsPerPage, sortConfig.key, sortConfig.direction);
         setTrades(tradesResponse.trades);
         setFilteredTrades(tradesResponse.trades);
         setPagination(tradesResponse.pagination);
@@ -193,8 +197,8 @@ const AllTrades: React.FC<AllTradesProps> = ({
         return;
       }
 
-      // Use the search API for filtering with pagination
-      const searchResponse = await api.trades.search(filters, page, itemsPerPage);
+      // Use the search API for filtering with pagination and sorting
+      const searchResponse = await api.trades.search(filters, page, itemsPerPage, sortConfig.key, sortConfig.direction);
       setTrades(searchResponse.trades);
       setFilteredTrades(searchResponse.trades);
       setPagination(searchResponse.pagination);
@@ -206,31 +210,40 @@ const AllTrades: React.FC<AllTradesProps> = ({
     }
   };
 
-  const handleSort = (key: keyof Trade) => {
+  const handleSort = async (key: keyof Trade) => {
     const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
     setSortConfig({ key, direction });
 
-    const sortedTrades = [...filteredTrades].sort((a, b) => {
-      const aValue = a[key];
-      const bValue = b[key];
+    // Server-side sorting: reload data with new sort parameters
+    try {
+      setLoading(true);
+      
+      // Check if we have active filters
+      const hasFilters = Object.values(filters).some(value => 
+        value !== undefined && value !== '' && value !== null
+      );
 
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return direction === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+      if (hasFilters) {
+        // Use search API with new sort order
+        const searchResponse = await api.trades.search(filters, currentPage, itemsPerPage, key, direction);
+        setTrades(searchResponse.trades);
+        setFilteredTrades(searchResponse.trades);
+        setPagination(searchResponse.pagination);
+        setDateContext(searchResponse.dateContext);
+      } else {
+        // Use regular API with new sort order
+        const tradesResponse = await api.trades.getAll(undefined, currentPage, itemsPerPage, key, direction);
+        setTrades(tradesResponse.trades);
+        setFilteredTrades(tradesResponse.trades);
+        setPagination(tradesResponse.pagination);
+        setDateContext(tradesResponse.dateContext);
       }
-
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-
-      return 0;
-    });
-
-    setFilteredTrades(sortedTrades);
+    } catch (err) {
+      console.error('Error sorting trades:', err);
+      setError('Failed to sort trades. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFilterChange = (filterKey: keyof TradeFilters, value: any) => {
