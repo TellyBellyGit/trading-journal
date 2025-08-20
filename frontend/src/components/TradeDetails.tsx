@@ -877,7 +877,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
     content: '',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[300px] p-4',
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[600px] p-4',
         style: 'max-width: none !important;',
       },
     },
@@ -1557,7 +1557,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         .ProseMirror {
           outline: none;
           padding: 1rem;
-          min-height: 400px;
+          min-height: 600px;
           background-color: #1f2937; /* Dark gray background to match theme */
           color: #f9fafb; /* Light text color */
         }
