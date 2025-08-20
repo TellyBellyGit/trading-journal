@@ -13,6 +13,7 @@ import { sanitizeForJSON } from '../utils/jsonSanitizer';
 import { useSettings } from '../contexts/SettingsContext';
 import { tradesApi } from '../api/trades';
 import { subscriptionsApi } from '../api/subscriptions';
+import TradeTemplateModal from './TradeTemplateModal';
 
 // API configuration
 const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
@@ -281,63 +282,6 @@ const ResizableImage = Image.extend({
   },
 });
 
-// Trade Review Template
-const TRADE_REVIEW_TEMPLATE = `
-<h1>TRADE REVIEW ANALYSIS</h1>
-
-<h2>I. SETUP & CONTEXT</h2>
-<ul>
-<li><strong>Setup Type / Strategy:</strong> [                    ]</li>
-<li><strong>Market Sentiment:</strong> [                    ]</li>
-<li><strong>Sector Strength:</strong> [                    ]</li>
-<li><strong>Market Cap:</strong> [                    ]</li>
-<li><strong>Volume Conditions:</strong> [                    ]</li>
-<li><strong>Entry Timeframe:</strong> [                    ]</li>
-<li><strong>Exit Timeframe:</strong> [                    ]</li>
-<li><strong>Entry Reason:</strong> [                                                    ]</li>
-<li><strong>News / Events:</strong> [                                                    ]</li>
-</ul>
-
-<h2>II. RISK & MONEY MANAGEMENT</h2>
-<ul>
-<li><strong>Account Size:</strong> [                    ]</li>
-<li><strong>Risk per Trade:</strong> [                    ]</li>
-<li><strong>Planned R:R Ratio:</strong> [                    ]</li>
-<li><strong>Leverage:</strong> [                    ]</li>
-</ul>
-
-<h2>III. EXECUTION & TRADE MANAGEMENT</h2>
-<ul>
-<li><strong>Order Type:</strong> [                    ]</li>
-<li><strong>Slippage / Fill Quality:</strong> [                    ]</li>
-<li><strong>Partial Exits:</strong> [                    ]</li>
-<li><strong>Exit Reason:</strong> [                                                    ]</li>
-<li><strong>Mistakes:</strong> [                                                    ]</li>
-</ul>
-
-<h2>IV. RESULTS & STATISTICS</h2>
-<ul>
-<li><strong>Profit / Loss (P&L):</strong> [                    ]</li>
-<li><strong>Max Favorable Excursion (MFE):</strong> [                    ]</li>
-<li><strong>Max Adverse Excursion (MAE):</strong> [                    ]</li>
-<li><strong>Did you follow your plan?:</strong> [                                                    ]</li>
-</ul>
-
-<h2>V. PSYCHOLOGY & REVIEW</h2>
-<ul>
-<li><strong>Pre-Trade Mindset:</strong> [                    ]</li>
-<li><strong>Emotional State:</strong> [                    ]</li>
-<li><strong>Technical Error:</strong> [                    ]</li>
-<li><strong>Psychological Error:</strong> [                    ]</li>
-<li><strong>Mechanical Error:</strong> [                    ]</li>
-<li><strong>Lessons Learned:</strong> [                                                    ]</li>
-<li><strong>What to Improve Next Time:</strong> [                                                    ]</li>
-<li><strong>"If I could replay the trade...":</strong> [                                                    ]</li>
-</ul>
-
-<hr>
-<p><em>Template inserted: ${new Date().toLocaleString()}</em></p>
-`;
 
 // Image compression utility - FIXED AGAIN
 const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<string> => {
@@ -397,7 +341,7 @@ interface TradeDetailsProps {
 }
 
 // FULL-FEATURED Enhanced Toolbar component for Tiptap with ALL functionality
-const EditorToolbar = ({ editor, trade }: { editor: any; trade: Trade | null }) => {
+const EditorToolbar = ({ editor, trade, onOpenTemplate }: { editor: any; trade: Trade | null; onOpenTemplate: () => void }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
@@ -877,9 +821,9 @@ const EditorToolbar = ({ editor, trade }: { editor: any; trade: Trade | null }) 
       {/* Template & Export Buttons - Extreme Right */}
       <div className="flex gap-1 ml-auto">
         <button
-          onClick={() => editor.chain().focus().insertContent(TRADE_REVIEW_TEMPLATE).run()}
+          onClick={onOpenTemplate}
           className="px-4 py-1.5 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors border border-green-600"
-          title="Insert comprehensive trade review template"
+          title="Open comprehensive trade review template"
         >
           Template
         </button>
@@ -916,6 +860,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [canUseRichText, setCanUseRichText] = useState(true);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
 
   // FULL-FEATURED Tiptap editor with FIXED extensions
   const editor = useEditor({
@@ -1100,6 +1045,22 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         setIsAutoSaving(false);
       }
     }, 500); // Wait 500ms after user stops typing
+  };
+
+  // Handle template modal
+  const handleOpenTemplate = () => {
+    setIsTemplateModalOpen(true);
+  };
+
+  const handleCloseTemplate = () => {
+    setIsTemplateModalOpen(false);
+  };
+
+  const handleInsertTemplate = (content: string) => {
+    if (editor) {
+      editor.commands.focus();
+      editor.commands.insertContent(content);
+    }
   };
 
   if (loading) {
@@ -1572,7 +1533,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 </div>
               </div>
             )}
-            <EditorToolbar editor={editor} trade={trade} />
+            <EditorToolbar editor={editor} trade={trade} onOpenTemplate={handleOpenTemplate} />
             <EditorContent 
               editor={editor} 
               className="min-h-[800px] max-h-[1200px] overflow-y-auto"
@@ -1617,6 +1578,13 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
           </div>
         )}
       </div>
+
+      {/* Template Modal */}
+      <TradeTemplateModal
+        isOpen={isTemplateModalOpen}
+        onClose={handleCloseTemplate}
+        onInsert={handleInsertTemplate}
+      />
       
       <style>{`
         /* Enhanced editor styles - DARK THEME MATCHING */

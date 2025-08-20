@@ -1,0 +1,133 @@
+{
+  "weights": {
+    "setup": 25,
+    "risk": 30,
+    "execution": 20,
+    "psychology": 25
+  },
+  "qualityLevels": {
+    "excellent": {
+      "threshold": 85,
+      "emoji": "✅",
+      "label": "Excellent",
+      "description": "Professional-grade trade execution"
+    },
+    "good": {
+      "threshold": 70,
+      "emoji": "🟢",
+      "label": "Good", 
+      "description": "Solid trade with minor areas for improvement"
+    },
+    "average": {
+      "threshold": 50,
+      "emoji": "⚠️",
+      "label": "Average",
+      "description": "Acceptable but significant room for improvement"
+    },
+    "poor": {
+      "threshold": 30,
+      "emoji": "❌",
+      "label": "Poor",
+      "description": "Process severely flawed"
+    },
+    "terrible": {
+      "threshold": 0,
+      "emoji": "🚨",
+      "label": "Terrible",
+      "description": "Gambling behavior - not trading"
+    }
+  },
+  "sectionCriteria": {
+    "setup": {
+      "factors": [
+        {
+          "name": "strategy_clarity",
+          "weight": 30,
+          "description": "Clear, specific strategy defined"
+        },
+        {
+          "name": "market_analysis",
+          "weight": 25,
+          "description": "Comprehensive market condition assessment"
+        },
+        {
+          "name": "timeframe_appropriateness",
+          "weight": 20,
+          "description": "Timeframe matches strategy and market cap"
+        },
+        {
+          "name": "entry_rationale",
+          "weight": 25,
+          "description": "Logical, evidence-based entry reason"
+        }
+      ]
+    },
+    "risk": {
+      "factors": [
+        {
+          "name": "position_sizing",
+          "weight": 40,
+          "description": "Appropriate risk per trade (1-2% ideal)"
+        },
+        {
+          "name": "risk_reward_ratio",
+          "weight": 30,
+          "description": "Favorable R:R ratio (minimum 1:1.5)"
+        },
+        {
+          "name": "leverage_usage",
+          "weight": 30,
+          "description": "Conservative leverage or none"
+        }
+      ]
+    },
+    "execution": {
+      "factors": [
+        {
+          "name": "order_type_selection",
+          "weight": 25,
+          "description": "Appropriate order type for conditions"
+        },
+        {
+          "name": "fill_quality",
+          "weight": 25,
+          "description": "Minimal slippage and good execution"
+        },
+        {
+          "name": "exit_discipline",
+          "weight": 30,
+          "description": "Systematic exit based on plan, not emotion"
+        },
+        {
+          "name": "mistake_awareness",
+          "weight": 20,
+          "description": "Honest assessment of execution errors"
+        }
+      ]
+    },
+    "psychology": {
+      "factors": [
+        {
+          "name": "pre_trade_state",
+          "weight": 30,
+          "description": "Calm, focused mindset before trading"
+        },
+        {
+          "name": "emotional_control",
+          "weight": 30,
+          "description": "Disciplined emotional state during trade"
+        },
+        {
+          "name": "learning_orientation",
+          "weight": 25,
+          "description": "Focus on improvement and learning"
+        },
+        {
+          "name": "self_awareness",
+          "weight": 15,
+          "description": "Honest self-assessment of errors"
+        }
+      ]
+    }
+  }
+}

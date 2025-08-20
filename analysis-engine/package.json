@@ -1,0 +1,27 @@
+{
+  "name": "trade-analysis-engine",
+  "version": "1.0.0",
+  "description": "Intelligent trade quality assessment and coaching system",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "jest",
+    "dev": "node --watch src/index.js",
+    "analyze": "node src/cli.js"
+  },
+  "keywords": [
+    "trading",
+    "analysis",
+    "assessment",
+    "psychology",
+    "risk-management"
+  ],
+  "author": "Trading Journal Team",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

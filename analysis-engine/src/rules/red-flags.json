@@ -1,0 +1,120 @@
+{
+  "entryReasons": {
+    "critical": [
+      "bored",
+      "boring",
+      "nothing to do",
+      "gut feeling",
+      "hunch",
+      "intuition",
+      "revenge",
+      "get back",
+      "make up for",
+      "compensate",
+      "fomo",
+      "fear of missing out",
+      "everyone else",
+      "hot tip",
+      "someone said",
+      "social media",
+      "twitter",
+      "reddit",
+      "discord"
+    ],
+    "warning": [
+      "quick",
+      "fast",
+      "easy money",
+      "sure thing",
+      "can't lose",
+      "obvious",
+      "simple",
+      "felt right",
+      "looked good"
+    ]
+  },
+  "psychology": {
+    "preTradeMindset": {
+      "critical": [
+        "anxious",
+        "rushed",
+        "tired",
+        "angry",
+        "frustrated",
+        "revenge mode"
+      ],
+      "warning": [
+        "overconfident",
+        "impatient"
+      ]
+    },
+    "emotionalState": {
+      "critical": [
+        "fear",
+        "greed",
+        "fomo",
+        "revenge",
+        "desperate"
+      ],
+      "warning": [
+        "impatient",
+        "excited"
+      ]
+    }
+  },
+  "timeframes": {
+    "highRisk": [
+      {
+        "marketCap": "Small",
+        "timeframe": ["1m", "2m", "5m"],
+        "reason": "Small cap stocks on short timeframes are extremely noisy and susceptible to manipulation"
+      },
+      {
+        "marketCap": "Mid",
+        "timeframe": ["1m"],
+        "reason": "1-minute charts on mid-cap stocks often show more noise than signal"
+      }
+    ]
+  },
+  "risk": {
+    "excessive": {
+      "percentThresholds": [
+        {
+          "threshold": 5,
+          "severity": "critical",
+          "message": "Risking more than 5% per trade is gambling, not trading"
+        },
+        {
+          "threshold": 3,
+          "severity": "warning", 
+          "message": "Risking more than 3% per trade is aggressive for most strategies"
+        }
+      ]
+    },
+    "leverage": {
+      "excessive": [
+        {
+          "amount": "10x",
+          "severity": "critical",
+          "message": "10x+ leverage is extremely dangerous for retail traders"
+        },
+        {
+          "amount": "5x",
+          "severity": "warning",
+          "message": "5x+ leverage requires exceptional risk management"
+        }
+      ]
+    }
+  },
+  "execution": {
+    "orderTypes": {
+      "risky": [
+        {
+          "type": "Market",
+          "context": ["High volatility", "Low volume", "Gap up", "Gap down"],
+          "reason": "Market orders during volatile conditions can result in significant slippage"
+        }
+      ]
+    }
+  }
+}

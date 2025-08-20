@@ -18,6 +18,7 @@ import adminRouter from './routes/admin';
 import userRouter from './routes/user';
 import subscriptionsRouter from './routes/subscriptions';
 import webhooksRouter from './routes/webhooks';
+import analysisRouter from './routes/analysis';
 import { JWTUtils } from './utils/auth';
 import PrismaClientSingleton, { prisma } from './lib/prisma';
 
@@ -58,7 +59,8 @@ app.use('/api/trades/import', importRoutes);
 app.use('/api/notes', notesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
-app.use('/api/subscriptions', subscriptionsRouter); 
+app.use('/api/subscriptions', subscriptionsRouter);
+app.use('/api', analysisRouter); 
 
 // Health check
 app.get('/api/health', (req, res) => {
