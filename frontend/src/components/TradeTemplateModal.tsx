@@ -216,8 +216,8 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
       const result = await response.json();
       setAnalysisResult({ analysis: result.analysis });
       
-    } catch (error) {
-      setAnalysisError('Failed to analyze trade. Please try again.');
+    } catch (error: any) {
+      setAnalysisError(error.message || error.toString() || 'Unknown error occurred');
       console.error('Analysis error:', error);
     } finally {
       setIsAnalyzing(false);
