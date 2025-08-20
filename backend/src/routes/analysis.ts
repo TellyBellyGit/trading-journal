@@ -117,30 +117,42 @@ router.post('/analyze-trade', authenticateToken, async (req, res) => {
     }
 
     console.log('✅ AI analysis completed successfully');
+    console.log('📤 Response length:', analysis.length, 'characters');
     
-    // Return the formatted analysis
-    res.json({ 
+    const responseData = { 
       analysis: analysis.trim(),
       timestamp: new Date().toISOString(),
       model: "deepseek-chat"
-    });
+    };
+    
+    console.log('📤 Sending response:', JSON.stringify(responseData).substring(0, 200) + '...');
+    res.json(responseData);
 
   } catch (error: any) {
     console.error('❌ AI analysis error:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      stack: error.stack?.substring(0, 500)
+    });
     
     // Provide helpful error messages
     if (error.code === 'invalid_api_key') {
+      console.error('🔑 Invalid API key error');
       return res.status(500).json({ 
         error: 'AI service configuration error' 
       });
     }
     
     if (error.code === 'rate_limit_exceeded') {
+      console.error('⏰ Rate limit exceeded');
       return res.status(429).json({ 
         error: 'Analysis service temporarily busy. Please try again in a moment.' 
       });
     }
 
+    console.error('💥 Generic error, sending 500 response');
     res.status(500).json({ 
       error: 'Failed to analyze trade. Please try again.' 
     });
