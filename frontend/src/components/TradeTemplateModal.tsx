@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 interface TradeTemplateModalProps {
   isOpen: boolean;
@@ -199,7 +200,7 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
       }
 
       // Call the AI analysis API
-      const response = await fetch('/api/analyze-trade', {
+      const response = await fetch(`${API_BASE_URL}/analyze-trade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
