@@ -60,6 +60,11 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
   onClose,
   onInsert,
 }) => {
+  // Position state for dragging
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, modalX: 0, modalY: 0 });
+
   const [templateData, setTemplateData] = useState<TemplateData>({
     setupType: '',
     marketSentiment: '',
@@ -96,6 +101,62 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // Reset position when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [isOpen]);
+
+  // Mouse event handlers for dragging
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY,
+      modalX: position.x,
+      modalY: position.y
+    });
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
+    
+    const newX = dragStart.modalX + deltaX;
+    const newY = dragStart.modalY + deltaY;
+    
+    // Prevent header from going off the top of the screen
+    const minY = 0; // Don't allow modal to go above the top of viewport
+    
+    setPosition({
+      x: newX,
+      y: Math.max(minY, newY)
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Add global mouse event listeners
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'none'; // Prevent text selection while dragging
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isDragging, dragStart, position]);
 
   // Load saved draft on mount
   useEffect(() => {
@@ -229,17 +290,26 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+      <div 
+        className="draggable-modal bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden relative"
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px)`,
+          cursor: isDragging ? 'grabbing' : 'default'
+        }}
+      >
+        {/* Header - Draggable */}
+        <div 
+          className="drag-handle bg-gradient-to-r from-blue-600 to-purple-600 p-6 cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold text-white">Trade Review Template</h2>
-              <p className="text-blue-100 text-sm mt-1">Auto-saved as you type</p>
+              <p className="text-blue-100 text-sm mt-1">Auto-saved as you type • Drag to reposition</p>
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-300 text-2xl"
+              className="text-white hover:text-gray-300 text-2xl hover:bg-white hover:bg-opacity-20 rounded w-8 h-8 flex items-center justify-center transition-colors"
             >
               ×
             </button>

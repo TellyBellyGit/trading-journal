@@ -6,6 +6,7 @@ import PerformanceMetrics from './PerformanceMetrics';
 import WinRateDonut from './WinRateDonut';
 import TradingAssessment from './TradingAssessment';
 import TimePeriodSelector from './TimePeriodSelector';
+import { analyticsApi } from '../../api/analytics';
 
 // Types for analytics data
 export interface AnalyticsData {
@@ -62,50 +63,31 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ loading = false
       setIsLoading(true);
       setError(null);
 
-      // Build API endpoint based on selected period
-      let endpoint = '';
-      const baseUrl = 'https://trading-journal-backend-5fi2.onrender.com/api';
+      let data;
       
       switch (selectedPeriod) {
         case 'daily':
-          endpoint = `${baseUrl}/trades/analytics/daily/${selectedDate}`;
+          data = await analyticsApi.getDaily(selectedDate);
           break;
         case 'weekly':
-          endpoint = `${baseUrl}/trades/analytics/weekly/${selectedDate}`;
+          data = await analyticsApi.getWeekly(selectedDate);
           break;
         case 'monthly':
-          endpoint = `${baseUrl}/trades/analytics/monthly/${selectedDate}`;
+          data = await analyticsApi.getMonthly(selectedDate);
           break;
         case 'ytd':
           const currentYear = new Date(selectedDate).getFullYear();
-          endpoint = `${baseUrl}/trades/analytics/ytd/${currentYear}`;
+          data = await analyticsApi.getYTD(currentYear);
           break;
         case 'previous-year':
           const targetYear = new Date(selectedDate).getFullYear();
-          endpoint = `${baseUrl}/trades/analytics/previous-year/${targetYear}`;
+          data = await analyticsApi.getPreviousYear(targetYear);
           break;
         default:
-          endpoint = `${baseUrl}/trades/analytics/summary`;
+          data = await analyticsApi.getSummary();
       }
 
-      console.log('Fetching analytics from:', endpoint);
-
-      // Fetch data from backend with authentication
-      const token = sessionStorage.getItem('auth_token');
-      const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch analytics: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
       console.log('Analytics data received:', data);
-      
       setAnalyticsData(data);
     } catch (err) {
       console.error('Error loading analytics data:', err);
