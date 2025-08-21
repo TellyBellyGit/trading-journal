@@ -12,6 +12,7 @@ import DatePickerModal from './DatePickerModal';
 import SubscriptionPage from '../pages/SubscriptionPage';
 import Admin from '../pages/Admin';
 import { subscriptionsApi } from '../api/subscriptions';
+import { tradesApi, exportTrades } from '../api/trades';
 import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -110,62 +111,37 @@ const TradingApp: React.FC = () => {
 
   // Actual export function called from date picker modal
   const performExportToAI = async (startDate: string, endDate: string) => {
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-
     try {
-      // Use the new efficient export API endpoint that filters at the database level
-      const token = sessionStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/trades/export?startDate=${startDate}&endDate=${endDate}&status=Closed`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch trades for export');
+      const response = await tradesApi.getAll();
+      const allTrades = response.trades || [];
       
-      const trades = await response.json();
+      const closedTrades = allTrades.filter((trade: any) => trade.status === 'Closed');
       
-      if (!trades.length) {
-        alert('No closed trades found in the selected date range.');
+      if (!closedTrades.length) {
+        alert('No closed trades found.');
         return;
       }
 
-      // Format the data for AI analysis
-      const formattedData = trades.map((trade: any) => ({
-        Symbol: trade.symbol,
-        Direction: trade.direction,
-        'Entry Price': trade.entryPrice,
-        'Exit Price': trade.exitPrice,
-        'P&L': trade.pnl,
-        'Percent Change': trade.percentChange,
-        'Entry Date': trade.entryDate,
-        'Exit Date': trade.exitDate,
-        Duration: trade.duration,
-        Assessment: trade.assessment || 'No assessment'
-      }));
-
-      // Convert to CSV format
       const csvContent = [
-        Object.keys(formattedData[0]).join(','),
-        ...formattedData.map((row: any) => Object.values(row).join(','))
+        'Symbol,Direction,Entry Price,Exit Price,P&L,Percent Change,Entry Date,Exit Date,Duration,Assessment',
+        ...closedTrades.map((trade: any) => 
+          `${trade.symbol},${trade.direction},${trade.entryPrice},${trade.exitPrice || ''},${trade.pnl || ''},${trade.percentChange || ''},${trade.entryDate},${trade.exitDate || ''},${trade.duration || ''},${trade.assessment || ''}`
+        )
       ].join('\n');
 
-      // Create and download the file
       const blob = new Blob([csvContent], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `trading-data-${startDate}-to-${endDate}.csv`;
+      a.download = `trades-export-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      alert(`Exported ${trades.length} trades to CSV file.`);
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert('Failed to export trades. Please try again.');
+      alert(`Exported ${closedTrades.length} trades to CSV file.`);
+    } catch (error: any) {
+      alert(`Export failed: ${error.message}`);
     }
   };
 

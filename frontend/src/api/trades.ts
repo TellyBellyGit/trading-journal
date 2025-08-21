@@ -100,6 +100,18 @@ api.interceptors.request.use(
 );
 
 // Enhanced Trades API
+// Export function for AI analysis
+const exportTrades = async (startDate: string, endDate: string, status?: string): Promise<Trade[]> => {
+  const params = new URLSearchParams({
+    startDate,
+    endDate,
+    ...(status && { status })
+  });
+  
+  const response = await api.get(`/trades/export?${params}`);
+  return response.data;
+};
+
 export const tradesApi = {
   // Get all trades (with optional broker filter, pagination, and sorting)
   getAll: async (
@@ -336,12 +348,15 @@ export const healthApi = {
   },
 };
 
+// Export function for the tradesApi
+export { exportTrades };
+
 // Export types
 export type { PaginationInfo, PaginatedResponse, DateContext };
 
 // Export default API object for convenience
 export default {
-  trades: tradesApi,
+  trades: { ...tradesApi, exportForAI: exportTrades },
   brokers: brokersApi,
   health: healthApi,
 };

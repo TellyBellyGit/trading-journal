@@ -1856,4 +1856,31 @@ function convertToParseTradeFormat(analyzedTrades: AnalyzedTrade[]): ParsedTrade
   }));
 }
 
+// Export trades endpoint
+router.get('/export', authenticateToken, async (req, res) => {
+  try {
+    const { startDate, endDate, status } = req.query;
+    const userId = req.user!.userId;
+
+    const trades = await prisma.trade.findMany({
+      where: {
+        userId,
+        ...(status && { status: status as string }),
+        ...(startDate && endDate && {
+          entryDate: {
+            gte: startDate as string,
+            lte: endDate as string,
+          },
+        }),
+      },
+      orderBy: { entryDate: 'desc' },
+    });
+
+    res.json(trades);
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: 'Failed to export trades' });
+  }
+});
+
 export default router;

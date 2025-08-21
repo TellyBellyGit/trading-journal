@@ -1,52 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
 
-interface TradeTemplateModalProps {
+interface TradeTemplateModal2Props {
   isOpen: boolean;
   onClose: () => void;
   onInsert: (content: string) => void;
+  trade?: any; // Trade data to display at top
 }
 
-interface TemplateData {
-  // Setup & Context
+interface Template2Data {
+  // Setup & Context (only 2 fields)
   setupType: string;
-  marketSentiment: string;
-  sectorStrength: string;
-  marketCap: string;
-  volumeConditions: string;
-  entryTimeframe: string;
-  exitTimeframe: string;
   entryReason: string;
-  newsEvents: string;
-  
-  // Risk & Money Management
-  accountSize: string;
-  riskPerTrade: string;
-  plannedRRRatio: string;
-  leverage: string;
   
   // Execution & Trade Management
-  orderType: string;
-  slippageFillQuality: string;
-  partialExits: string;
   exitReason: string;
-  mistakes: string;
+  followedPlan: boolean | null;
+  planDeviationReason: string;
   
-  // Results & Statistics
-  profitLoss: string;
-  maxFavorableExcursion: string;
-  maxAdverseExcursion: string;
-  followedPlan: string;
-  
-  // Psychology & Review
+  // Psychology & Review (keeping most fields)
   preTradeMindset: string;
   emotionalState: string;
   technicalError: string;
   psychologicalError: string;
   mechanicalError: string;
   lessonsLearned: string;
-  improvementFocus: string;
-  perfectReplay: string;
 }
 
 interface AnalysisResult {
@@ -54,49 +32,31 @@ interface AnalysisResult {
   cleanAnalysis?: string; // Clean HTML for TipTap editor insertion
 }
 
-const STORAGE_KEY = 'trade-template-draft';
+const STORAGE_KEY = 'trade-template2-draft';
 
-const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
+const TradeTemplateModal2: React.FC<TradeTemplateModal2Props> = ({
   isOpen,
   onClose,
   onInsert,
+  trade,
 }) => {
   // Position state for dragging
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, modalX: 0, modalY: 0 });
 
-  const [templateData, setTemplateData] = useState<TemplateData>({
+  const [templateData, setTemplateData] = useState<Template2Data>({
     setupType: '',
-    marketSentiment: '',
-    sectorStrength: '',
-    marketCap: '',
-    volumeConditions: '',
-    entryTimeframe: '',
-    exitTimeframe: '',
     entryReason: '',
-    newsEvents: '',
-    accountSize: '',
-    riskPerTrade: '',
-    plannedRRRatio: '',
-    leverage: '',
-    orderType: '',
-    slippageFillQuality: '',
-    partialExits: '',
     exitReason: '',
-    mistakes: '',
-    profitLoss: '',
-    maxFavorableExcursion: '',
-    maxAdverseExcursion: '',
-    followedPlan: '',
+    followedPlan: null,
+    planDeviationReason: '',
     preTradeMindset: '',
     emotionalState: '',
     technicalError: '',
     psychologicalError: '',
     mechanicalError: '',
     lessonsLearned: '',
-    improvementFocus: '',
-    perfectReplay: '',
   });
 
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -181,105 +141,11 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
     return () => clearTimeout(saveTimer);
   }, [templateData]);
 
-  const handleInputChange = (field: keyof TemplateData, value: string) => {
+  const handleInputChange = (field: keyof Template2Data, value: string | boolean | null) => {
     setTemplateData(prev => ({
       ...prev,
       [field]: value
     }));
-  };
-
-  // Format AI response with rich TipTap styling
-  const formatAIResponse = (rawAnalysis: string): string => {
-    let formatted = rawAnalysis;
-    
-    // Main title styling
-    formatted = formatted.replace(
-      /<h1>([^<]*)<\/h1>/gi,
-      '<h1 style="color: #60a5fa; font-size: 28px; font-weight: bold; margin: 20px 0 16px 0; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">$1</h1>'
-    );
-    
-    // Section headers with colors
-    formatted = formatted.replace(
-      /<h2>([^<]*)<\/h2>/gi,
-      '<h2 style="color: #34d399; font-size: 22px; font-weight: bold; margin: 20px 0 12px 0;">$1</h2>'
-    );
-    
-    // Subsection headers
-    formatted = formatted.replace(
-      /<h3>([^<]*)<\/h3>/gi,
-      '<h3 style="color: #fbbf24; font-size: 18px; font-weight: bold; margin: 16px 0 8px 0;">$1</h3>'
-    );
-    
-    // Strengths sections - green styling
-    formatted = formatted.replace(
-      /<p><strong>Strengths:<\/strong><\/p>/gi,
-      '<p style="color: #10b981; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;">STRENGTHS:</p>'
-    );
-    
-    // Weaknesses sections - red styling
-    formatted = formatted.replace(
-      /<p><strong>Weaknesses:<\/strong><\/p>/gi,
-      '<p style="color: #ef4444; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;">WEAKNESSES:</p>'
-    );
-    
-    // Verdict sections - orange styling
-    formatted = formatted.replace(
-      /<p><strong>Verdict:<\/strong>/gi,
-      '<p style="color: #f97316; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;"><strong>VERDICT:</strong>'
-    );
-    
-    // Analysis sections - blue styling
-    formatted = formatted.replace(
-      /<p><strong>Analysis:<\/strong><\/p>/gi,
-      '<p style="color: #3b82f6; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;">ANALYSIS:</p>'
-    );
-    
-    // Overall Trade Quality - purple styling
-    formatted = formatted.replace(
-      /<p><strong>Overall Trade Quality:<\/strong>/gi,
-      '<p style="color: #a855f7; font-weight: bold; font-size: 18px; margin: 12px 0 8px 0; padding: 8px 12px; background-color: rgba(168, 85, 247, 0.1); border-left: 4px solid #a855f7;"><strong>OVERALL TRADE QUALITY:</strong>'
-    );
-    
-    // Key labels styling
-    formatted = formatted.replace(
-      /<p><strong>Why\?<\/strong>/gi,
-      '<p style="color: #06b6d4; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;"><strong>WHY:</strong>'
-    );
-    
-    formatted = formatted.replace(
-      /<p><strong>The Key Lesson:<\/strong>/gi,
-      '<p style="color: #8b5cf6; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;"><strong>KEY LESSON:</strong>'
-    );
-    
-    formatted = formatted.replace(
-      /<p><strong>Your Next Step:<\/strong>/gi,
-      '<p style="color: #059669; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0; padding: 8px 12px; background-color: rgba(5, 150, 105, 0.1); border-left: 4px solid #059669;"><strong>YOUR NEXT STEP:</strong>'
-    );
-    
-    // Final Summary section
-    formatted = formatted.replace(
-      /<h2>Final Summary: Good Trade or Bad Trade\?<\/h2>/gi,
-      '<h2 style="color: #dc2626; font-size: 24px; font-weight: bold; margin: 24px 0 16px 0; padding: 12px; background-color: rgba(220, 38, 38, 0.1); border: 2px solid #dc2626; border-radius: 8px; text-align: center;">FINAL SUMMARY: GOOD TRADE OR BAD TRADE?</h2>'
-    );
-    
-    // Style bullet points in lists
-    formatted = formatted.replace(
-      /<ul>/gi,
-      '<ul style="margin: 8px 0 16px 20px; padding-left: 16px;">'
-    );
-    
-    formatted = formatted.replace(
-      /<li>/gi,
-      '<li style="margin: 4px 0; color: #e5e7eb; line-height: 1.5;">'
-    );
-    
-    // Regular paragraphs
-    formatted = formatted.replace(
-      /<p>(?!.*style=)([^<]*)<\/p>/gi,
-      '<p style="margin: 8px 0; line-height: 1.6; color: #f3f4f6;">$1</p>'
-    );
-    
-    return formatted;
   };
 
   // Convert AI response to TipTap JSON format for proper formatting with colors
@@ -504,7 +370,7 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
       `.trim();
     }
 
-    // Use clean analysis for insertion, not the styled version
+    // Use clean analysis for insertion, not the debug version
     const contentToInsert = analysisResult.cleanAnalysis || analysisResult.analysis;
     
     return `${contentToInsert}
@@ -531,35 +397,16 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
       localStorage.removeItem(STORAGE_KEY);
       setTemplateData({
         setupType: '',
-        marketSentiment: '',
-        sectorStrength: '',
-        marketCap: '',
-        volumeConditions: '',
-        entryTimeframe: '',
-        exitTimeframe: '',
         entryReason: '',
-        newsEvents: '',
-        accountSize: '',
-        riskPerTrade: '',
-        plannedRRRatio: '',
-        leverage: '',
-        orderType: '',
-        slippageFillQuality: '',
-        partialExits: '',
         exitReason: '',
-        mistakes: '',
-        profitLoss: '',
-        maxFavorableExcursion: '',
-        maxAdverseExcursion: '',
-        followedPlan: '',
+        followedPlan: null,
+        planDeviationReason: '',
         preTradeMindset: '',
         emotionalState: '',
         technicalError: '',
         psychologicalError: '',
         mechanicalError: '',
         lessonsLearned: '',
-        improvementFocus: '',
-        perfectReplay: '',
       });
       setAnalysisResult(null);
       setAnalysisError(null);
@@ -570,6 +417,65 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
     setIsAnalyzing(true);
     setAnalysisError(null);
     
+    // Create combined data object for debugging
+    const performanceData = getPerformanceData();
+    const debugData = {
+      ...templateData,
+      tradeData: trade ? {
+        symbol: trade.symbol,
+        direction: trade.direction,
+        quantity: trade.quantity,
+        entryPrice: trade.entryPrice,
+        exitPrice: trade.exitPrice,
+        pnl: trade.pnl,
+        percentChange: trade.percentChange,
+        status: trade.status,
+        entryDate: trade.entryDate,
+        entryTime: trade.entryTime,
+        exitDate: trade.exitDate,
+        exitTime: trade.exitTime,
+        capital: trade.capital,
+      } : null,
+      calculatedPerformance: performanceData
+    };
+
+    // Show debug information immediately
+    const debugHtml = `
+      <h3><strong>SENDING DATA TO AI:</strong></h3>
+      <div style="background-color: #374151; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; margin: 8px 0;">
+        <strong>Trade Details:</strong><br/>
+        Symbol: ${trade?.symbol || 'N/A'}<br/>
+        Direction: ${trade?.direction || 'N/A'}<br/>
+        Entry Price: $${trade?.entryPrice?.toFixed(2) || 'N/A'}<br/>
+        Exit Price: $${trade?.exitPrice?.toFixed(2) || 'N/A'}<br/>
+        P&L: $${trade?.pnl?.toFixed(2) || 'N/A'}<br/>
+        Percent Change: ${trade?.percentChange?.toFixed(2) || 'N/A'}%<br/>
+        Status: ${trade?.status || 'N/A'}<br/>
+        Capital: $${trade?.capital || 'N/A'}<br/><br/>
+        
+        <strong>Template Data:</strong><br/>
+        Setup Type: ${templateData.setupType || 'Empty'}<br/>
+        Entry Reason: ${templateData.entryReason || 'Empty'}<br/>
+        Exit Reason: ${templateData.exitReason || 'Empty'}<br/>
+        Followed Plan: ${templateData.followedPlan === null ? 'Not answered' : templateData.followedPlan ? 'Yes' : 'No'}<br/>
+        Plan Deviation Reason: ${templateData.planDeviationReason || 'Empty'}<br/>
+        Pre-Trade Mindset: ${templateData.preTradeMindset || 'Empty'}<br/>
+        Emotional State: ${templateData.emotionalState || 'Empty'}<br/>
+        Technical Error: ${templateData.technicalError || 'Empty'}<br/>
+        Psychological Error: ${templateData.psychologicalError || 'Empty'}<br/>
+        Mechanical Error: ${templateData.mechanicalError || 'Empty'}<br/>
+        Lessons Learned: ${templateData.lessonsLearned || 'Empty'}<br/><br/>
+        
+        <strong>Calculated Performance:</strong><br/>
+        Capital Efficiency: ${performanceData?.capitalEfficiency || 'N/A'}<br/>
+        Return on Risk: ${performanceData?.returnOnRisk || 'N/A'}<br/>
+        Actual Exit: ${performanceData?.actualExit || 'N/A'}<br/>
+      </div>
+      <p><strong>Sending to AI for analysis...</strong></p>
+    `;
+    
+    setAnalysisResult({ analysis: debugHtml });
+    
     try {
       // Get auth token
       const token = sessionStorage.getItem('auth_token');
@@ -577,14 +483,14 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
         throw new Error('No authentication token found');
       }
 
-      // Call the AI analysis API
+      // Call the AI analysis API with combined data
       const response = await fetch(`${API_BASE_URL}/analyze-trade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(templateData)
+        body: JSON.stringify(debugData)
       });
 
       if (!response.ok) {
@@ -593,10 +499,19 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
 
       const result = await response.json();
       
-      // Format the AI response with rich TipTap styling for display
+      // Show debug data in modal, but prepare clean analysis for insertion
       const formattedAnalysis = formatAIResponse(result.analysis);
+      
+      // For display in modal (with debug info)
+      const displayAnalysis = `
+        ${debugHtml}
+        <hr style="margin: 20px 0; border-color: #6b7280;"/>
+        <h3><strong>AI ANALYSIS RESULT:</strong></h3>
+        ${formattedAnalysis}
+      `;
+      
       setAnalysisResult({ 
-        analysis: formattedAnalysis,
+        analysis: displayAnalysis,
         cleanAnalysis: convertToTipTapFormat(result.analysis) // Clean version for editor insertion
       });
       
@@ -608,6 +523,122 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
     }
   };
 
+  // Calculate performance data from trade
+  // Format AI response with rich TipTap styling
+  const formatAIResponse = (rawAnalysis: string): string => {
+    let formatted = rawAnalysis;
+    
+    // Main title styling
+    formatted = formatted.replace(
+      /<h1>([^<]*)<\/h1>/gi,
+      '<h1 style="color: #60a5fa; font-size: 28px; font-weight: bold; margin: 20px 0 16px 0; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">$1</h1>'
+    );
+    
+    // Section headers with colors
+    formatted = formatted.replace(
+      /<h2>([^<]*)<\/h2>/gi,
+      '<h2 style="color: #34d399; font-size: 22px; font-weight: bold; margin: 20px 0 12px 0;">$1</h2>'
+    );
+    
+    // Subsection headers
+    formatted = formatted.replace(
+      /<h3>([^<]*)<\/h3>/gi,
+      '<h3 style="color: #fbbf24; font-size: 18px; font-weight: bold; margin: 16px 0 8px 0;">$1</h3>'
+    );
+    
+    // Strengths sections - green styling
+    formatted = formatted.replace(
+      /<p><strong>Strengths:<\/strong><\/p>/gi,
+      '<p style="color: #10b981; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;">STRENGTHS:</p>'
+    );
+    
+    // Weaknesses sections - red styling
+    formatted = formatted.replace(
+      /<p><strong>Weaknesses:<\/strong><\/p>/gi,
+      '<p style="color: #ef4444; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;">WEAKNESSES:</p>'
+    );
+    
+    // Verdict sections - orange styling
+    formatted = formatted.replace(
+      /<p><strong>Verdict:<\/strong>/gi,
+      '<p style="color: #f97316; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;"><strong>VERDICT:</strong>'
+    );
+    
+    // Analysis sections - blue styling
+    formatted = formatted.replace(
+      /<p><strong>Analysis:<\/strong><\/p>/gi,
+      '<p style="color: #3b82f6; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;">ANALYSIS:</p>'
+    );
+    
+    // Overall Trade Quality - purple styling
+    formatted = formatted.replace(
+      /<p><strong>Overall Trade Quality:<\/strong>/gi,
+      '<p style="color: #a855f7; font-weight: bold; font-size: 18px; margin: 12px 0 8px 0; padding: 8px 12px; background-color: rgba(168, 85, 247, 0.1); border-left: 4px solid #a855f7;"><strong>OVERALL TRADE QUALITY:</strong>'
+    );
+    
+    // Key labels styling
+    formatted = formatted.replace(
+      /<p><strong>Why\?<\/strong>/gi,
+      '<p style="color: #06b6d4; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;"><strong>WHY:</strong>'
+    );
+    
+    formatted = formatted.replace(
+      /<p><strong>The Key Lesson:<\/strong>/gi,
+      '<p style="color: #8b5cf6; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0;"><strong>KEY LESSON:</strong>'
+    );
+    
+    formatted = formatted.replace(
+      /<p><strong>Your Next Step:<\/strong>/gi,
+      '<p style="color: #059669; font-weight: bold; font-size: 16px; margin: 12px 0 6px 0; padding: 8px 12px; background-color: rgba(5, 150, 105, 0.1); border-left: 4px solid #059669;"><strong>YOUR NEXT STEP:</strong>'
+    );
+    
+    // Final Summary section
+    formatted = formatted.replace(
+      /<h2>Final Summary: Good Trade or Bad Trade\?<\/h2>/gi,
+      '<h2 style="color: #dc2626; font-size: 24px; font-weight: bold; margin: 24px 0 16px 0; padding: 12px; background-color: rgba(220, 38, 38, 0.1); border: 2px solid #dc2626; border-radius: 8px; text-align: center;">FINAL SUMMARY: GOOD TRADE OR BAD TRADE?</h2>'
+    );
+    
+    // Style bullet points in lists
+    formatted = formatted.replace(
+      /<ul>/gi,
+      '<ul style="margin: 8px 0 16px 20px; padding-left: 16px;">'
+    );
+    
+    formatted = formatted.replace(
+      /<li>/gi,
+      '<li style="margin: 4px 0; color: #e5e7eb; line-height: 1.5;">'
+    );
+    
+    // Regular paragraphs
+    formatted = formatted.replace(
+      /<p>(?!.*style=)([^<]*)<\/p>/gi,
+      '<p style="margin: 8px 0; line-height: 1.6; color: #f3f4f6;">$1</p>'
+    );
+    
+    return formatted;
+  };
+
+  const getPerformanceData = () => {
+    if (!trade) return null;
+    
+    const capital = trade.capital || 0;
+    const pnl = trade.pnl || 0;
+    const entryPrice = trade.entryPrice || 0;
+    const exitPrice = trade.exitPrice || 0;
+    const quantity = trade.quantity || 0;
+    
+    // Calculate R/R ratios and other metrics
+    const capitalEfficiency = capital > 0 ? `${pnl > 0 ? '+' : ''}$${pnl} / $${capital}` : 'N/A';
+    const returnOnRisk = entryPrice > 0 && exitPrice > 0 ? ((exitPrice - entryPrice) / entryPrice).toFixed(2) + ':1' : 'N/A';
+    
+    return {
+      capitalEfficiency,
+      returnOnRisk,
+      actualExit: exitPrice ? `Exit at $${exitPrice.toFixed(2)}` : 'Still Open'
+    };
+  };
+
+  const performanceData = getPerformanceData();
 
   if (!isOpen) return null;
 
@@ -627,8 +658,8 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
         >
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold text-white">Trade Review Template</h2>
-              <p className="text-blue-100 text-sm mt-1">Auto-saved as you type • Drag to reposition</p>
+              <h2 className="text-2xl font-bold text-white">Trade Review Template 2</h2>
+              <p className="text-blue-100 text-sm mt-1">Simplified Template • Auto-saved as you type • Drag to reposition</p>
             </div>
             <button
               onClick={onClose}
@@ -641,7 +672,85 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Section I: Setup & Context */}
+          {/* Trade Details Section */}
+          {trade && (
+            <div className="mb-8 bg-gray-750 border border-gray-600 rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-blue-400 mb-4 border-b border-gray-600 pb-2">
+                TRADE DETAILS
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-400">Symbol:</span>
+                  <span className="ml-2 font-semibold text-white">{trade.symbol}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Direction:</span>
+                  <span className={`ml-2 font-semibold ${trade.direction === 'Long' ? 'text-green-400' : 'text-red-400'}`}>
+                    {trade.direction}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Quantity:</span>
+                  <span className="ml-2 font-semibold text-white">{trade.quantity}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Entry Price:</span>
+                  <span className="ml-2 font-semibold text-white">${trade.entryPrice?.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Exit Price:</span>
+                  <span className="ml-2 font-semibold text-white">
+                    {trade.exitPrice ? `$${trade.exitPrice.toFixed(2)}` : 'Open'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">P&L:</span>
+                  <span className={`ml-2 font-semibold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {trade.pnl !== null ? `$${trade.pnl.toFixed(2)}` : 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Entry Date:</span>
+                  <span className="ml-2 font-semibold text-white">{trade.entryDate} {trade.entryTime}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Exit Date:</span>
+                  <span className="ml-2 font-semibold text-white">
+                    {trade.exitDate ? `${trade.exitDate} ${trade.exitTime}` : 'Open'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400">Status:</span>
+                  <span className={`ml-2 font-semibold ${trade.status === 'Closed' ? 'text-blue-400' : 'text-yellow-400'}`}>
+                    {trade.status}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Performance Data */}
+              {performanceData && (
+                <div className="mt-6 border-t border-gray-600 pt-4">
+                  <h4 className="text-lg font-medium text-orange-400 mb-3">PERFORMANCE</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-400">Capital Efficiency:</span>
+                      <span className="ml-2 font-semibold text-white">{performanceData.capitalEfficiency}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Return on Risk:</span>
+                      <span className="ml-2 font-semibold text-white">{performanceData.returnOnRisk}</span>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="text-gray-400">Actual Exit:</span>
+                      <span className="ml-2 font-semibold text-white">{performanceData.actualExit}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Section I: Setup & Context (Simplified) */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-green-400 mb-4 border-b border-gray-600 pb-2">
               I. SETUP & CONTEXT
@@ -659,94 +768,10 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
                   placeholder="e.g., Breakout, Mean Reversion"
                 />
               </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Market Sentiment
-                </label>
-                <select
-                  value={templateData.marketSentiment}
-                  onChange={(e) => handleInputChange('marketSentiment', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select...</option>
-                  <option value="Bullish">Bullish</option>
-                  <option value="Bearish">Bearish</option>
-                  <option value="Neutral">Neutral</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Sector Strength
-                </label>
-                <select
-                  value={templateData.sectorStrength}
-                  onChange={(e) => handleInputChange('sectorStrength', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select...</option>
-                  <option value="Strong">Strong</option>
-                  <option value="Weak">Weak</option>
-                  <option value="Mixed">Mixed</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Market Cap
-                </label>
-                <select
-                  value={templateData.marketCap}
-                  onChange={(e) => handleInputChange('marketCap', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select...</option>
-                  <option value="Large">Large Cap</option>
-                  <option value="Mid">Mid Cap</option>
-                  <option value="Small">Small Cap</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Volume Conditions
-                </label>
-                <select
-                  value={templateData.volumeConditions}
-                  onChange={(e) => handleInputChange('volumeConditions', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select...</option>
-                  <option value="High">High</option>
-                  <option value="Average">Average</option>
-                  <option value="Low">Low</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Entry Timeframe
-                </label>
-                <input
-                  type="text"
-                  value={templateData.entryTimeframe}
-                  onChange={(e) => handleInputChange('entryTimeframe', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., 5m, 1H, Daily"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Exit Timeframe
-                </label>
-                <input
-                  type="text"
-                  value={templateData.exitTimeframe}
-                  onChange={(e) => handleInputChange('exitTimeframe', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., 5m, 1H, Daily"
-                />
-              </div>
             </div>
             <div className="mt-4">
               <label className="block text-gray-300 text-sm font-medium mb-2">
-                Entry Reason
+                Reason for Entry
               </label>
               <textarea
                 value={templateData.entryReason}
@@ -756,215 +781,76 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
                 placeholder="Why this trade, why now?"
               />
             </div>
-            <div className="mt-4">
-              <label className="block text-gray-300 text-sm font-medium mb-2">
-                News / Events
-              </label>
-              <textarea
-                value={templateData.newsEvents}
-                onChange={(e) => handleInputChange('newsEvents', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                rows={3}
-                placeholder="Earnings, FOMC, geopolitical events, etc."
-              />
-            </div>
           </div>
 
-          {/* Section II: Risk & Money Management */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold text-orange-400 mb-4 border-b border-gray-600 pb-2">
-              II. RISK & MONEY MANAGEMENT
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Account Size
-                </label>
-                <input
-                  type="text"
-                  value={templateData.accountSize}
-                  onChange={(e) => handleInputChange('accountSize', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., $50,000"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Risk per Trade
-                </label>
-                <input
-                  type="text"
-                  value={templateData.riskPerTrade}
-                  onChange={(e) => handleInputChange('riskPerTrade', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., $500 or 1%"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Planned R:R Ratio
-                </label>
-                <input
-                  type="text"
-                  value={templateData.plannedRRRatio}
-                  onChange={(e) => handleInputChange('plannedRRRatio', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., 1:2, 1:3"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Leverage
-                </label>
-                <input
-                  type="text"
-                  value={templateData.leverage}
-                  onChange={(e) => handleInputChange('leverage', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., None, 2x, 5x"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section III: Execution & Trade Management */}
+          {/* Section II: Execution & Trade Management (Simplified) */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-purple-400 mb-4 border-b border-gray-600 pb-2">
-              III. EXECUTION & TRADE MANAGEMENT
+              II. EXECUTION & TRADE MANAGEMENT
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Order Type
-                </label>
-                <select
-                  value={templateData.orderType}
-                  onChange={(e) => handleInputChange('orderType', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select...</option>
-                  <option value="Market">Market</option>
-                  <option value="Limit">Limit</option>
-                  <option value="Stop">Stop</option>
-                  <option value="Stop-Limit">Stop-Limit</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Slippage / Fill Quality
-                </label>
-                <select
-                  value={templateData.slippageFillQuality}
-                  onChange={(e) => handleInputChange('slippageFillQuality', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select...</option>
-                  <option value="Excellent">Excellent</option>
-                  <option value="Good">Good</option>
-                  <option value="Average">Average</option>
-                  <option value="Poor">Poor</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Partial Exits
-                </label>
-                <input
-                  type="text"
-                  value={templateData.partialExits}
-                  onChange={(e) => handleInputChange('partialExits', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., 50% at target 1"
-                />
-              </div>
-            </div>
-            <div className="mt-4">
+            <div className="mb-4">
               <label className="block text-gray-300 text-sm font-medium mb-2">
-                Exit Reason
+                Exit Reason/Any Mistakes
               </label>
               <textarea
                 value={templateData.exitReason}
                 onChange={(e) => handleInputChange('exitReason', e.target.value)}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 rows={3}
-                placeholder="Target hit, Stop loss, Emotional exit, etc."
+                placeholder="Target hit, Stop loss, Emotional exit, mistakes made, etc."
               />
             </div>
-            <div className="mt-4">
-              <label className="block text-gray-300 text-sm font-medium mb-2">
-                Mistakes
-              </label>
-              <textarea
-                value={templateData.mistakes}
-                onChange={(e) => handleInputChange('mistakes', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                rows={3}
-                placeholder="Late entry, didn't follow stop, etc."
-              />
-            </div>
-          </div>
-
-          {/* Section IV: Results & Statistics */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold text-teal-400 mb-4 border-b border-gray-600 pb-2">
-              IV. RESULTS & STATISTICS
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Profit / Loss (P&L)
-                </label>
-                <input
-                  type="text"
-                  value={templateData.profitLoss}
-                  onChange={(e) => handleInputChange('profitLoss', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., +$250 (+2.5%)"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Max Favorable Excursion (MFE)
-                </label>
-                <input
-                  type="text"
-                  value={templateData.maxFavorableExcursion}
-                  onChange={(e) => handleInputChange('maxFavorableExcursion', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., +3.2%"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Max Adverse Excursion (MAE)
-                </label>
-                <input
-                  type="text"
-                  value={templateData.maxAdverseExcursion}
-                  onChange={(e) => handleInputChange('maxAdverseExcursion', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="e.g., -1.8%"
-                />
-              </div>
-            </div>
-            <div className="mt-4">
-              <label className="block text-gray-300 text-sm font-medium mb-2">
+            
+            {/* Follow Plan Toggle */}
+            <div className="mb-4">
+              <label className="block text-gray-300 text-sm font-medium mb-3">
                 Did you follow your plan?
               </label>
-              <textarea
-                value={templateData.followedPlan}
-                onChange={(e) => handleInputChange('followedPlan', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                rows={3}
-                placeholder="Yes/No - Explain any deviations"
-              />
+              <div className="flex gap-4 mb-3">
+                <button
+                  onClick={() => handleInputChange('followedPlan', true)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    templateData.followedPlan === true
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => handleInputChange('followedPlan', false)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    templateData.followedPlan === false
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+              
+              {/* Show reason field if "No" is selected */}
+              {templateData.followedPlan === false && (
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                    Why didn't you follow your plan?
+                  </label>
+                  <input
+                    type="text"
+                    value={templateData.planDeviationReason}
+                    onChange={(e) => handleInputChange('planDeviationReason', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    placeholder="Explain why you deviated from your plan"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Section V: Psychology & Review */}
+          {/* Section III: Psychology & Review (Modified) */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-pink-400 mb-4 border-b border-gray-600 pb-2">
-              V. PSYCHOLOGY & REVIEW
+              III. PSYCHOLOGY & REVIEW
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1052,30 +938,6 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
                 placeholder="Key takeaways from this trade"
               />
             </div>
-            <div className="mt-4">
-              <label className="block text-gray-300 text-sm font-medium mb-2">
-                What to Improve Next Time
-              </label>
-              <textarea
-                value={templateData.improvementFocus}
-                onChange={(e) => handleInputChange('improvementFocus', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                rows={3}
-                placeholder="Specific actions for improvement"
-              />
-            </div>
-            <div className="mt-4">
-              <label className="block text-gray-300 text-sm font-medium mb-2">
-                "If I could replay the trade..."
-              </label>
-              <textarea
-                value={templateData.perfectReplay}
-                onChange={(e) => handleInputChange('perfectReplay', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                rows={3}
-                placeholder="Ideal execution in hindsight"
-              />
-            </div>
           </div>
 
           {/* Analysis Section */}
@@ -1115,7 +977,6 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
               </div>
             )}
           </div>
-
         </div>
 
         {/* Footer */}
@@ -1151,4 +1012,4 @@ const TradeTemplateModal: React.FC<TradeTemplateModalProps> = ({
   );
 };
 
-export default TradeTemplateModal;
+export default TradeTemplateModal2;

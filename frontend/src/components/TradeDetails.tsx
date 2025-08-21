@@ -14,6 +14,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { tradesApi } from '../api/trades';
 import { subscriptionsApi } from '../api/subscriptions';
 import TradeTemplateModal from './TradeTemplateModal';
+import TradeTemplateModal2 from './TradeTemplateModal2';
 
 // API configuration
 const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
@@ -341,7 +342,7 @@ interface TradeDetailsProps {
 }
 
 // FULL-FEATURED Enhanced Toolbar component for Tiptap with ALL functionality
-const EditorToolbar = ({ editor, trade, onOpenTemplate }: { editor: any; trade: Trade | null; onOpenTemplate: () => void }) => {
+const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { editor: any; trade: Trade | null; onOpenTemplate: () => void; onOpenTemplate2: () => void }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
@@ -829,6 +830,14 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate }: { editor: any; trade: 
         </button>
         
         <button
+          onClick={onOpenTemplate2}
+          className="px-4 py-1.5 rounded text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors border border-purple-600"
+          title="Open simplified trade review template"
+        >
+          Template 2
+        </button>
+        
+        <button
           onClick={exportToHtml}
           className="px-4 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors border border-blue-600"
           title="Export trade details and notes to HTML file"
@@ -861,6 +870,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [canUseRichText, setCanUseRichText] = useState(true);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isTemplate2ModalOpen, setIsTemplate2ModalOpen] = useState(false);
 
   // FULL-FEATURED Tiptap editor with FIXED extensions
   const editor = useEditor({
@@ -876,7 +886,9 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         },
       }),
       TextStyle,
-      Color,
+      Color.configure({
+        types: ['textStyle'],
+      }),
       ResizableImage.configure({
         HTMLAttributes: {
           class: 'editor-image',
@@ -899,6 +911,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
       }
     },
   });
+
 
   // Load subscription status to check rich text eligibility
   useEffect(() => {
@@ -1056,10 +1069,32 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
     setIsTemplateModalOpen(false);
   };
 
-  const handleInsertTemplate = (content: string) => {
+  // Handle template 2 modal
+  const handleOpenTemplate2 = () => {
+    setIsTemplate2ModalOpen(true);
+  };
+
+  const handleCloseTemplate2 = () => {
+    setIsTemplate2ModalOpen(false);
+  };
+
+  const handleInsertTemplate = (content: string | any) => {
     if (editor) {
       editor.commands.focus();
-      editor.commands.insertContent(content);
+      
+      // If content is a TipTap JSON object, use setContent to insert it properly
+      if (typeof content === 'object' && content.type === 'doc') {
+        const currentContent = editor.getJSON();
+        // Append the new content to existing content
+        const newContent = {
+          ...currentContent,
+          content: [...(currentContent.content || []), ...content.content]
+        };
+        editor.commands.setContent(newContent);
+      } else {
+        // Fallback to HTML insertion for backwards compatibility
+        editor.commands.insertContent(content);
+      }
     }
   };
 
@@ -1533,7 +1568,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
                 </div>
               </div>
             )}
-            <EditorToolbar editor={editor} trade={trade} onOpenTemplate={handleOpenTemplate} />
+            <EditorToolbar editor={editor} trade={trade} onOpenTemplate={handleOpenTemplate} onOpenTemplate2={handleOpenTemplate2} />
             <EditorContent 
               editor={editor} 
               className="min-h-[800px] max-h-[1200px] overflow-y-auto"
@@ -1585,6 +1620,14 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         onClose={handleCloseTemplate}
         onInsert={handleInsertTemplate}
       />
+
+      {/* Template 2 Modal */}
+      <TradeTemplateModal2
+        isOpen={isTemplate2ModalOpen}
+        onClose={handleCloseTemplate2}
+        onInsert={handleInsertTemplate}
+        trade={trade}
+      />
       
       <style>{`
         /* Enhanced editor styles - DARK THEME MATCHING */
@@ -1601,7 +1644,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
           font-weight: bold;
           margin-top: 1.5rem;
           margin-bottom: 1rem;
-          color: #f9fafb; /* Light color for dark theme */
+          color: #f9fafb;
         }
         
         .ProseMirror h2 {
@@ -1609,13 +1652,13 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
           font-weight: bold;
           margin-top: 1.25rem;
           margin-bottom: 0.75rem;
-          color: #f9fafb; /* Light color for dark theme */
+          color: #f9fafb;
         }
         
         .ProseMirror p {
           margin-bottom: 1rem;
           line-height: 1.6;
-          color: #f9fafb; /* Light text */
+          color: #f9fafb;
         }
         
         .ProseMirror ul, .ProseMirror ol {
@@ -1625,7 +1668,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         
         .ProseMirror li {
           margin-bottom: 0.25rem;
-          color: #f9fafb; /* Light text for lists */
+          color: #f9fafb;
         }
         
         .ProseMirror ul {
@@ -1699,6 +1742,7 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
           pointer-events: none;
           height: 0;
         }
+        
       `}</style>
     </div>
   );
