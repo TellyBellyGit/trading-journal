@@ -60,7 +60,7 @@ app.use('/api/notes', notesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
-app.use('/api', analysisRouter); 
+app.use('/api/analysis', analysisRouter); 
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -15,6 +15,9 @@ import { subscriptionsApi } from '../api/subscriptions';
 import { tradesApi, exportTrades } from '../api/trades';
 import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import AnalysisProgressModal from './AnalysisProgressModal';
+import { analysisApi } from '../api/analysis';
+import { notesApi } from '../api/notes';
 
 // API configuration
 const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
@@ -31,6 +34,10 @@ const TradingApp: React.FC = () => {
   
   const [currentView, setCurrentView] = useState(getInitialView());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState<'sending' | 'analyzing' | 'formatting' | 'completed' | 'error'>('sending');
+  const [analysisError, setAnalysisError] = useState<string>('');
+  const [analysisTradeCount, setAnalysisTradeCount] = useState<number>(0);
   const [upgradeNotification, setUpgradeNotification] = useState<{
     show: boolean;
     title: string;
@@ -112,19 +119,16 @@ const TradingApp: React.FC = () => {
   // Actual export function called from date picker modal
   const performExportToAI = async (startDate: string, endDate: string) => {
     try {
-      const response = await tradesApi.getAll();
-      const allTrades = response.trades || [];
+      const allTrades = await exportTrades(startDate, endDate, 'Closed');
       
-      const closedTrades = allTrades.filter((trade: any) => trade.status === 'Closed');
-      
-      if (!closedTrades.length) {
+      if (!allTrades.length) {
         alert('No closed trades found.');
         return;
       }
 
       const csvContent = [
         'Symbol,Direction,Entry Price,Exit Price,P&L,Percent Change,Entry Date,Exit Date,Duration,Assessment',
-        ...closedTrades.map((trade: any) => 
+        ...allTrades.map((trade: any) => 
           `${trade.symbol},${trade.direction},${trade.entryPrice},${trade.exitPrice || ''},${trade.pnl || ''},${trade.percentChange || ''},${trade.entryDate},${trade.exitDate || ''},${trade.duration || ''},${trade.assessment || ''}`
         )
       ].join('\n');
@@ -139,9 +143,61 @@ const TradingApp: React.FC = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      alert(`Exported ${closedTrades.length} trades to CSV file.`);
+      alert(`Exported ${allTrades.length} trades to CSV file.`);
+
+      // Start AI Analysis
+      await performAIAnalysis(allTrades, startDate, endDate);
     } catch (error: any) {
       alert(`Export failed: ${error.message}`);
+    }
+  };
+
+  // AI Analysis function
+  const performAIAnalysis = async (trades: any[], startDate: string, endDate: string) => {
+    try {
+      // Show modal and set initial status
+      setAnalysisTradeCount(trades.length);
+      setAnalysisStatus('sending');
+      setShowAnalysisModal(true);
+      setAnalysisError('');
+
+      // Wait a bit to show "sending" status
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Update to analyzing status
+      setAnalysisStatus('analyzing');
+
+      // Call AI analysis API
+      const analysisResult = await analysisApi.analyzeTrades(trades);
+
+      // Update to formatting status
+      setAnalysisStatus('formatting');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Create note with analysis
+      const noteTitle = `${startDate} to ${endDate} ANALYSIS`;
+      await notesApi.create({
+        title: noteTitle,
+        content: analysisResult.analysis,
+        category: 'AI Analysis',
+        tags: ['trading-analysis', 'ai-generated', 'portfolio-review']
+      });
+
+      // Show completion
+      setAnalysisStatus('completed');
+    } catch (error: any) {
+      console.error('AI Analysis failed:', error);
+      setAnalysisStatus('error');
+      setAnalysisError(error.message || 'Failed to analyze trades');
+    }
+  };
+
+  // Handle analysis modal close
+  const handleAnalysisModalClose = () => {
+    setShowAnalysisModal(false);
+    if (analysisStatus === 'completed') {
+      // Navigate to notes section
+      setCurrentView('notes');
     }
   };
 
@@ -292,6 +348,15 @@ const TradingApp: React.FC = () => {
         isOpen={showDatePicker}
         onClose={() => setShowDatePicker(false)}
         onExport={performExportToAI}
+      />
+
+      {/* Analysis Progress Modal */}
+      <AnalysisProgressModal
+        isOpen={showAnalysisModal}
+        status={analysisStatus}
+        tradeCount={analysisTradeCount}
+        errorMessage={analysisError}
+        onClose={handleAnalysisModalClose}
       />
     </>
   );

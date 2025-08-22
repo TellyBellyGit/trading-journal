@@ -109,7 +109,7 @@ const exportTrades = async (startDate: string, endDate: string, status?: string)
   });
   
   const response = await api.get(`/trades/export?${params}`);
-  return response.data;
+  return response.data.trades || response.data;
 };
 
 export const tradesApi = {
