@@ -484,7 +484,7 @@ const TradeTemplateModal2: React.FC<TradeTemplateModal2Props> = ({
       }
 
       // Call the AI analysis API with combined data
-      const response = await fetch(`${API_BASE_URL}/analyze-trade`, {
+      const response = await fetch(`${API_BASE_URL}/analysis/analyze-trade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
