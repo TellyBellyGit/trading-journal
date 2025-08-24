@@ -360,6 +360,22 @@ const TradeTemplateModal2: React.FC<TradeTemplateModal2Props> = ({
     return clean;
   };
 
+  const reorderAnalysisContent = (content: string): string => {
+    // Extract Final Summary section
+    const finalSummaryMatch = content.match(/<h2>Final Summary:[^<]*<\/h2>(.*?)(?=<h2>|$)/s);
+    const finalSummaryContent = finalSummaryMatch ? finalSummaryMatch[0] : '';
+    
+    // Remove Final Summary from original content
+    const contentWithoutFinalSummary = content.replace(/<h2>Final Summary:[^<]*<\/h2>(.*?)(?=<h2>|$)/s, '').trim();
+    
+    // If we found a Final Summary, just move it to the top without any modifications
+    if (finalSummaryContent) {
+      return `${finalSummaryContent}\n\n${contentWithoutFinalSummary}`;
+    }
+    
+    return content;
+  };
+
   const generateAnalysisHTML = (): string => {
     if (!analysisResult) {
       return `
@@ -373,7 +389,10 @@ const TradeTemplateModal2: React.FC<TradeTemplateModal2Props> = ({
     // Use clean analysis for insertion, not the debug version
     const contentToInsert = analysisResult.cleanAnalysis || analysisResult.analysis;
     
-    return `${contentToInsert}
+    // Reorder content to move Final Summary to the top
+    const reorderedContent = reorderAnalysisContent(contentToInsert);
+    
+    return `${reorderedContent}
 <hr>
 <p><em>Analysis generated: ${new Date().toLocaleString()}</em></p>`;
   };
@@ -386,8 +405,11 @@ const TradeTemplateModal2: React.FC<TradeTemplateModal2Props> = ({
       return;
     }
 
+    // Reorder the analysis content to move Final Summary to the top
+    const reorderedContent = reorderAnalysisContent(analysisResult.cleanAnalysis);
+    
     // Convert AI analysis to TipTap JSON structure instead of HTML
-    const jsonContent = convertToTipTapJSON(analysisResult.cleanAnalysis);
+    const jsonContent = convertToTipTapJSON(reorderedContent);
     onInsert(jsonContent);
     onClose();
   };
