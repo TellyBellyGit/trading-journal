@@ -106,7 +106,7 @@
 
 .ProseMirror p {
   margin: 0.75rem 0 !important;
-  color: #f9fafb !important;
+  color: #f9fafb;
 }
 
 .ProseMirror h1 {
@@ -138,7 +138,7 @@
 
 .ProseMirror li {
   margin: 0.25rem 0 !important;
-  color: #f9fafb !important;
+  color: #f9fafb;
 }
 
 .ProseMirror blockquote {
@@ -159,12 +159,12 @@
 
 .ProseMirror strong {
   font-weight: bold !important;
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 .ProseMirror em {
   font-style: italic !important;
-  color: #f3f4f6 !important;
+  color: #f3f4f6;
 }
 
 .ProseMirror code {

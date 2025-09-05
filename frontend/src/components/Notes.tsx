@@ -7,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { Color } from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
 import Image from '@tiptap/extension-image';
+import { HTMLPreserver } from './HTMLPreserver';
 import { notesApi } from '../api/notes';
 import type { Note, CreateNoteData, UpdateNoteData, SaveStatus } from '../types/notes';
 import { sanitizeForJSON } from '../utils/jsonSanitizer';
@@ -109,6 +110,7 @@ const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.
 // Editor Toolbar Component
 const EditorToolbar = ({ editor }: { editor: any }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const htmlInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
 
@@ -132,6 +134,25 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 
   const addImage = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleHTMLImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/html') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const htmlContent = e.target?.result as string;
+        // Use setContent with preserveWhitespace to maintain formatting and colors
+        editor.commands.setContent(htmlContent, false, {
+          preserveWhitespace: 'full'
+        });
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const importHTML = () => {
+    htmlInputRef.current?.click();
   };
 
   return (
@@ -262,6 +283,14 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
       {/* Media & Utilities */}
       <div className="flex gap-1">
         <button
+          onClick={importHTML}
+          className="px-3 py-1.5 rounded text-sm font-medium bg-purple-500 text-white hover:bg-purple-600 transition-colors border"
+          title="Import HTML Analysis"
+        >
+          📁 Import HTML
+        </button>
+        
+        <button
           onClick={addImage}
           className="px-3 py-1.5 rounded text-sm font-medium bg-green-500 text-white hover:bg-green-600 transition-colors border"
           title="Add Image"
@@ -313,6 +342,13 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
         onChange={handleImageUpload}
         style={{ display: 'none' }}
       />
+      <input
+        ref={htmlInputRef}
+        type="file"
+        accept=".html"
+        onChange={handleHTMLImport}
+        style={{ display: 'none' }}
+      />
     </div>
   );
 };
@@ -349,6 +385,7 @@ const Notes: React.FC = () => {
       }),
       TextStyle,
       Color,
+      HTMLPreserver, // Preserves inline HTML styles including colors
       ResizableImage.configure({
         HTMLAttributes: {
           class: 'editor-image',

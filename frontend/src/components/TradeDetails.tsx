@@ -15,6 +15,7 @@ import { tradesApi } from '../api/trades';
 import { subscriptionsApi } from '../api/subscriptions';
 import TradeTemplateModal from './TradeTemplateModal';
 import TradeTemplateModal2 from './TradeTemplateModal2';
+import { HTMLPreserver } from './HTMLPreserver';
 
 // API configuration
 const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
@@ -344,6 +345,7 @@ interface TradeDetailsProps {
 // FULL-FEATURED Enhanced Toolbar component for Tiptap with ALL functionality
 const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { editor: any; trade: Trade | null; onOpenTemplate: () => void; onOpenTemplate2: () => void }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const htmlInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
 
@@ -376,6 +378,25 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
 
   const addImage = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleHTMLImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/html') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const htmlContent = e.target?.result as string;
+        // Use setContent with preserveWhitespace to maintain formatting and colors
+        editor.commands.setContent(htmlContent, false, {
+          preserveWhitespace: 'full'
+        });
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const importHTML = () => {
+    htmlInputRef.current?.click();
   };
 
   const exportToHtml = () => {
@@ -830,6 +851,14 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         </button>
         
         <button
+          onClick={importHTML}
+          className="px-4 py-1.5 rounded text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 transition-colors border border-orange-600"
+          title="Import HTML analysis with preserved colors"
+        >
+          📁 Import HTML
+        </button>
+        
+        <button
           onClick={onOpenTemplate2}
           className="px-4 py-1.5 rounded text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors border border-purple-600"
           title="Open simplified trade review template"
@@ -852,6 +881,13 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         type="file"
         accept="image/*"
         onChange={handleImageUpload}
+        style={{ display: 'none' }}
+      />
+      <input
+        ref={htmlInputRef}
+        type="file"
+        accept=".html"
+        onChange={handleHTMLImport}
         style={{ display: 'none' }}
       />
     </div>
@@ -887,8 +923,9 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
       }),
       TextStyle,
       Color.configure({
-        types: ['textStyle'],
+        types: ['textStyle', 'heading'],
       }),
+      HTMLPreserver, // Preserves inline HTML styles including colors
       ResizableImage.configure({
         HTMLAttributes: {
           class: 'editor-image',
