@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { Extension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { Color } from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
@@ -873,27 +872,6 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isTemplate2ModalOpen, setIsTemplate2ModalOpen] = useState(false);
 
-  // Custom Color Extension for headings
-  const CustomColor = Extension.create({
-    addGlobalAttributes() {
-      return [
-        {
-          types: ['heading'],
-          attributes: {
-            color: {
-              default: null,
-              parseHTML: element => element.getAttribute('data-color'),
-              renderHTML: attributes => {
-                if (!attributes.color) return {}
-                return { 'data-color': attributes.color, style: `color: ${attributes.color}` }
-              }
-            }
-          }
-        }
-      ]
-    }
-  })
-
   // FULL-FEATURED Tiptap editor with FIXED extensions
   const editor = useEditor({
     extensions: [
@@ -911,7 +889,6 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
       Color.configure({
         types: ['textStyle'],
       }),
-      CustomColor,
       ResizableImage.configure({
         HTMLAttributes: {
           class: 'editor-image',
