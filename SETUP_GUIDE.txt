@@ -1,0 +1,108 @@
+Trading Journal Setup Guide (Windows)
+
+Overview
+- Backend runs on `http://127.0.0.1:3002` (Express + Prisma).
+- Frontend runs on `http://localhost:5173` (Vite React).
+- Database can be Railway Postgres (hosted) or local Postgres.
+- Frontend talks only to the backend; the backend talks to Postgres.
+
+Prerequisites
+- Node.js LTS and npm installed.
+- Recommended: Postman or curl for API tests.
+- Optional: Docker Desktop (for local Postgres without system install).
+
+Folder Layout
+- Backend: `backend/`
+- Frontend: `frontend/`
+- Prisma schema: `backend/prisma/schema.prisma`
+
+Backend Environment (.env)
+- Create `backend/.env` based on `backend/.env.example`.
+- Required keys (from `.env.example`):
+  - `DATABASE_URL` — Postgres connection string
+  - `PORT=3002` — backend port
+  - `NODE_ENV=development`
+  - `JWT_SECRET` — access token secret
+  - `JWT_REFRESH_SECRET` — refresh token secret
+  - `RESEND_API_KEY` — email provider key (optional for local)
+  - `FROM_EMAIL`, `FROM_NAME` — email sender identity
+  - `FRONTEND_URL=http://localhost:5173`
+  - `STRIPE_*` — Stripe keys if subscriptions are enabled (optional locally)
+
+Examples for `DATABASE_URL`
+- Railway (hosted): `postgresql://<user>:<pass>@<host>:5432/<db>?schema=public`
+- Local (default port): `postgresql://postgres:postgres@localhost:5432/trading_journal?schema=public`
+- Remove any `sslmode=require` when using local Postgres.
+
+Frontend Environment (.env)
+- Create `frontend/.env` (already present in this repo):
+  - `VITE_API_URL=http://localhost:3002`
+- Frontend computes `API_BASE_URL` as `${VITE_API_URL}/api`.
+- Avoid hardcoding hosted URLs in components; import `API_BASE_URL` from `frontend/src/config/api.ts`.
+
+Install & Start (first run)
+1) Backend
+   - `cd backend`
+   - `npm install`
+   - `npx prisma generate`
+   - If the DB is empty: `npx prisma db push` (or `npx prisma migrate dev -n init` if using migrations)
+   - Optional seed: `npx prisma db seed` (if configured)
+   - Start dev server: `npm run dev`
+   - Server listens on `http://127.0.0.1:3002`
+
+2) Frontend
+   - `cd frontend`
+   - `npm install`
+   - Ensure `frontend/.env` has `VITE_API_URL=http://localhost:3002`
+   - Start dev server: `npm run dev`
+   - App runs at `http://localhost:5173/`
+
+Quick Auth Checks (PowerShell examples)
+- Login: `Invoke-WebRequest -Uri http://127.0.0.1:3002/api/auth/login -Method POST -ContentType 'application/json' -Body '{"email":"<your_email>","password":"<your_password>"}'`
+- Copy `accessToken` from the JSON response.
+- Profile: `Invoke-WebRequest -Uri http://127.0.0.1:3002/api/auth/me -Headers @{ Authorization = 'Bearer <accessToken>' }`
+
+Common Issues & Fixes
+- CORS blocked when pointing frontend to a hosted backend: ensure server sends `Access-Control-Allow-Origin`, handles `OPTIONS`, and includes needed methods/headers.
+- Hardcoded URLs: use `API_BASE_URL` from `frontend/src/config/api.ts` (we fixed `Register.tsx` to do this).
+- Prisma client mismatch: run `npx prisma generate` after schema changes.
+- DB schema missing locally: run `npx prisma migrate dev` (or `db push`) after changing `DATABASE_URL`.
+
+Using Local Postgres (two options)
+1) System install (Windows)
+   - Install PostgreSQL.
+   - Create DB `trading_journal` and a user (e.g., `postgres` / `postgres`).
+   - Set `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/trading_journal?schema=public`.
+   - Run Prisma commands: `npx prisma migrate dev -n local_setup` and `npx prisma generate`.
+
+2) Docker quick start
+   - Start Postgres: `docker run -d --name pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=trading_journal -p 5432:5432 postgres:16`
+   - Use `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/trading_journal?schema=public`.
+   - Run Prisma commands: `npx prisma migrate dev` and `npx prisma generate`.
+
+Switching DB Targets
+- To use Railway: set `DATABASE_URL` to your Railway URL, restart backend.
+- To use local Postgres: change `DATABASE_URL` to local, run migrations, restart backend.
+- Frontend usually remains `VITE_API_URL=http://localhost:3002` for local dev.
+
+Known Ports & URLs
+- Backend: `http://127.0.0.1:3002`
+- Frontend: `http://localhost:5173`
+- API base: `${VITE_API_URL}/api` (from `frontend/src/config/api.ts`)
+
+Schema Changes
+- Edit `backend/prisma/schema.prisma`.
+- `npx prisma migrate dev -n <your_change>` (uses current `DATABASE_URL`).
+- `npx prisma generate`.
+- Update backend validation/services and frontend types/forms accordingly.
+
+Deployment Notes
+- Containerization via `Dockerfile` is optional for local dev; useful for consistent deploys.
+- Railway deployment script exists (`deploy-to-railway.ps1`); configure env on Railway to match `.env.example`.
+
+Verification Checklist
+- Backend responds: `GET http://127.0.0.1:3002/api/health` (if available) or `POST /api/auth/login` works.
+- Frontend loads at `http://localhost:5173/`.
+- Registration and login succeed and `GET /api/auth/me` returns your profile.
+
+Last Updated: keep this document in repo root and adjust as the environment evolves.
