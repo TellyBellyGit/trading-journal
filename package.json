@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\""
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "build": "cd backend && npm run build",
+    "start": "cd backend && npm run start",
+    "railway:deploy": "railway up"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",

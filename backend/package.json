@@ -31,7 +31,8 @@
     "openai": "^5.13.1",
     "pg": "^8.16.3",
     "resend": "^4.7.0",
-    "stripe": "^18.3.0"
+    "stripe": "^18.3.0",
+    "trading-journal": "file:.."
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
