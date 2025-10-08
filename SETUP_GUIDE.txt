@@ -1,8 +1,8 @@
 Trading Journal Setup Guide (Windows)
 
 Overview
-- Backend runs on `http://127.0.0.1:3002` (Express + Prisma).
-- Frontend runs on `http://localhost:5173` (Vite React).
+ - Backend runs on `http://127.0.0.1:3003` (Express + Prisma).
+ - Frontend runs on `http://localhost:5173` (or `5174` if 5173 is busy) (Vite React).
 - Database can be Railway Postgres (hosted) or local Postgres.
 - Frontend talks only to the backend; the backend talks to Postgres.
 
@@ -20,23 +20,25 @@ Backend Environment (.env)
 - Create `backend/.env` based on `backend/.env.example`.
 - Required keys (from `.env.example`):
   - `DATABASE_URL` — Postgres connection string
-  - `PORT=3002` — backend port
+  - `PORT=3003` — backend port
   - `NODE_ENV=development`
   - `JWT_SECRET` — access token secret
   - `JWT_REFRESH_SECRET` — refresh token secret
   - `RESEND_API_KEY` — email provider key (optional for local)
   - `FROM_EMAIL`, `FROM_NAME` — email sender identity
-  - `FRONTEND_URL=http://localhost:5173`
+  - `FRONTEND_URL=http://localhost:5174` (use `5173` if your frontend runs there)
   - `STRIPE_*` — Stripe keys if subscriptions are enabled (optional locally)
 
 Examples for `DATABASE_URL`
 - Railway (hosted): `postgresql://<user>:<pass>@<host>:5432/<db>?schema=public`
+ - Railway (provided): `postgresql://postgres:xWsCOGvmCZblVHNgytuBUrTfOmmlPLob@crossover.proxy.rlwy.net:20318/railway`
+   - If you see SSL errors locally, append `?sslmode=require` to enforce TLS.
 - Local (default port): `postgresql://postgres:postgres@localhost:5432/trading_journal?schema=public`
 - Remove any `sslmode=require` when using local Postgres.
 
 Frontend Environment (.env)
 - Create `frontend/.env` (already present in this repo):
-  - `VITE_API_URL=http://localhost:3002`
+  - `VITE_API_URL=http://localhost:3003`
 - Frontend computes `API_BASE_URL` as `${VITE_API_URL}/api`.
 - Avoid hardcoding hosted URLs in components; import `API_BASE_URL` from `frontend/src/config/api.ts`.
 
@@ -48,25 +50,41 @@ Install & Start (first run)
    - If the DB is empty: `npx prisma db push` (or `npx prisma migrate dev -n init` if using migrations)
    - Optional seed: `npx prisma db seed` (if configured)
    - Start dev server: `npm run dev`
-   - Server listens on `http://127.0.0.1:3002`
+   - Server listens on `http://127.0.0.1:3003`
 
 2) Frontend
    - `cd frontend`
    - `npm install`
-   - Ensure `frontend/.env` has `VITE_API_URL=http://localhost:3002`
+   - Ensure `frontend/.env` has `VITE_API_URL=http://localhost:3003`
    - Start dev server: `npm run dev`
-   - App runs at `http://localhost:5173/`
+   - App runs at `http://localhost:5173/` (or `http://localhost:5174/` if 5173 is busy)
 
 Quick Auth Checks (PowerShell examples)
-- Login: `Invoke-WebRequest -Uri http://127.0.0.1:3002/api/auth/login -Method POST -ContentType 'application/json' -Body '{"email":"<your_email>","password":"<your_password>"}'`
-- Copy `accessToken` from the JSON response.
-- Profile: `Invoke-WebRequest -Uri http://127.0.0.1:3002/api/auth/me -Headers @{ Authorization = 'Bearer <accessToken>' }`
+ - Login: `Invoke-WebRequest -Uri http://127.0.0.1:3003/api/auth/login -Method POST -ContentType 'application/json' -Body '{"email":"<your_email>","password":"<your_password>"}'`
+ - Copy `accessToken` from the JSON response.
+ - Profile: `Invoke-WebRequest -Uri http://127.0.0.1:3003/api/auth/me -Headers @{ Authorization = 'Bearer <accessToken>' }`
 
 Common Issues & Fixes
 - CORS blocked when pointing frontend to a hosted backend: ensure server sends `Access-Control-Allow-Origin`, handles `OPTIONS`, and includes needed methods/headers.
 - Hardcoded URLs: use `API_BASE_URL` from `frontend/src/config/api.ts` (we fixed `Register.tsx` to do this).
 - Prisma client mismatch: run `npx prisma generate` after schema changes.
 - DB schema missing locally: run `npx prisma migrate dev` (or `db push`) after changing `DATABASE_URL`.
+ - Error: `Authentication service temporarily unavailable`
+   - Cause: Backend cannot reach the database (wrong `DATABASE_URL` or network/SSL issue).
+   - Fix:
+     - Set `backend/.env` `DATABASE_URL` to your Railway URL (see above). If SSL errors appear, append `?sslmode=require`.
+     - Run `npx prisma generate` then `npx prisma db push`.
+     - Restart backend: `npm run dev`.
+ - Error: `Cannot reach the server`
+   - Cause: Frontend cannot reach backend (wrong `VITE_API_URL`, backend not running, or CORS mismatch).
+   - Fix:
+     - Ensure `frontend/.env` `VITE_API_URL=http://localhost:3003`.
+     - Backend running and listening on `http://localhost:3003`.
+     - `FRONTEND_URL` in `backend/.env` matches your dev origin (e.g., `http://localhost:5174`).
+ - Stripe publishable key warning in dev
+   - IntegrationError warnings from Stripe can be ignored during local auth testing.
+ - AI analysis route requires `OPENAI_API_KEY`
+   - If not set, the analysis route may crash at startup; set a dummy key for dev or comment out the route for local.
 
 Using Local Postgres (two options)
 1) System install (Windows)
@@ -86,9 +104,21 @@ Switching DB Targets
 - Frontend usually remains `VITE_API_URL=http://localhost:3002` for local dev.
 
 Known Ports & URLs
-- Backend: `http://127.0.0.1:3002`
-- Frontend: `http://localhost:5173`
-- API base: `${VITE_API_URL}/api` (from `frontend/src/config/api.ts`)
+ - Backend: `http://127.0.0.1:3003`
+ - Frontend: `http://localhost:5173` (or `5174` if 5173 is busy)
+ - API base: `${VITE_API_URL}/api` (from `frontend/src/config/api.ts`)
+ 
+ Health & Connectivity Checks
+ - Backend health: `GET http://localhost:3003/api/health`
+ - Frontend → Backend: login request to `/api/auth/login` should return JSON (check devtools Network).
+ 
+ Railway Database (Production)
+ - Current connection string:
+   `postgresql://postgres:xWsCOGvmCZblVHNgytuBUrTfOmmlPLob@crossover.proxy.rlwy.net:20318/railway`
+ - Tips:
+   - If SSL errors occur locally, append `?sslmode=require`.
+   - Keep this URL in your local `.env`; on Railway, set the same `DATABASE_URL` via dashboard envs.
+   - Use `npx prisma db push` against Railway for schema sync; run `npx prisma generate` after changes.
 
 Schema Changes
 - Edit `backend/prisma/schema.prisma`.
@@ -101,8 +131,8 @@ Deployment Notes
 - Railway deployment script exists (`deploy-to-railway.ps1`); configure env on Railway to match `.env.example`.
 
 Verification Checklist
-- Backend responds: `GET http://127.0.0.1:3002/api/health` (if available) or `POST /api/auth/login` works.
-- Frontend loads at `http://localhost:5173/`.
-- Registration and login succeed and `GET /api/auth/me` returns your profile.
+ - Backend responds: `GET http://127.0.0.1:3003/api/health`.
+ - Frontend loads at `http://localhost:5173/` (or `5174`).
+ - Registration and login succeed and `GET /api/auth/me` returns your profile.
 
 Last Updated: keep this document in repo root and adjust as the environment evolves.

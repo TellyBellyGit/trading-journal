@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../../config/api';
 
 interface VerificationState {
   status: 'loading' | 'success' | 'error' | 'already_verified';
@@ -33,7 +34,7 @@ const SimpleEmailVerification: React.FC = () => {
 
   const verifyEmail = async (verificationToken: string) => {
     try {
-      const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/auth/verify-email', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

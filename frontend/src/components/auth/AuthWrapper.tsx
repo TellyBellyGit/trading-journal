@@ -32,11 +32,11 @@ const getInitialAuthMode = (): 'login' | 'register' | 'reset-password' | 'forgot
 };
 
 const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isInitializing } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'reset-password' | 'forgot-password' | 'verify-email'>(getInitialAuthMode());
 
   // Show loading screen while checking authentication
-  if (isLoading) {
+  if (isInitializing) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">

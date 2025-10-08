@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isInitializing: boolean;
   isAuthenticated: boolean;
   error: string | null;
   showSessionTimeoutModal: boolean;
@@ -53,7 +54,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSessionTimeoutModal, setShowSessionTimeoutModal] = useState(false);
 
@@ -79,7 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sessionStorage.removeItem('auth_token');
         sessionStorage.removeItem('auth_user');
       } finally {
-        setIsLoading(false);
+        setIsInitializing(false);
       }
     };
 
@@ -90,8 +92,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       sessionStorage.removeItem('refresh_token');
     };
 
-    // Enhanced visibility change handler with timer
-    let visibilityTimer: NodeJS.Timeout | null = null;
+    // Enhanced visibility change handler with timer (browser uses number timers)
+    let visibilityTimer: number | null = null;
     
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
@@ -152,9 +154,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const errorData = await response.json();
         const errorMessage = errorData.error || 'Login failed';
         
-        // Store error in context state instead of DOM manipulation
+        // Store error in context state
         setError(errorMessage);
-        throw new Error(errorMessage);
+        
+        // Throw a structured error so UI can show specific messages
+        const err = new Error(errorMessage) as any;
+        err.type = errorData.type;
+        err.attemptsRemaining = errorData.attemptsRemaining;
+        err.retryAfter = errorData.retryAfter;
+        err.canResendVerification = errorData.canResendVerification;
+        err.status = response.status;
+        throw err;
       }
 
       const data: AuthResponse = await response.json();
@@ -166,9 +176,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       sessionStorage.setItem('auth_user', JSON.stringify(data.user));
       sessionStorage.setItem('refresh_token', data.refreshToken);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      throw error;
+      // Network/CORS errors result in TypeError: Failed to fetch
+      const isNetworkError = error?.message && /Failed to fetch|NetworkError/i.test(error.message);
+      const friendlyMessage = isNetworkError
+        ? 'Cannot reach the server. Ensure the backend is running and API URL is correct.'
+        : (error?.message || 'Login failed');
+
+      // Store friendly error
+      setError(friendlyMessage);
+
+      // Throw structured error so UI can format it
+      const err = new Error(friendlyMessage) as any;
+      err.type = isNetworkError ? 'network_error' : 'unknown';
+      err.status = undefined;
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -343,6 +366,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     token,
     isLoading,
+    isInitializing,
     isAuthenticated: !!user && !!token,
     error,
     showSessionTimeoutModal,

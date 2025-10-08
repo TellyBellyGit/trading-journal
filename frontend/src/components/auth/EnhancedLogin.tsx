@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../config/api';
 
 interface LoginError {
   message: string;
@@ -34,7 +35,16 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
     } catch (err: any) {
       let errorData: LoginError;
       
-      if (err.message.includes('429') || err.message.includes('Too many')) {
+      if (err?.type || err?.status) {
+        // Structured error thrown by AuthContext
+        errorData = {
+          message: err.message || 'Login failed. Please try again.',
+          type: err.type || 'unknown',
+          attemptsRemaining: err.attemptsRemaining,
+          retryAfter: err.retryAfter,
+          canResendVerification: err.canResendVerification,
+        };
+      } else if (err.message.includes('429') || err.message.includes('Too many')) {
         errorData = {
           message: 'Too many login attempts. Please try again in 15 minutes.',
           type: 'rate_limit'
@@ -50,9 +60,16 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
           canResendVerification
         };
       } else {
+        const msg = err.message || 'Login failed. Please try again.';
+        // Network error friendly mapping
+        const isNetwork = /Failed to fetch|NetworkError/i.test(msg) || err?.type === 'network_error';
+        const looksUnverified = /verify your email/i.test(msg);
         errorData = {
-          message: err.message || 'Login failed. Please try again.',
-          type: 'unknown'
+          message: isNetwork
+            ? `Cannot connect to the API. Please ensure the backend is running and that VITE_API_URL points to ${API_BASE_URL}.`
+            : msg,
+          type: isNetwork ? 'network_error' : looksUnverified ? 'email_unverified' : 'unknown',
+          canResendVerification: looksUnverified ? true : undefined,
         };
       }
       
@@ -123,9 +140,26 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
             {error.canResendVerification && (
               <button 
                 className="mt-3 text-blue-400 hover:text-blue-300 underline text-xs"
-                onClick={() => {
-                  // TODO: Implement resend verification
-                  alert('Resend verification functionality coming soon');
+                onClick={async () => {
+                  if (!email) {
+                    alert('Enter your email above first.');
+                    return;
+                  }
+                  try {
+                    const resp = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email }),
+                    });
+                    const data = await resp.json();
+                    if (resp.ok) {
+                      alert('Verification email sent! Check your inbox.');
+                    } else {
+                      alert(data.error || 'Failed to resend verification email');
+                    }
+                  } catch (e) {
+                    alert('Failed to resend verification email. Please try again.');
+                  }
                 }}
               >
                 Resend verification email
