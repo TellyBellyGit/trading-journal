@@ -327,6 +327,110 @@ const TradeTemplateModal2: React.FC<TradeTemplateModal2Props> = ({
     };
   };
 
+  // Robust DOM-based HTML -> TipTap JSON converter that preserves inline colors
+  const htmlToTipTapDoc = (html: string): any => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      const getColorMark = (el: HTMLElement) => {
+        const color = el.style?.color || '';
+        return color ? [{ type: 'textStyle', attrs: { color } }] : [];
+      };
+
+      const mergeMarks = (a: any[] = [], b: any[] = []) => [...a, ...b];
+
+      const buildTextNode = (text: string, marks: any[] = []) => ({ type: 'text', text, marks });
+
+      const buildInlineFromNode = (node: Node, inheritedMarks: any[] = []): any[] => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const t = node.textContent || '';
+          return t ? [buildTextNode(t, inheritedMarks)] : [];
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return [];
+
+        const el = node as HTMLElement;
+        let marks = [...inheritedMarks];
+
+        // Bold / italic
+        if (el.tagName === 'STRONG' || el.tagName === 'B') {
+          marks = mergeMarks(marks, [{ type: 'bold' }]);
+        }
+        if (el.tagName === 'EM' || el.tagName === 'I') {
+          marks = mergeMarks(marks, [{ type: 'italic' }]);
+        }
+        // Inline color
+        marks = mergeMarks(marks, getColorMark(el));
+
+        // Recurse children
+        const out: any[] = [];
+        for (const child of Array.from(el.childNodes)) {
+          out.push(...buildInlineFromNode(child, marks));
+        }
+        return out;
+      };
+
+      const buildBlockFromElement = (el: HTMLElement): any | null => {
+        const tag = el.tagName;
+
+        if (tag === 'H1' || tag === 'H2' || tag === 'H3') {
+          const level = tag === 'H1' ? 1 : tag === 'H2' ? 2 : 3;
+          const content = buildInlineFromNode(el, getColorMark(el)).length
+            ? buildInlineFromNode(el, getColorMark(el))
+            : [buildTextNode(el.textContent || '', getColorMark(el))];
+          return { type: 'heading', attrs: { level }, content };
+        }
+
+        if (tag === 'P') {
+          const content = buildInlineFromNode(el, getColorMark(el));
+          return { type: 'paragraph', content: content.length ? content : [buildTextNode('', [])] };
+        }
+
+        if (tag === 'UL') {
+          const items: any[] = [];
+          for (const li of Array.from(el.children)) {
+            if (li.tagName !== 'LI') continue;
+            const para = { type: 'paragraph', content: buildInlineFromNode(li as HTMLElement, getColorMark(li as HTMLElement)) };
+            items.push({ type: 'listItem', content: [para] });
+          }
+          return { type: 'bulletList', content: items };
+        }
+
+        if (tag === 'OL') {
+          const items: any[] = [];
+          for (const li of Array.from(el.children)) {
+            if (li.tagName !== 'LI') continue;
+            const para = { type: 'paragraph', content: buildInlineFromNode(li as HTMLElement, getColorMark(li as HTMLElement)) };
+            items.push({ type: 'listItem', content: [para] });
+          }
+          return { type: 'orderedList', content: items };
+        }
+
+        if (tag === 'HR') {
+          return { type: 'horizontalRule' };
+        }
+
+        // Fallback: wrap unknown elements as paragraph
+        if (el.textContent && el.textContent.trim()) {
+          const content = buildInlineFromNode(el, getColorMark(el));
+          return { type: 'paragraph', content };
+        }
+        return null;
+      };
+
+      const blocks: any[] = [];
+      for (const child of Array.from(doc.body.children)) {
+        const built = buildBlockFromElement(child as HTMLElement);
+        if (built) blocks.push(built);
+      }
+
+      return { type: 'doc', content: blocks };
+    } catch (e) {
+      console.error('htmlToTipTapDoc conversion error:', e);
+      return { type: 'doc', content: [] };
+    }
+  };
+
   // Convert AI response to TipTap-compatible format (no inline styles, proper structure)
   const convertToTipTapFormat = (rawAnalysis: string): string => {
     let clean = rawAnalysis;
@@ -398,19 +502,19 @@ const TradeTemplateModal2: React.FC<TradeTemplateModal2Props> = ({
   };
 
   const handleInsert = () => {
-    if (!analysisResult?.cleanAnalysis) {
-      const htmlContent = generateAnalysisHTML();
-      onInsert(htmlContent);
-      onClose();
-      return;
-    }
+    // Prefer the styled analysis HTML to preserve colors during conversion
+    const sourceHtml = analysisResult?.analysis || generateAnalysisHTML();
+    const reorderedContent = reorderAnalysisContent(sourceHtml);
 
-    // Reorder the analysis content to move Final Summary to the top
-    const reorderedContent = reorderAnalysisContent(analysisResult.cleanAnalysis);
-    
-    // Convert AI analysis to TipTap JSON structure instead of HTML
-    const jsonContent = convertToTipTapJSON(reorderedContent);
-    onInsert(jsonContent);
+    // Convert styled HTML to TipTap JSON (preserving inline colors)
+    const jsonDoc = htmlToTipTapDoc(reorderedContent);
+
+    if (jsonDoc?.type === 'doc' && Array.isArray(jsonDoc.content) && jsonDoc.content.length > 0) {
+      onInsert(jsonDoc);
+    } else {
+      // Fallback: insert styled HTML directly (HTMLPreserver will keep inline styles)
+      onInsert(reorderedContent);
+    }
     onClose();
   };
 
