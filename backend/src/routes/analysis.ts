@@ -10,6 +10,15 @@ const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
 });
 
+// Helper: Verify AI configuration before attempting requests
+const isAIConfigured = (): boolean => {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  // Treat missing/placeholder keys as not configured
+  if (!key || key.length === 0) return false;
+  if (key.toLowerCase() === 'fake_dev_key') return false;
+  return true;
+};
+
 // Professional trading analysis prompt
 const ANALYSIS_PROMPT = `You are a professional trading mentor with 20+ years of experience. Analyze this trade with the depth, honesty, and expertise of a seasoned professional who has mentored hundreds of traders.
 
@@ -128,6 +137,15 @@ router.post('/analyze-trade', authenticateToken, async (req, res) => {
   console.log('🎯 analyze-trade endpoint hit by user', req.user?.userId);
   
   try {
+    // Fail fast if AI service is not configured
+    if (!isAIConfigured()) {
+      console.error('🔧 AI service not configured: missing or placeholder OPENAI_API_KEY');
+      return res.status(500).json({
+        error: 'AI service configuration error',
+        details: 'Set a valid DeepSeek API key in OPENAI_API_KEY and restart the server.'
+      });
+    }
+
     const tradeData = req.body;
     console.log('📊 Trade data received:', Object.keys(tradeData).length, 'fields');
     
@@ -215,6 +233,15 @@ router.post('/analyze-trades', authenticateToken, async (req, res) => {
   console.log('🎯 analyze-trades endpoint hit by user', req.user?.userId);
   
   try {
+    // Fail fast if AI service is not configured
+    if (!isAIConfigured()) {
+      console.error('🔧 AI service not configured: missing or placeholder OPENAI_API_KEY');
+      return res.status(500).json({
+        error: 'AI service configuration error',
+        details: 'Set a valid DeepSeek API key in OPENAI_API_KEY and restart the server.'
+      });
+    }
+
     const { trades } = req.body;
     console.log('📊 Trades data received:', trades?.length || 0, 'trades');
     

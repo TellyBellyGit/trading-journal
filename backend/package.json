@@ -4,6 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
+    "dev:clean": "powershell -ExecutionPolicy Bypass -File ./scripts/start-dev.ps1",
     "build": "tsc",
     "start": "npx prisma generate && npx prisma db push --accept-data-loss && node dist/index.js",
     "db:generate": "prisma generate",
