@@ -1,4 +1,4 @@
-# Environments: Development (Docker) and Production (Railway + Cloudflare)
+just discuss f# Environments: Development (Docker) and Production (Railway + Cloudflare)
 
 This document describes how to run the app locally (development) with a Dockerized Postgres database, and how to deploy to production with Railway (backend) and Cloudflare Pages (frontend). It also covers environment variables, Prisma migrations, Stripe, Resend, and CORS.
 

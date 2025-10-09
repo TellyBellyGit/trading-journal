@@ -86,6 +86,16 @@ Common Issues & Fixes
  - AI analysis route requires `OPENAI_API_KEY`
    - If not set, the analysis route may crash at startup; set a dummy key for dev or comment out the route for local.
 
+AI Analysis (DeepSeek)
+- Backend uses an OpenAI-compatible client pointed at DeepSeek (`baseURL=https://api.deepseek.com`).
+- Local development key: set in `backend/.env`
+  - `OPENAI_API_KEY=sk-8f53ba0a6ec24af88fe92fdbfc0a8970`
+- Notes:
+  - This key is for local testing only; do not use in production.
+  - If the key rotates, update `backend/.env` and restart the backend: `npm run dev`.
+  - Analysis endpoints: `POST /api/analysis/analyze-trade`, `POST /api/analysis/analyze-trades`.
+  - Frontend calls originate from `frontend/src/api/analysis.ts`, `TradeTemplateModal.tsx`, and `TradeTemplateModal2.tsx`.
+
 Using Local Postgres (two options)
 1) System install (Windows)
    - Install PostgreSQL.
