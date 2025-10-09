@@ -3,9 +3,7 @@ import AppShell from './components/AppShell';
 import MetricsDashboard from './components/MetricsDashboard';
 import AllTradesDemo from './components/AllTradesDemo';
 import './index.css';
-
-// API configuration
-const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
+import { API_BASE_URL } from './config/api';
 
 // Types matching your Prisma schema
 interface Trade {

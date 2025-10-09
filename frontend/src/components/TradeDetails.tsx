@@ -16,9 +16,7 @@ import { subscriptionsApi } from '../api/subscriptions';
 import TradeTemplateModal from './TradeTemplateModal';
 import TradeTemplateModal2 from './TradeTemplateModal2';
 import { HTMLPreserver } from './HTMLPreserver';
-
-// API configuration
-const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
+import { API_BASE_URL } from '../config/api';
 
 // Extend window object for timeout
 declare global {

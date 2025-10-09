@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, RegisterData } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../config/api';
 
 interface RegisterProps {
   onSwitchToLogin?: () => void;
@@ -65,7 +66,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
     
     try {
       console.log('🔍 Checking if email exists:', email);
-      const response = await fetch('https://trading-journal-backend-5fi2.onrender.com/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

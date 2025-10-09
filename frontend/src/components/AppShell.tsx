@@ -4,8 +4,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import SubscriptionPricing from './SubscriptionPricing';
 import { subscriptionsApi } from '../api/subscriptions';
-
-const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
+import { API_BASE_URL } from '../config/api';
 
 // Navigation items matching your PyQt5 app
 const getNavigationItems = (isAdmin: boolean = false) => [

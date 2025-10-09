@@ -1,210 +1,165 @@
-// prisma/schema.prisma
-// 1. Define the database
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-// 2. Set generator for Prisma Client
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
-// 3. Define the User model
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String   // Hashed password
-  firstName String
-  lastName  String
-  isActive  Boolean  @default(true)
-  isAdmin   Boolean  @default(false)
-  // Email verification fields
-  emailVerified           Boolean   @default(false)
-  emailVerificationToken  String?
+  id                       Int                 @id @default(autoincrement())
+  email                    String              @unique
+  password                 String
+  firstName                String
+  lastName                 String
+  isActive                 Boolean             @default(true)
+  isAdmin                  Boolean             @default(false)
+  emailVerified            Boolean             @default(false)
+  emailVerificationToken   String?
   emailVerificationExpires DateTime?
-  // Password reset fields
-  passwordResetToken      String?
-  passwordResetExpires    DateTime?
-  // Security fields
-  loginAttempts           Int       @default(0)
-  lockedUntil            DateTime?
-  lastLogin              DateTime?
-  // Optional user preferences
-  timezone  String?  @default("UTC")
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  // Relations
-  userBrokerAccounts UserBrokerAccount[]
-  trades             Trade[]
-  notes              Note[]
-  subscription       Subscription?
-  loginHistory       LoginHistory[]
-  
-  // Performance indexes for login and user queries
-  @@index([email])                        // Critical: login performance
-  @@index([isActive])                     // User status queries
-  @@index([lastLogin])                    // Recent login queries
-  @@index([emailVerified])                // Email verification status
+  passwordResetToken       String?
+  passwordResetExpires     DateTime?
+  loginAttempts            Int                 @default(0)
+  lockedUntil              DateTime?
+  lastLogin                DateTime?
+  timezone                 String?             @default("UTC")
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  loginHistory             LoginHistory[]
+  notes                    Note[]
+  subscription             Subscription?
+  trades                   Trade[]
+  userBrokerAccounts       UserBrokerAccount[]
+
+  @@index([email])
+  @@index([isActive])
+  @@index([lastLogin])
+  @@index([emailVerified])
 }
 
-// 4. Define the Global Broker model (shared across all users)
 model Broker {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique // e.g., "TD Ameritrade", "Interactive Brokers" - globally unique
-  displayName String  // e.g., "TD Ameritrade"
-  isActive    Boolean @default(true)
-  // Default commission structure for this broker
-  defaultCommission Float?       // Default commission per trade
-  commissionType    String?      // "per_trade", "per_share", "percentage"
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  // Relations
-  trades      Trade[]
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  displayName        String
+  isActive           Boolean             @default(true)
+  defaultCommission  Float?
+  commissionType     String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  trades             Trade[]
   userBrokerAccounts UserBrokerAccount[]
 }
 
-// 4b. User-specific broker account settings (optional)
 model UserBrokerAccount {
-  id        Int    @id @default(autoincrement())
-  userId    Int
-  brokerId  Int  
-  // User-specific settings for this broker
-  accountType       String? // e.g., "IRA", "Taxable", "Business"
-  accountId         String? // User's account identifier with this broker
-  customCommission  Float?  // Override broker's default commission
-  displayName       String? // User's custom name for this account
-  isActive          Boolean @default(true)
-  // Relationships
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  broker            Broker  @relation(fields: [brokerId], references: [id], onDelete: Cascade)
-  // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  // Unique constraint: user can't have duplicate accounts for same broker
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  brokerId         Int
+  accountType      String?
+  accountId        String?
+  customCommission Float?
+  displayName      String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  broker           Broker   @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, brokerId])
 }
 
-// 5. Define the Trade model
 model Trade {
-  id            Int      @id @default(autoincrement())
-  symbol        String
-  direction     String
-  quantity      Int
-  entryDate     DateTime
-  entryTime     String
-  entryPrice    Float
-  exitDate      DateTime
-  exitTime      String
-  exitPrice     Float
-  duration      String
-  pnl           Float
-  percentChange Float
-  orderType     String
-  assessment    String?
-  capital       Float
-  status        String?  @default("Closed")
-  // User relationship
-  userId        Int
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Broker relationship
-  brokerId      Int
-  broker        Broker   @relation(fields: [brokerId], references: [id])
-  // Rich text journaling fields
-  notes         String?  // Rich text content (HTML format from Tiptap)
-  strategy      String?  // Trading strategy used
-  riskReward    String?  // Risk:Reward ratio (e.g., "1:3")
-  commission    Float?   // Actual commission/fees paid (can override broker default)
-  tags          String?  // Comma-separated tags for categorization
-  // Additional trade metadata
-  tradeId       String?  // Broker's trade confirmation number
-  executionVenue String? // Where trade was executed (e.g., "NASDAQ", "NYSE")
-  // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  // Performance indexes
-  @@index([userId])                    // Critical: user-scoped queries
-  @@index([userId, entryDate])         // Critical: user trades by date
-  @@index([userId, status])            // User trades by status
-  @@index([userId, symbol])            // User trades by symbol
-  @@index([userId, pnl])               // Critical: P&L queries and filtering
-  @@index([brokerId])                  // Broker-scoped queries
-  @@index([entryDate])                 // Date range queries
+  id             Int      @id @default(autoincrement())
+  symbol         String
+  direction      String
+  quantity       Int
+  entryDate      DateTime
+  entryTime      String
+  entryPrice     Float
+  exitDate       DateTime
+  exitTime       String
+  exitPrice      Float
+  duration       String
+  pnl            Float
+  percentChange  Float
+  orderType      String
+  assessment     String?
+  capital        Float
+  status         String?  @default("Closed")
+  userId         Int
+  brokerId       Int
+  notes          String?
+  strategy       String?
+  riskReward     String?
+  commission     Float?
+  tags           String?
+  tradeId        String?
+  executionVenue String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  broker         Broker   @relation(fields: [brokerId], references: [id])
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, entryDate])
+  @@index([userId, status])
+  @@index([userId, symbol])
+  @@index([userId, pnl])
+  @@index([brokerId])
+  @@index([entryDate])
 }
 
-// 6. Define the Note model
 model Note {
   id        String   @id @default(cuid())
   title     String
-  content   String   // Rich text content (HTML format from Tiptap)
-  category  String?  // Optional category for organization
-  tags      String?  // Comma-separated tags for categorization
-  // User relationship
+  content   String
+  category  String?
+  tags      String?
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  // Performance indexes
-  @@index([userId])                    // Critical: user-scoped queries
-  @@index([userId, createdAt])         // User notes by date
-  @@index([category])                  // Notes by category
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([category])
 }
 
-// 7. Define the Subscription model
 model Subscription {
-  id                Int      @id @default(autoincrement())
-  // Stripe identifiers
-  stripeCustomerId     String   @unique  // Stripe customer ID
-  stripeSubscriptionId String?  @unique  // Stripe subscription ID (null for free tier)
-  stripePriceId        String?           // Stripe price ID for current plan
-  // Subscription details
-  plan                 String   @default("free")  // "free", "pro", "premium"
-  status               String   @default("active") // "active", "canceled", "past_due", "incomplete"
+  id                   Int       @id @default(autoincrement())
+  stripeCustomerId     String    @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  plan                 String    @default("free")
+  status               String    @default("active")
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean  @default(false)
-  // Usage tracking
-  tradeCount           Int      @default(0)       // Current period trade count
-  periodStartDate      DateTime @default(now())   // When current usage period started
-  // Limits based on plan
-  maxTrades            Int      @default(25)      // Max trades per month for current plan
-  // User relationship
-  userId               Int      @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Timestamps
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  
-  // Performance indexes
+  cancelAtPeriodEnd    Boolean   @default(false)
+  tradeCount           Int       @default(0)
+  periodStartDate      DateTime  @default(now())
+  maxTrades            Int       @default(25)
+  userId               Int       @unique
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([stripeCustomerId])
   @@index([stripeSubscriptionId])
   @@index([plan])
   @@index([status])
 }
 
-// 8. Define the LoginHistory model
 model LoginHistory {
-  id        Int      @id @default(autoincrement())
-  // User relationship
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Login attempt details
-  ipAddress String?
-  userAgent String?
-  success   Boolean  @default(false)
-  // Additional context
-  failureReason String? // "invalid_password", "account_locked", "unverified_email", etc.
-  // Timestamps
-  createdAt DateTime @default(now())
-  
-  // Performance indexes
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  ipAddress     String?
+  userAgent     String?
+  success       Boolean  @default(false)
+  failureReason String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([userId, createdAt])
   @@index([success])

@@ -7,9 +7,7 @@ import Image from '@tiptap/extension-image';
 import { ListItem } from '@tiptap/extension-list-item';
 import { BulletList } from '@tiptap/extension-bullet-list';
 import { OrderedList } from '@tiptap/extension-ordered-list';
-
-// API configuration
-const API_BASE_URL = 'http://localhost:3001/api';
+import { API_BASE_URL } from '../../config/api';
 
 // Types matching your Prisma schema
 interface Trade {

@@ -19,9 +19,6 @@ import AnalysisProgressModal from './AnalysisProgressModal';
 import { analysisApi } from '../api/analysis';
 import { notesApi } from '../api/notes';
 
-// API configuration
-const API_BASE_URL = 'https://trading-journal-backend-5fi2.onrender.com/api';
-
 
 // Main Trading App Component (authenticated content)
 const TradingApp: React.FC = () => {

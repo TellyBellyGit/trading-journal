@@ -593,17 +593,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Invalid trade ID' });
     }
     
+    // Use a valid unique lookup, then enforce ownership
     const trade = await prisma.trade.findUnique({
-      where: {
-        id: tradeId,
-        userId: req.user!.userId
-      },
-      include: {
-        broker: true
-      }
+      where: { id: tradeId },
+      include: { broker: true }
     });
-    
-    if (!trade) {
+
+    if (!trade || trade.userId !== req.user!.userId) {
+      // Hide existence for non-owners
       return res.status(404).json({ error: 'Trade not found' });
     }
     
@@ -756,6 +753,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Invalid trade ID' });
     }
 
+    const ownerCheck = await prisma.trade.findUnique({
+      where: { id: tradeId },
+      select: { userId: true }
+    });
+
+    if (!ownerCheck || ownerCheck.userId !== req.user!.userId) {
+      return res.status(404).json({ error: 'Trade not found' });
+    }
+
     const {
       symbol,
       direction,
@@ -784,10 +790,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     } = req.body;
 
     const trade = await prisma.trade.update({
-      where: { 
-        id: tradeId,
-        userId: req.user!.userId
-      },
+      where: { id: tradeId },
       data: {
         symbol,
         direction,
@@ -814,9 +817,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         tradeId: brokerTradeId,
         executionVenue
       },
-      include: {
-        broker: true
-      }
+      include: { broker: true }
     });
 
     res.json(trade);
@@ -832,11 +833,17 @@ router.patch('/:id/notes', authenticateToken, async (req, res) => {
     const tradeId = parseInt(req.params.id);
     const { notes } = req.body;
 
+    const ownerCheck = await prisma.trade.findUnique({
+      where: { id: tradeId },
+      select: { userId: true }
+    });
+
+    if (!ownerCheck || ownerCheck.userId !== req.user!.userId) {
+      return res.status(404).json({ error: 'Trade not found' });
+    }
+
     const trade = await prisma.trade.update({
-      where: { 
-        id: tradeId,
-        userId: req.user!.userId
-      },
+      where: { id: tradeId },
       data: { 
         notes: notes || null,
         updatedAt: new Date()
@@ -856,11 +863,17 @@ router.patch('/:id/assessment', authenticateToken, async (req, res) => {
     const tradeId = parseInt(req.params.id);
     const { assessment } = req.body;
 
+    const ownerCheck = await prisma.trade.findUnique({
+      where: { id: tradeId },
+      select: { userId: true }
+    });
+
+    if (!ownerCheck || ownerCheck.userId !== req.user!.userId) {
+      return res.status(404).json({ error: 'Trade not found' });
+    }
+
     const trade = await prisma.trade.update({
-      where: { 
-        id: tradeId,
-        userId: req.user!.userId
-      },
+      where: { id: tradeId },
       data: { 
         assessment: assessment || null,
         updatedAt: new Date()
@@ -880,11 +893,17 @@ router.patch('/:id/strategy', authenticateToken, async (req, res) => {
     const tradeId = parseInt(req.params.id);
     const { strategy } = req.body;
 
+    const ownerCheck = await prisma.trade.findUnique({
+      where: { id: tradeId },
+      select: { userId: true }
+    });
+
+    if (!ownerCheck || ownerCheck.userId !== req.user!.userId) {
+      return res.status(404).json({ error: 'Trade not found' });
+    }
+
     const trade = await prisma.trade.update({
-      where: { 
-        id: tradeId,
-        userId: req.user!.userId
-      },
+      where: { id: tradeId },
       data: { 
         strategy: strategy || null,
         updatedAt: new Date()
@@ -902,12 +921,17 @@ router.patch('/:id/strategy', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const tradeId = parseInt(req.params.id);
-    await prisma.trade.delete({
-      where: { 
-        id: tradeId,
-        userId: req.user!.userId
-      }
+
+    const ownerCheck = await prisma.trade.findUnique({
+      where: { id: tradeId },
+      select: { userId: true }
     });
+
+    if (!ownerCheck || ownerCheck.userId !== req.user!.userId) {
+      return res.status(404).json({ error: 'Trade not found' });
+    }
+
+    await prisma.trade.delete({ where: { id: tradeId } });
     res.json({ message: 'Trade deleted successfully' });
   } catch (error) {
     console.error('Error deleting trade:', error);
