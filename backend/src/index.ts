@@ -53,6 +53,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Explicitly handle CORS preflight for all routes
+app.options('*', cors(corsOptions));
+
 // Special webhook route (needs raw body for Stripe signature verification)
 app.use('/api/webhooks', webhooksRouter);
 

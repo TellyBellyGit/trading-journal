@@ -105,8 +105,7 @@ class AdminAPI {
   private getAuthHeaders() {
     const token = sessionStorage.getItem('auth_token');
     return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Authorization': `Bearer ${token}`
     };
   }
 
@@ -152,7 +151,7 @@ class AdminAPI {
   }): Promise<AdminUser> {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
       method: 'PATCH',
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
 
@@ -188,7 +187,7 @@ class AdminAPI {
   }> {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/email-verification`, {
       method: 'PATCH',
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ emailVerified })
     });
 
@@ -211,7 +210,7 @@ class AdminAPI {
   }> {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/account-status`, {
       method: 'PATCH',
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive })
     });
 
@@ -236,7 +235,7 @@ class AdminAPI {
   }> {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/reset-password`, {
       method: 'POST',
-      headers: this.getAuthHeaders()
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' }
     });
 
     if (!response.ok) {
@@ -307,7 +306,7 @@ class AdminAPI {
   }> {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
       method: 'DELETE',
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ force })
     });
 
@@ -335,7 +334,7 @@ class AdminAPI {
   }> {
     const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
       method: 'PATCH',
-      headers: this.getAuthHeaders(),
+      headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(subscriptionData)
     });
 
