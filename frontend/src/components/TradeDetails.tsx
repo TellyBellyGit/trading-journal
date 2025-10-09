@@ -32,7 +32,7 @@ declare global {
 interface Trade {
   id: number;
   symbol: string;
-  direction: 'Long' | 'Short';
+  direction: string;
   quantity: number;
   entryPrice: number;
   exitPrice?: number;
@@ -46,8 +46,8 @@ interface Trade {
   entryTime: string;
   exitDate?: string;
   exitTime?: string;
-  duration?: number;
-  status: 'Open' | 'Closed';
+  duration?: string;
+  status?: string;
   notes?: string; // Changed from commentary to notes
   createdAt: string;
   updatedAt: string;
@@ -842,13 +842,15 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
 
       {/* Template & Export Buttons - Extreme Right */}
       <div className="flex gap-1 ml-auto">
-        <button
-          onClick={onOpenTemplate}
-          className="px-4 py-1.5 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors border border-green-600"
-          title="Open comprehensive trade review template"
-        >
-          Template
-        </button>
+        {false && (
+          <button
+            onClick={onOpenTemplate}
+            className="px-4 py-1.5 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors border border-green-600"
+            title="Open comprehensive trade review template"
+          >
+            Template
+          </button>
+        )}
         
         <button
           onClick={importHTML}
@@ -861,9 +863,9 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         <button
           onClick={onOpenTemplate2}
           className="px-4 py-1.5 rounded text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors border border-purple-600"
-          title="Open simplified trade review template"
+          title="Open AI Analysis"
         >
-          Template 2
+          AI Analysis
         </button>
         
         <button
@@ -1131,6 +1133,12 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
       } else {
         // Fallback to HTML insertion for backwards compatibility
         editor.commands.insertContent(content);
+      }
+
+      // Force immediate auto-save after programmatic insertion to avoid losing changes
+      const updatedHtml = editor.getHTML();
+      if (trade && updatedHtml !== trade.notes) {
+        triggerAutoSave(updatedHtml);
       }
     }
   };
