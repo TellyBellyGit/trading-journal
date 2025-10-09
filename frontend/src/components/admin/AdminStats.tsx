@@ -23,6 +23,8 @@ const AdminStats: React.FC = () => {
     loadStats();
   }, []);
 
+  
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -166,6 +168,8 @@ const AdminStats: React.FC = () => {
           </div>
         </div>
       </div>
+
+      
 
       {/* Refresh Button */}
       <div className="flex justify-end">

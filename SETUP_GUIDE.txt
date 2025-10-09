@@ -20,7 +20,7 @@ Backend Environment (.env)
 - Create `backend/.env` based on `backend/.env.example`.
 - Required keys (from `.env.example`):
   - `DATABASE_URL` — Postgres connection string
-  - `PORT=3003` — backend port
+  - `PORT=3003` — backend port (standardized; example updated to 3003)
   - `NODE_ENV=development`
   - `JWT_SECRET` — access token secret
   - `JWT_REFRESH_SECRET` — refresh token secret
@@ -107,6 +107,22 @@ Known Ports & URLs
  - Backend: `http://127.0.0.1:3003`
  - Frontend: `http://localhost:5173` (or `5174` if 5173 is busy)
  - API base: `${VITE_API_URL}/api` (from `frontend/src/config/api.ts`)
+
+Environment Persistence
+- Keep your local secrets in `backend/.env` and `frontend/.env.development` (or `frontend/.env`).
+- Do not edit example files for active values; copy from this guide and `.env.example` into your local `.env` files.
+- We standardized on `PORT=3003` for the backend and documented it here; ensure your `.env` matches to avoid drift.
+- Email sending requires `RESEND_API_KEY`, `FROM_EMAIL`, `FROM_NAME`, and a correct `FRONTEND_URL`. If `RESEND_API_KEY` is empty, emails are skipped by design (dev convenience).
+ 
+ Current Dev Resend Email Configuration (Local Testing)
+ - Use the following values in `backend/.env` during local development:
+   - `RESEND_API_KEY=re_DYe21Vbj_9xSrQxoP1jCYZQnLjWvhA4AP`
+   - `FROM_EMAIL=support@tradrdash.com`
+   - `FROM_NAME=Trading Journal`
+ - Notes:
+   - This key is for local testing only. Do not use in production.
+   - If the key is rotated, update `backend/.env` and restart: `npm run dev`.
+   - Ensure the sender domain is verified in Resend for successful delivery.
  
  Health & Connectivity Checks
  - Backend health: `GET http://localhost:3003/api/health`
@@ -134,5 +150,13 @@ Verification Checklist
  - Backend responds: `GET http://127.0.0.1:3003/api/health`.
  - Frontend loads at `http://localhost:5173/` (or `5174`).
  - Registration and login succeed and `GET /api/auth/me` returns your profile.
+
+Common Commands
+ - Start local DB: `docker compose up -d`
+ - Stop local DB: `docker compose down`
+ - Check DB health: `docker inspect --format "{{.State.Health.Status}}" trading_journal_db`
+ - Generate Prisma Client: `npx --prefix backend prisma generate`
+ - Push schema to local DB: `npx --prefix backend prisma db push --schema backend/prisma/schema.prisma`
+ - Run both apps locally: `npm run dev`
 
 Last Updated: keep this document in repo root and adjust as the environment evolves.

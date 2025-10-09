@@ -4,11 +4,17 @@ import OpenAI from 'openai';
 
 const router = express.Router();
 
-// Initialize DeepSeek client (compatible with OpenAI SDK)
-const deepseek = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Using OPENAI_API_KEY env var for DeepSeek key
-  baseURL: 'https://api.deepseek.com',
-});
+// Lazy DeepSeek client creation (avoids startup crash before envs load)
+const getDeepseekClient = (): OpenAI => {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  if (!key) {
+    throw new Error('Missing OPENAI_API_KEY');
+  }
+  return new OpenAI({
+    apiKey: key,
+    baseURL: 'https://api.deepseek.com',
+  });
+};
 
 // Helper: Verify AI configuration before attempting requests
 const isAIConfigured = (): boolean => {
@@ -163,6 +169,7 @@ router.post('/analyze-trade', authenticateToken, async (req, res) => {
     console.log('🧠 Starting AI trade analysis for user', req.user?.userId);
     
     // Call DeepSeek API
+    const deepseek = getDeepseekClient();
     const completion = await deepseek.chat.completions.create({
       model: "deepseek-chat", // DeepSeek's chat model
       messages: [
@@ -274,6 +281,7 @@ router.post('/analyze-trades', authenticateToken, async (req, res) => {
     console.log('🧠 Starting AI bulk trades analysis for user', req.user?.userId);
     
     // Call DeepSeek API
+    const deepseek = getDeepseekClient();
     const completion = await deepseek.chat.completions.create({
       model: "deepseek-chat",
       messages: [

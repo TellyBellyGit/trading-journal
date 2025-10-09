@@ -8,6 +8,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import bcrypt from 'bcryptjs';
 import tradesRouter from './routes/trades';
 import brokersRouter from './routes/brokers';
@@ -21,8 +22,9 @@ import webhooksRouter from './routes/webhooks';
 import analysisRouter from './routes/analysis';
 import { JWTUtils } from './utils/auth';
 import PrismaClientSingleton, { prisma } from './lib/prisma';
+import { emailService } from './services/emailService';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3002; // 🔥 CHANGED: Use 3002 instead of 3001
@@ -65,6 +67,39 @@ app.use('/api/analysis', analysisRouter);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Trading Journal API is running' });
+});
+
+// Email config health check
+app.get('/api/health/email', async (req, res) => {
+  try {
+    const apiKey = process.env.RESEND_API_KEY || '';
+    const fromEmail = process.env.FROM_EMAIL || '';
+    const fromName = process.env.FROM_NAME || '';
+    const frontendUrl = process.env.FRONTEND_URL || '';
+
+    let configurationValid = false;
+    try {
+      configurationValid = await emailService.testConfiguration();
+    } catch (_) {
+      configurationValid = false;
+    }
+
+    res.json({
+      resend: {
+        apiKeyPresent: !!apiKey,
+        apiKeyFormatValid: !!apiKey && apiKey.startsWith('re_'),
+        configurationValid,
+      },
+      fromEmailPresent: !!fromEmail,
+      fromNamePresent: !!fromName,
+      frontendUrlSet: !!frontendUrl,
+      frontendUrl,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to check email configuration',
+    });
+  }
 });
 
 // Global error handler for JSON parsing and other errors

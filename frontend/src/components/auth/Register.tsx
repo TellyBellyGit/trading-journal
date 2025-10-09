@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config/api';
 
 interface RegisterProps {
@@ -19,6 +19,28 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
+
+  // After successful registration, start a 5s countdown then switch to login
+  useEffect(() => {
+    if (!success) return;
+    // Initialize countdown once when success becomes true
+    if (redirectCountdown === null) {
+      setRedirectCountdown(5);
+      return;
+    }
+    // When countdown hits 0, redirect to login
+    if (redirectCountdown <= 0) {
+      onSwitchToLogin?.();
+      return;
+    }
+    // Decrement countdown every second
+    const timer = setTimeout(() => {
+      setRedirectCountdown((prev) => (prev !== null ? prev - 1 : prev));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [success, redirectCountdown, onSwitchToLogin]);
 
   const checkEmailExists = async (email: string) => {
     if (!email || !/\S+@\S+\.\S+/.test(email)) return;
@@ -112,6 +134,10 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
         if (onSuccess) {
           onSuccess();
         }
+        // Provide local success feedback if no navigation happens
+        setSuccess(true);
+        // Start redirect countdown UX immediately
+        setRedirectCountdown(5);
       } else {
         const errorData = await response.json();
         setSubmitError(errorData.message || 'Registration failed. Please try again.');
@@ -268,6 +294,26 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
         {/* Registration Form */}
         <div className="flex gap-8">
           <form onSubmit={handleSubmit} className="space-y-6 max-w-md border border-gray-600 rounded-lg p-8">
+          {/* Success Message */}
+          {success && (
+            <div className="p-3 bg-green-900/40 border border-green-500 rounded-lg">
+              <p className="text-sm text-green-300">Registration successful! Check your email for a verification link.</p>
+              {redirectCountdown !== null && (
+                <p className="mt-2 text-xs text-green-200">
+                  Redirecting to sign in in {redirectCountdown}s...
+                </p>
+              )}
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={onSwitchToLogin}
+                  className="text-xs text-blue-300 hover:text-blue-200 underline"
+                >
+                  Go to sign in now
+                </button>
+              </div>
+            </div>
+          )}
           {/* First Name */}
           <div>
             <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">
@@ -280,6 +326,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
               onChange={(e) => setFirstName(e.target.value)}
               className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="First Name"
+              disabled={success}
             />
           </div>
 
@@ -295,6 +342,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
               onChange={(e) => setLastName(e.target.value)}
               className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Last Name"
+              disabled={success}
             />
           </div>
 
@@ -311,6 +359,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
               onBlur={handleEmailBlur}
               className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Email Address"
+              disabled={success}
             />
             {emailMessage && (
               <p className={`mt-1 text-sm ${emailMessageColor}`}>{emailMessage}</p>
@@ -319,6 +368,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
               <p className="mt-1 text-sm text-red-400">
                 An account with this email address already exists.{' '}
                 <button
+                  type="button"
                   onClick={onSwitchToLogin}
                   className="text-blue-400 hover:text-blue-300 underline focus:outline-none"
                 >
@@ -342,6 +392,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
                 onFocus={handlePasswordFocus}
                 className="w-full px-4 py-3 pr-12 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 password-no-reveal"
                 placeholder="Password"
+                disabled={success}
               />
               {password && (
                 <button
@@ -384,6 +435,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
                   confirmPassword && !passwordsMatch ? 'border-red-500' : 'border-gray-600'
                 }`}
                 placeholder="Confirm Password"
+                disabled={success}
               />
               {confirmPassword && (
                 <button
@@ -432,14 +484,14 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={!canSubmit || isSubmitting}
+            disabled={!canSubmit || isSubmitting || success}
             className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-colors ${
               canSubmit && !isSubmitting
                 ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
                 : 'bg-gray-600 cursor-not-allowed'
             }`}
           >
-            {isSubmitting ? 'Creating Account...' : 'Create Account'}
+            {success ? 'Account Created' : isSubmitting ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 
@@ -533,6 +585,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onSuccess }) => {
             <p className="text-gray-400">
               Already have an account?{' '}
               <button
+                type="button"
                 onClick={onSwitchToLogin}
                 className="text-blue-400 hover:text-blue-300 font-medium focus:outline-none focus:underline"
               >

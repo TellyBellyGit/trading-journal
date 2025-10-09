@@ -4,11 +4,12 @@ import AdminStats from '../components/admin/AdminStats';
 import UserList from '../components/admin/UserList';
 import UserDetail from '../components/admin/UserDetail';
 import BrokerManagement from '../components/admin/BrokerManagement';
+import AdminHealth from '../components/admin/AdminHealth';
 import { AdminUser } from '../api/admin';
 
 const Admin: React.FC = () => {
   const { user } = useAuth();
-  const [currentView, setCurrentView] = useState<'overview' | 'users' | 'brokers' | 'user-detail'>('overview');
+  const [currentView, setCurrentView] = useState<'overview' | 'users' | 'brokers' | 'health' | 'user-detail'>('overview');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   // Redirect non-admin users
@@ -74,6 +75,16 @@ const Admin: React.FC = () => {
           >
             Brokers
           </button>
+          <button
+            onClick={() => setCurrentView('health')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              currentView === 'health'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            Health
+          </button>
         </div>
       </div>
 
@@ -83,6 +94,8 @@ const Admin: React.FC = () => {
       {currentView === 'users' && <UserList onUserSelect={handleUserSelect} />}
       
       {currentView === 'brokers' && <BrokerManagement />}
+
+      {currentView === 'health' && <AdminHealth />}
       
       {currentView === 'user-detail' && selectedUser && (
         <UserDetail 
