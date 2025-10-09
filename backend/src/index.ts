@@ -29,14 +29,23 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 3002; // 🔥 CHANGED: Use 3002 instead of 3001
 
-// Middleware - CORS configuration
+// Middleware - CORS configuration (env-driven, dev-safe)
+const allowedOrigins = new Set<string>();
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.add(process.env.FRONTEND_URL);
+}
+// Allow local dev origins only when not in production
+if ((process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+  allowedOrigins.add('http://localhost:5173');
+  allowedOrigins.add('http://localhost:5174');
+}
 const corsOptions = {
-  origin: [
-    'http://localhost:5173', // Local development
-    'https://trading-journal-frontend-2zj6.onrender.com', // Production frontend
-    'https://app.tradrdash.com', // Custom domain frontend
-    process.env.FRONTEND_URL // From environment variable
-  ].filter(Boolean), // Remove any undefined values
+  origin: (origin: any, callback: any) => {
+    // Allow same-origin or non-browser requests
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

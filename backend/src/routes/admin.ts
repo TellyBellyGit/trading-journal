@@ -611,7 +611,15 @@ router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
 
     logger.info(`Admin ${req.user?.email} generated password reset token for user ${updatedUser.email}`, req);
 
-    // 🔍 DEBUG: Include debug info in response for testing
+    // Build reset link safely: require FRONTEND_URL in production
+    const frontendUrl = process.env.FRONTEND_URL;
+    if ((process.env.NODE_ENV || '').toLowerCase() === 'production' && !frontendUrl) {
+      return res.status(500).json({ error: 'FRONTEND_URL is not configured in production' });
+    }
+    const resetLink = `${frontendUrl || 'http://localhost:5173'}?token=${resetToken}`;
+    const includeDebug = (process.env.NODE_ENV || '').toLowerCase() !== 'production';
+
+    // 🔍 Include debug info only in non-production environments
     res.json({
       message: 'Password reset token generated successfully',
       user: {
@@ -619,16 +627,18 @@ router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
         email: updatedUser.email,
         name: `${updatedUser.firstName} ${updatedUser.lastName}`
       },
-      resetToken, // Only for testing - remove in production
-      resetLink: `${process.env.FRONTEND_URL || 'http://localhost:5173'}?token=${resetToken}`,
+      resetLink,
       expiresAt: resetExpires,
-      debug: {
-        rawToken: resetToken.substring(0, 8) + '...',
-        hashedToken: hashedToken.substring(0, 8) + '...',
-        expiresAt: resetExpires.toISOString(),
-        userId,
-        tokenStoredInDatabase: true
-      }
+      ...(includeDebug ? { resetToken } : {}),
+      ...(includeDebug ? {
+        debug: {
+          rawToken: resetToken.substring(0, 8) + '...',
+          hashedToken: hashedToken.substring(0, 8) + '...',
+          expiresAt: resetExpires.toISOString(),
+          userId,
+          tokenStoredInDatabase: true
+        }
+      } : {})
     });
 
   } catch (error) {
