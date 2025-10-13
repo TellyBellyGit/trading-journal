@@ -33,7 +33,7 @@ interface Trade {
   direction: string;
   quantity: number;
   entryPrice: number;
-  exitPrice?: number;
+  exitPrice?: number | null;
   pnl?: number;
   percentChange?: number;
   orderType: string;
@@ -42,8 +42,8 @@ interface Trade {
   capital: number;
   entryDate: string;
   entryTime: string;
-  exitDate?: string;
-  exitTime?: string;
+  exitDate?: string | null;
+  exitTime?: string | null;
   duration?: string;
   status?: string;
   notes?: string; // Changed from commentary to notes
@@ -432,21 +432,21 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #e5e7eb;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f8f9fa;
+            background-color: #0b1220;
         }
         .container {
-            background: white;
+            background: #111827;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             overflow: hidden;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: #f9fafb;
             padding: 30px;
             text-align: center;
         }
@@ -461,7 +461,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
             border-radius: 20px;
             margin-top: 10px;
             font-weight: 600;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12);
         }
         .trade-details {
             display: grid;
@@ -470,7 +470,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
             padding: 30px;
         }
         .detail-section {
-            background: #f8f9fa;
+            background: #0f172a;
             padding: 25px;
             border-radius: 10px;
             border-left: 4px solid #667eea;
@@ -488,7 +488,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
             justify-content: space-between;
             margin-bottom: 12px;
             padding-bottom: 8px;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid #1f2937;
         }
         .detail-row:last-child {
             border-bottom: none;
@@ -496,11 +496,11 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         }
         .detail-label {
             font-weight: 500;
-            color: #6c757d;
+            color: #9ca3af;
         }
         .detail-value {
             font-weight: 600;
-            color: #495057;
+            color: #e5e7eb;
         }
         .pnl-positive {
             color: #28a745;
@@ -510,18 +510,18 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         }
         .notes-section {
             padding: 30px;
-            border-top: 2px solid #e9ecef;
+            border-top: 2px solid #1f2937;
         }
         .notes-section h2 {
-            color: #495057;
+            color: #e5e7eb;
             margin-bottom: 20px;
             font-size: 1.5rem;
         }
         .notes-content {
-            background: #f8f9fa;
+            background: #0f172a;
             padding: 25px;
             border-radius: 10px;
-            border: 1px solid #e9ecef;
+            border: 1px solid #1f2937;
             min-height: 200px;
         }
         .notes-content img {
@@ -529,16 +529,16 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
             height: auto;
             border-radius: 8px;
             margin: 10px 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
         .export-info {
-            background: #e7f3ff;
+            background: rgba(59, 130, 246, 0.15);
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
-            border: 1px solid #bee5eb;
+            border: 1px solid #1e3a8a;
             text-align: center;
-            color: #0c5460;
+            color: #bfdbfe;
             font-size: 0.9rem;
         }
         @media print {
@@ -560,12 +560,12 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         </div>
         
         <div class="export-info">
-            📄 Trade Export Generated on ${currentDate.toLocaleString()} | 🚀 TradrDash Trading Journal
+            Trade Export Generated on ${currentDate.toLocaleString()} | TradrDash Trading Journal
         </div>
         
         <div class="trade-details">
             <div class="detail-section">
-                <h3>📈 Entry Details</h3>
+                <h3>Entry Details</h3>
                 <div class="detail-row">
                     <span class="detail-label">Date:</span>
                     <span class="detail-value">${new Date(trade.entryDate).toLocaleDateString()}</span>
@@ -589,7 +589,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
             </div>
             
             <div class="detail-section">
-                <h3>📉 Exit Details</h3>
+                <h3>Exit Details</h3>
                 <div class="detail-row">
                     <span class="detail-label">Date:</span>
                     <span class="detail-value">${trade.exitDate ? new Date(trade.exitDate).toLocaleDateString() : 'Position Open'}</span>
@@ -613,7 +613,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
             </div>
             
             <div class="detail-section">
-                <h3>💰 Performance</h3>
+                <h3>Performance</h3>
                 <div class="detail-row">
                     <span class="detail-label">P&L:</span>
                     <span class="detail-value ${trade.pnl && trade.pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}">${formatCurrency(trade.pnl || 0)}</span>
@@ -643,7 +643,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
         
         ${notesContent && notesContent.trim() !== '<p></p>' && notesContent.trim() !== '' ? `
         <div class="notes-section">
-            <h2>📝 Trade Notes & Analysis</h2>
+            <h2>Trade Notes & Analysis</h2>
             <div class="notes-content">
                 ${notesContent}
             </div>
@@ -798,7 +798,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
           className="px-3 py-1.5 rounded text-sm font-medium bg-green-500 text-white hover:bg-green-600 transition-colors border"
           title="Add Image"
         >
-          📷 Image
+          Image
         </button>
         
         <button
@@ -808,7 +808,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
           }`}
           title="Quote"
         >
-          " Quote
+          Quote
         </button>
         
         <button
@@ -816,7 +816,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
           className="px-3 py-1.5 rounded text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 transition-colors border"
           title="Horizontal Line"
         >
-          ─ Line
+          Horizontal Line
         </button>
         
         <button
@@ -825,7 +825,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
           className="px-3 py-1.5 rounded text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 transition-colors border disabled:opacity-50"
           title="Undo"
         >
-          ↶
+          Undo
         </button>
         
         <button
@@ -834,7 +834,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
           className="px-3 py-1.5 rounded text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 transition-colors border disabled:opacity-50"
           title="Redo"
         >
-          ↷
+          Redo
         </button>
       </div>
 
@@ -855,7 +855,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
           className="px-4 py-1.5 rounded text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 transition-colors border border-orange-600"
           title="Import HTML analysis with preserved colors"
         >
-          📁 Import HTML
+          Import HTML
         </button>
         
         <button
@@ -871,7 +871,7 @@ const EditorToolbar = ({ editor, trade, onOpenTemplate, onOpenTemplate2 }: { edi
           className="px-4 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors border border-blue-600"
           title="Export trade details and notes to HTML file"
         >
-          📄 Export
+          Export
         </button>
       </div>
 
@@ -1619,9 +1619,9 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
             <div className="p-4 bg-gray-800 border-t border-gray-700">
               <div className="flex items-center justify-between text-sm text-gray-400">
                 <div className="flex items-center space-x-6">
-                  <span>💡 Format text with the toolbar above</span>
-                  <span>📷 Add images by drag & drop, paste, or click Image button</span>
-                  <span>🔧 Click images to select, then drag the blue circle to resize</span>
+                  <span>Format text with the toolbar above</span>
+                  <span>Add images by drag & drop, paste, or click Image button</span>
+                  <span>Click images to select, then drag the blue circle to resize</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span>Auto-save enabled</span>
