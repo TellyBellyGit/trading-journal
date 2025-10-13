@@ -30,17 +30,17 @@
   }
   
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: #374151;
+    background: #111827;
     border-radius: 3px;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #6b7280;
+    background: #4b5563;
     border-radius: 3px;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: #6b7280;
   }
 
   /* Button hover effects */
@@ -61,6 +61,33 @@
   .form-input {
     @apply w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
   }
+}
+
+/* Global dark scrollbar styles (applies to all scrollable elements) */
+/* Firefox */
+html, body, * {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #111827; /* thumb | track */
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111827; /* near-black to match app background */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #4b5563; /* gray-600 */
+  border-radius: 6px;
+  border: 2px solid #111827; /* creates spacing against the black track */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280; /* gray-500 on hover */
 }
 
 @layer utilities {

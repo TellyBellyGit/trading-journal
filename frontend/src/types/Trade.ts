@@ -26,9 +26,9 @@ export interface Trade {
   entryDate: string; // ISO date string
   entryTime: string;
   entryPrice: number;
-  exitDate: string; // ISO date string
-  exitTime: string;
-  exitPrice: number;
+  exitDate: string | null; // ISO date string or null if open
+  exitTime: string | null;
+  exitPrice: number | null;
   duration: string;
   pnl: number;
   percentChange: number;
@@ -60,9 +60,9 @@ export interface NewTrade {
   entryDate: string;
   entryTime: string;
   entryPrice: number;
-  exitDate: string;
-  exitTime: string;
-  exitPrice: number;
+  exitDate: string | null;
+  exitTime: string | null;
+  exitPrice: number | null;
   duration: string;
   pnl: number;
   percentChange: number;

@@ -81,6 +81,15 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
     loadData();
   }, [tradeId]);
 
+  // Lock page scroll while modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -231,9 +240,9 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
         entryDate: formData.entryDate,
         entryTime: formData.entryTime || '09:30:00',
         entryPrice: parseFloat(formData.entryPrice),
-        exitDate: isClosed ? formData.exitDate : '2001-01-01',
-        exitTime: isClosed ? (formData.exitTime || '16:00:00') : '23:59:59',
-        exitPrice: isClosed ? parseFloat(formData.exitPrice) : 0,
+        exitDate: isClosed ? formData.exitDate : null,
+        exitTime: isClosed ? (formData.exitTime || '16:00:00') : null,
+        exitPrice: isClosed ? parseFloat(formData.exitPrice) : null,
         duration: metrics.duration,
         pnl: metrics.pnl,
         percentChange: metrics.percentChange,
@@ -285,6 +294,19 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
     }).format(value);
   };
 
+  const handleClearExit = () => {
+    setFormData(prev => ({
+      ...prev,
+      exitDate: '',
+      exitTime: '',
+      exitPrice: ''
+    }));
+    // Lock out mirroring from entry fields after clearing
+    setExitDateTouched(true);
+    setExitTimeTouched(true);
+    setExitPriceTouched(true);
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -310,12 +332,6 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
               {isNewTrade ? 'Enter all trade details below' : 'Update trade information'}
             </p>
           </div>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            ← Back
-          </button>
         </div>
       </div>
 
@@ -415,7 +431,16 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
 
           {/* Exit Details (always visible, optional) */}
           <div>
-            <h4 className="text-white font-medium mb-3">Exit Details</h4>
+            <div className="flex items-center gap-3 mb-3">
+              <h4 className="text-white font-medium m-0">Exit Details</h4>
+              <button
+                type="button"
+                onClick={handleClearExit}
+                className="px-2 py-1 text-xs bg-gray-700 text-gray-200 rounded hover:bg-gray-600"
+              >
+                Not exited
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-2">Exit Date</label>
@@ -624,22 +649,7 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
         </div>
       </div>
 
-      {/* Save Actions */}
-      <div className="flex justify-between">
-        <button
-          onClick={onBack}
-          className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : (isNewTrade ? 'Create Trade' : 'Update Trade')}
-        </button>
-      </div>
+      
     </div>
   );
 };

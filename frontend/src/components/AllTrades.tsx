@@ -859,7 +859,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                       {trade.status === 'Open' ? (
                         <span className="text-orange-400 italic">—</span>
                       ) : (
-                        formatTradeTime(trade.exitTime, trade.exitDate)
+                        formatTradeTime(trade.exitTime ?? '', trade.exitDate ?? trade.entryDate)
                       )}
                     </td>
                     <td className="p-2">
@@ -959,7 +959,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                     {trade.status === 'Open' ? (
                       <span className="text-orange-400 italic">—</span>
                     ) : (
-                      formatTradeTime(trade.exitTime, trade.exitDate)
+                      formatTradeTime(trade.exitTime ?? '', trade.exitDate ?? trade.entryDate)
                     )}
                   </p>
                 </div>

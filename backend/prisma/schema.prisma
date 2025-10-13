@@ -77,9 +77,9 @@ model Trade {
   entryDate      DateTime
   entryTime      String
   entryPrice     Float
-  exitDate       DateTime
-  exitTime       String
-  exitPrice      Float
+  exitDate       DateTime?
+  exitTime       String?
+  exitPrice      Float?
   duration       String
   pnl            Float
   percentChange  Float
