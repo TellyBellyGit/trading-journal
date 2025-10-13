@@ -449,22 +449,8 @@ const AllTrades: React.FC<AllTradesProps> = ({
     );
   }
 
-  // NEW: Conditional rendering for EditTrade - MUST be after all hooks
-  if (editingTradeId !== null) {
-    return (
-      <EditTrade 
-        tradeId={editingTradeId} 
-        onBack={() => {
-          setEditingTradeId(null);
-          loadInitialData();
-        }}
-        onSave={() => {
-          setEditingTradeId(null);
-          loadInitialData(); // Refresh the trades list
-        }}
-      />
-    );
-  }
+  // NOTE: EditTrade renders as a modal overlay near the end of JSX
+  // NOTE: EditTrade will render as a modal overlay (see JSX at bottom)
 
   return (
     <div className="space-y-6">
@@ -1086,8 +1072,40 @@ const AllTrades: React.FC<AllTradesProps> = ({
           </div>
         </div>
       )}
+
+      {/* Edit Trade Modal Overlay */}
+      {editingTradeId !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative bg-gray-800 border border-gray-700 rounded-lg p-4 sm:p-6 max-w-3xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setEditingTradeId(null);
+                loadInitialData();
+              }}
+              className="absolute top-3 right-3 px-3 py-1 text-sm bg-gray-700 text-gray-200 rounded hover:bg-gray-600"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+
+            {/* EditTrade form inside modal */}
+            <EditTrade
+              tradeId={editingTradeId}
+              onBack={() => {
+                setEditingTradeId(null);
+                loadInitialData();
+              }}
+              onSave={() => {
+                setEditingTradeId(null);
+                loadInitialData();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default AllTrades; 
+export default AllTrades;

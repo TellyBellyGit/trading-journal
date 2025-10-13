@@ -1,3 +1,26 @@
+/**
+ * TradingApp component (top-level app UI orchestrator)
+ *
+ * Purpose:
+ * - Controls which major view is displayed (dashboard, analytics, trades, import, notes, calendar, settings, subscription, admin).
+ * - Supplies `AppShell` with the correct title/subtitle and renders the chosen content within the shell.
+ * - Coordinates cross-cutting features like upgrade notifications and the date picker modal.
+ *
+ * High-level flow:
+ * - Holds `currentView` state and uses `renderContent()` to return the appropriate view component.
+ * - Computes titles and subtitles via `getTitle()` and `getSubtitle()`; defaults are intentionally minimal.
+ * - Integrates with `AuthContext` and API modules (`tradesApi`, `subscriptionsApi`, `analysisApi`, `notesApi`).
+ *
+ * Extending:
+ * - To add a new view:
+ *   1) Create the view component.
+ *   2) Add a case in `renderContent()` and update `getTitle()` / `getSubtitle()`.
+ *   3) Optionally add a nav item in `AppShell` via `getNavigationItems`.
+ *
+ * Notes:
+ * - This component is rendered inside `App.tsx` within `AuthWrapper` and `AuthProvider`.
+ * - App-wide layout and header controls live in `AppShell`; TradingApp focuses on view orchestration.
+ */
 import React, { useState } from 'react';
 import AppShell from './AppShell';
 import Dashboard from './Dashboard';
@@ -286,7 +309,7 @@ const TradingApp: React.FC = () => {
       case 'admin':
         return 'System administration and user management';
       default:
-        return 'Real-time trading performance';
+        return '';
     }
   };
 

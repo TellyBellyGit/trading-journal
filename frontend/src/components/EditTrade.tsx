@@ -69,6 +69,10 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
     executionVenue: ''
   });
 
+  const [exitDateTouched, setExitDateTouched] = useState(false);
+  const [exitTimeTouched, setExitTimeTouched] = useState(false);
+  const [exitPriceTouched, setExitPriceTouched] = useState(false);
+
   const [isOpenTrade, setIsOpenTrade] = useState(false);
 
   const isNewTrade = tradeId === 'new';
@@ -96,6 +100,8 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
           ...prev,
           entryDate: dateStr,
           entryTime: timeStr,
+          exitDate: dateStr,
+          exitTime: timeStr,
           brokerId: brokersData.length > 0 ? brokersData[0].id.toString() : ''
         }));
         setIsOpenTrade(true); // Default to open trade
@@ -134,35 +140,40 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const next = { ...prev, [field]: value };
+
+      // Mirror entry -> exit until the specific exit field is manually edited
+      if (field === 'entryDate' && !exitDateTouched) {
+        next.exitDate = value;
+      }
+      if (field === 'entryTime' && !exitTimeTouched) {
+        next.exitTime = value;
+      }
+      if (field === 'entryPrice' && !exitPriceTouched) {
+        next.exitPrice = value;
+      }
+
+      return next;
+    });
+
+    // Mark exit fields as touched when user edits them
+    if (field === 'exitDate') setExitDateTouched(true);
+    if (field === 'exitTime') setExitTimeTouched(true);
+    if (field === 'exitPrice') setExitPriceTouched(true);
   };
 
-  const handleOpenTradeToggle = (isOpen: boolean) => {
-    setIsOpenTrade(isOpen);
-    if (isOpen) {
-      // Clear exit data for open trades
-      setFormData(prev => ({
-        ...prev,
-        exitDate: '',
-        exitTime: '',
-        exitPrice: ''
-      }));
-    }
-  };
+  // per-field auto-fill implemented in handleInputChange; removed combined useEffect
+
+  // Remove explicit trade status toggle; status is inferred from exit fields
 
   const calculateTradeMetrics = () => {
     const entry = parseFloat(formData.entryPrice);
     const exit = parseFloat(formData.exitPrice);
     const qty = parseInt(formData.quantity);
+    const isClosed = Boolean(formData.exitDate) && !!exit && exit > 0;
 
-    if (!entry || !qty || isOpenTrade) {
-      return { pnl: 0, percentChange: 0, duration: '0' };
-    }
-
-    if (!exit) {
+    if (!entry || !qty || !isClosed) {
       return { pnl: 0, percentChange: 0, duration: '0' };
     }
 
@@ -192,12 +203,7 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
     if (!formData.quantity.trim() || parseInt(formData.quantity) <= 0) errors.push('Valid quantity is required');
     if (!formData.entryDate) errors.push('Entry date is required');
     if (!formData.entryPrice.trim() || parseFloat(formData.entryPrice) <= 0) errors.push('Valid entry price is required');
-    if (!formData.brokerId) errors.push('Broker is required');
-
-    if (!isOpenTrade) {
-      if (!formData.exitDate) errors.push('Exit date is required for closed trades');
-      if (!formData.exitPrice.trim() || parseFloat(formData.exitPrice) <= 0) errors.push('Valid exit price is required for closed trades');
-    }
+    // Broker and exit fields are optional now
 
     return errors;
   };
@@ -215,7 +221,9 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
       setError(null);
 
       const metrics = calculateTradeMetrics();
-      
+      const exitVal = parseFloat(formData.exitPrice);
+      const isClosed = Boolean(formData.exitDate) && !!exitVal && exitVal > 0;
+
       const tradeData: any = {
         symbol: formData.symbol.toUpperCase().trim(),
         direction: formData.direction,
@@ -223,17 +231,17 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
         entryDate: formData.entryDate,
         entryTime: formData.entryTime || '09:30:00',
         entryPrice: parseFloat(formData.entryPrice),
-        exitDate: isOpenTrade ? '2001-01-01' : formData.exitDate,
-        exitTime: isOpenTrade ? '23:59:59' : (formData.exitTime || '16:00:00'),
-        exitPrice: isOpenTrade ? 0 : parseFloat(formData.exitPrice),
+        exitDate: isClosed ? formData.exitDate : '2001-01-01',
+        exitTime: isClosed ? (formData.exitTime || '16:00:00') : '23:59:59',
+        exitPrice: isClosed ? parseFloat(formData.exitPrice) : 0,
         duration: metrics.duration,
         pnl: metrics.pnl,
         percentChange: metrics.percentChange,
         orderType: formData.orderType,
         assessment: formData.assessment || null,
         capital: parseFloat(formData.entryPrice) * parseInt(formData.quantity),
-        status: isOpenTrade ? 'Open' : 'Closed',
-        brokerId: parseInt(formData.brokerId),
+        status: isClosed ? 'Closed' : 'Open',
+        brokerId: formData.brokerId ? parseInt(formData.brokerId) : null,
         notes: formData.notes || null,
         strategy: formData.strategy || null,
         riskReward: formData.riskReward || null,
@@ -381,7 +389,7 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
               </div>
 
               <div>
-                <label className="block text-gray-400 text-sm mb-2">Entry Time</label>
+                <label className="block text-gray-400 text-sm mb-2">Entry Time *</label>
                 <input
                   type="time"
                   value={formData.entryTime}
@@ -405,78 +413,95 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
             </div>
           </div>
 
-          {/* Trade Status Toggle */}
+          {/* Exit Details (always visible, optional) */}
           <div>
-            <h4 className="text-white font-medium mb-3">Trade Status</h4>
-            <div className="flex space-x-4">
-              <label className="flex items-center">
+            <h4 className="text-white font-medium mb-3">Exit Details</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Exit Date</label>
                 <input
-                  type="radio"
-                  checked={isOpenTrade}
-                  onChange={() => handleOpenTradeToggle(true)}
-                  className="mr-2"
+                  type="date"
+                  value={formData.exitDate}
+                  onChange={(e) => handleInputChange('exitDate', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 />
-                <span className="text-white">Open Trade</span>
-              </label>
-              <label className="flex items-center">
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Exit Time</label>
                 <input
-                  type="radio"
-                  checked={!isOpenTrade}
-                  onChange={() => handleOpenTradeToggle(false)}
-                  className="mr-2"
+                  type="time"
+                  value={formData.exitTime}
+                  onChange={(e) => handleInputChange('exitTime', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                 />
-                <span className="text-white">Closed Trade</span>
-              </label>
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Exit Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.exitPrice}
+                  onChange={(e) => handleInputChange('exitPrice', e.target.value)}
+                  placeholder="155.00"
+                  min="0.01"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
             </div>
           </div>
-
-          {/* Exit Details (only for closed trades) */}
-          {!isOpenTrade && (
-            <div>
-              <h4 className="text-white font-medium mb-3">Exit Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Calculated Metrics Preview (moved up; shown when exit provided) */}
+          {Boolean(formData.exitDate) && formData.entryPrice && formData.exitPrice && formData.quantity && (
+            <div className="bg-gray-700/50 rounded-lg p-4 mb-4">
+              <h4 className="text-white font-medium mb-3">Calculated Metrics</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Exit Date *</label>
-                  <input
-                    type="date"
-                    value={formData.exitDate}
-                    onChange={(e) => handleInputChange('exitDate', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  />
+                  <span className="text-gray-400">P&L: </span>
+                  <span className={`font-medium ${calculateTradeMetrics().pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatCurrency(calculateTradeMetrics().pnl)}
+                  </span>
                 </div>
-
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Exit Time</label>
-                  <input
-                    type="time"
-                    value={formData.exitTime}
-                    onChange={(e) => handleInputChange('exitTime', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  />
+                  <span className="text-gray-400">% Change: </span>
+                  <span className={`font-medium ${calculateTradeMetrics().percentChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {calculateTradeMetrics().percentChange.toFixed(2)}%
+                  </span>
                 </div>
-
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Exit Price *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.exitPrice}
-                    onChange={(e) => handleInputChange('exitPrice', e.target.value)}
-                    placeholder="155.00"
-                    min="0.01"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  />
+                  <span className="text-gray-400">Capital: </span>
+                  <span className="text-white font-medium">
+                    {formatCurrency(parseFloat(formData.entryPrice) * parseInt(formData.quantity))}
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Additional Details */}
+          {/* Duplicate Save Actions (placed above Additional Details) */}
+          <div className="flex justify-between mb-6">
+            <button
+              onClick={onBack}
+              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : (isNewTrade ? 'Create Trade' : 'Update Trade')}
+            </button>
+          </div>
+
+          {/* Additional Details - Optional */}
           <div>
-            <h4 className="text-white font-medium mb-3">Additional Details</h4>
+            <h4 className="text-white font-medium mb-3">Additional Details - Optional</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-400 text-sm mb-2">Broker *</label>
+                <label className="block text-gray-400 text-sm mb-2">Broker</label>
                 <select
                   value={formData.brokerId}
                   onChange={(e) => handleInputChange('brokerId', e.target.value)}
@@ -595,32 +620,7 @@ const EditTrade: React.FC<EditTradeProps> = ({ tradeId, onBack, onSave }) => {
             )}
           </div>
 
-          {/* Calculated Metrics Preview (for closed trades) */}
-          {!isOpenTrade && formData.entryPrice && formData.exitPrice && formData.quantity && (
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <h4 className="text-white font-medium mb-3">Calculated Metrics</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-400">P&L: </span>
-                  <span className={`font-medium ${calculateTradeMetrics().pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {formatCurrency(calculateTradeMetrics().pnl)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-400">% Change: </span>
-                  <span className={`font-medium ${calculateTradeMetrics().percentChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {calculateTradeMetrics().percentChange.toFixed(2)}%
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Capital: </span>
-                  <span className="text-white font-medium">
-                    {formatCurrency(parseFloat(formData.entryPrice) * parseInt(formData.quantity))}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+          
         </div>
       </div>
 

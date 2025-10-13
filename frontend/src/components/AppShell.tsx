@@ -1,3 +1,29 @@
+/**
+ * AppShell component
+ *
+ * Purpose:
+ * - Provides the application layout: sidebar navigation, header bar, and main content area.
+ * - Centralizes common UI controls (date format toggle, time display toggle, add trade button, notifications, settings).
+ * - Displays subscription usage and user profile via app contexts when available.
+ *
+ * Key props:
+ * - `title` (string): Page title shown in the header.
+ * - `subtitle` (string): Optional subtitle shown next to the title.
+ * - `currentView` (string): ID of the active view for navigation highlighting.
+ * - `onViewChange` (function): Handler to switch views (updates navigation).
+ * - `onNewTrade` (function): Handler for creating a new trade.
+ *
+ * Notable behavior:
+ * - Reads auth and settings via `useAuth` and `useSettings` contexts.
+ * - Collapsible sidebar optimized for small screens.
+ * - Header includes date/time format toggles and session/user dropdown.
+ * - Delegates rendering of page content to `children`.
+ *
+ * When to edit:
+ * - Add/remove global UI controls or nav links.
+ * - Change layout/styling across the app in one place.
+ * - Keep business logic out; this is a UI shell only.
+ */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -369,18 +395,6 @@ const AppShell: React.FC<AppShellProps> = ({
           </div>
           
           <div className="flex items-center space-x-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search trades..."
-                className="w-64 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                <span className="text-gray-400">🔍</span>
-              </div>
-            </div>
-
             {/* Date Format Toggle */}
             <button 
               onClick={toggleDateFormat}

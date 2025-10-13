@@ -147,10 +147,10 @@ function Wait-PostgresHealthy {
 }
 
 function Ensure-PrismaReady {
-  Write-Info "Generating Prisma client"
-  cmd /c "npx --prefix backend prisma generate" | Write-Host
-  Write-Info "Pushing schema to database"
-  cmd /c "npx --prefix backend prisma db push --schema backend/prisma/schema.prisma" | Write-Host
+  Write-Info "Generating Prisma client (using backend/.env and backend/prisma/schema.prisma)"
+  cmd /c "cd backend && npx prisma generate --schema prisma/schema.prisma" | Write-Host
+  Write-Info "Pushing schema to database (using backend/.env and backend/prisma/schema.prisma)"
+  cmd /c "cd backend && npx prisma db push --schema prisma/schema.prisma" | Write-Host
 }
 
 function Free-Port($port) {
@@ -186,6 +186,23 @@ Write-Info "Repo root: $PSScriptRoot"
 Start-DockerDesktopIfNeeded
 Ensure-DockerComposeUp
 Wait-PostgresHealthy | Out-Null
+Write-Info "Loading DATABASE_URL from backend/.env for this session"
+$backendEnvPath = Join-Path $PSScriptRoot 'backend/.env'
+if (Test-Path $backendEnvPath) {
+  try {
+    $dbLine = (Get-Content $backendEnvPath) | Where-Object { $_ -match '^\s*DATABASE_URL\s*=' } | Select-Object -First 1
+    if ($dbLine) {
+      $env:DATABASE_URL = ($dbLine -split '=',2)[1].Trim()
+      Write-Info "Session DATABASE_URL set from backend/.env"
+    } else {
+      Write-Warn "DATABASE_URL not found in backend/.env"
+    }
+  } catch {
+    Write-Warn "Failed to read backend/.env: $_"
+  }
+} else {
+  Write-Warn "backend/.env not found; proceeding with existing environment"
+}
 Ensure-PrismaReady
 Free-Port -port $BackendPort
 Start-Apps
