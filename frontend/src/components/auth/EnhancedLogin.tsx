@@ -20,9 +20,44 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState<LoginError | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [guestCredentials, setGuestCredentials] = useState<{ username: string; email: string; password: string } | null>(null);
   const { login } = useAuth();
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    setError(null);
+    setGuestCredentials(null);
+
+    try {
+      const resp = await fetch(`${API_BASE_URL}/auth/guest-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data.error || 'Failed to create guest account');
+      }
+
+      // Show credentials to user
+      setGuestCredentials(data.credentials);
+
+      // Auto-fill the login form and let the user press Sign In manually
+      setEmail(data.credentials.email);
+      setPassword(data.credentials.password);
+    } catch (err: any) {
+      setError({
+        message: err.message || 'Failed to create guest account. Please try again.',
+        type: 'server_error'
+      });
+    } finally {
+      setGuestLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,18 +222,18 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300">
-                Email address
+                Email / Username
               </label>
               <input
                 id="email"
                 name="email"
-                type="email"
+                type="text"
                 autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your email"
+                placeholder="Enter your email or username"
               />
             </div>
             
@@ -246,6 +281,24 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
 
           {getErrorDisplay()}
 
+          {/* Guest credentials display */}
+          {guestCredentials && (
+            <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/10 text-green-400 text-sm">
+              <div className="flex items-start space-x-2">
+                <span className="text-lg">👤</span>
+                <div className="flex-1">
+                  <h4 className="font-medium">Guest Account Created</h4>
+                  <p className="mt-1">Save these credentials to return later:</p>
+                  <div className="mt-2 space-y-1 font-mono text-xs">
+                    <p><span className="text-gray-400">Username:</span> {guestCredentials.username}</p>
+                    <p><span className="text-gray-400">Email:</span> {guestCredentials.email}</p>
+                    <p><span className="text-gray-400">Password:</span> {guestCredentials.password}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="text-sm">
               <button
@@ -280,11 +333,33 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
             </button>
           </div>
 
+          <div>
+            <button
+              type="button"
+              onClick={handleGuestLogin}
+              disabled={guestLoading || loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {guestLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating guest account...
+                </>
+              ) : (
+                'Enter as a Guest'
+              )}
+            </button>
+          </div>
+
           {onSwitchToRegister && (
             <div className="text-center">
               <span className="text-sm text-gray-400">
                 Don't have an account?{' '}
                 <button
+                  type="button"
                   onClick={onSwitchToRegister}
                   className="font-medium text-blue-400 hover:text-blue-300 focus:outline-none focus:underline"
                 >

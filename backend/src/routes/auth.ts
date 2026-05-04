@@ -7,6 +7,7 @@ import SubscriptionService from '../services/subscriptionService';
 import { emailService } from '../services/emailService';
 import { generateSecureToken } from '../utils/tokenUtils';
 import { prisma } from '../lib/prisma';
+import { seedGuestTrades } from '../services/guestTradeSeeder';
 
 const router = express.Router();
 
@@ -180,7 +181,7 @@ router.post('/login', loginRateLimit, async (req, res) => {
   console.log(`🔐 [LOGIN-TIMING] Login started at ${new Date().toISOString()}`);
 
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
     // Validate required fields
     if (!email || !password) {
@@ -188,6 +189,13 @@ router.post('/login', loginRateLimit, async (req, res) => {
         error: 'Email and password are required',
         type: 'validation_error'
       });
+    }
+
+    // Support guest username format: "Guest001" -> "guest-001@guest.tradrdash.local"
+    const guestUsernameMatch = email.match(/^Guest(\d+)$/i);
+    if (guestUsernameMatch) {
+      const paddedNumber = guestUsernameMatch[1].padStart(3, '0');
+      email = `guest-${paddedNumber}@guest.tradrdash.local`;
     }
 
     // Validate email format
@@ -1022,6 +1030,90 @@ router.patch('/profile', authenticateToken, async (req, res) => {
     res.status(500).json({
       error: 'Failed to update profile',
       details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// POST /api/auth/guest-login - Create a guest user and return credentials + tokens
+router.post('/guest-login', async (req, res) => {
+  try {
+    // Count existing guest users to generate sequential number
+    const guestCount = await prisma.user.count({
+      where: {
+        email: { startsWith: 'guest-', endsWith: '@guest.tradrdash.local' }
+      }
+    });
+
+    const guestNumber = guestCount + 1;
+    const paddedNumber = String(guestNumber).padStart(3, '0');
+    const guestEmail = `guest-${paddedNumber}@guest.tradrdash.local`;
+    const guestPassword = generateSecureToken().substring(0, 12);
+
+    // Hash password
+    const hashedPassword = await PasswordUtils.hashPassword(guestPassword);
+
+    // Create guest user
+    const user = await prisma.user.create({
+      data: {
+        email: guestEmail,
+        password: hashedPassword,
+        firstName: 'Guest',
+        lastName: paddedNumber,
+        emailVerified: true, // Guests are pre-verified
+        isActive: true,
+        accountType: 'GUEST',
+        timezone: 'UTC'
+      }
+    });
+
+    // Create free subscription for guest
+    try {
+      await SubscriptionService.createFreeSubscription(user.id, user.email);
+    } catch (subscriptionError) {
+      console.error('Error creating guest subscription:', subscriptionError);
+      // Don't fail if subscription creation fails
+    }
+
+    // Seed sample trades so guests see data, not a blank app
+    try {
+      await seedGuestTrades(user.id);
+    } catch (seedError) {
+      console.error('Error seeding guest trades:', seedError);
+      // Don't fail guest creation if trade seeding fails
+    }
+
+    // Generate tokens
+    const token = JWTUtils.generateToken({
+      userId: user.id,
+      email: user.email
+    });
+
+    const refreshToken = JWTUtils.generateRefreshToken({
+      userId: user.id,
+      email: user.email
+    });
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    console.log(`👤 Guest user created: ${guestEmail} (ID: ${user.id})`);
+
+    res.status(201).json({
+      message: 'Guest account created',
+      credentials: {
+        username: `Guest${paddedNumber}`,
+        email: guestEmail,
+        password: guestPassword
+      },
+      user: userWithoutPassword,
+      token,
+      refreshToken
+    });
+
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({
+      error: 'Failed to create guest account. Please try again.',
+      type: 'server_error'
     });
   }
 });

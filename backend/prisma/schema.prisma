@@ -8,6 +8,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- Support Ticket System Enums ---
+enum TicketType {
+  query
+  feature_request
+  bug
+  billing
+  account
+  other
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum TicketSeverity {
+  minor
+  moderate
+  major
+  critical
+}
+
+enum TicketStatus {
+  submitted
+  opened
+  in_progress
+  waiting_customer
+  resolved
+  closed
+}
+
 model User {
   id                       Int                 @id @default(autoincrement())
   email                    String              @unique
@@ -16,6 +49,7 @@ model User {
   lastName                 String
   isActive                 Boolean             @default(true)
   isAdmin                  Boolean             @default(false)
+  accountType              String              @default("STANDARD")
   emailVerified            Boolean             @default(false)
   emailVerificationToken   String?
   emailVerificationExpires DateTime?
@@ -32,6 +66,10 @@ model User {
   subscription             Subscription?
   trades                   Trade[]
   userBrokerAccounts       UserBrokerAccount[]
+  tickets                  Ticket[]           @relation("TicketOwner")
+  assignedTickets          Ticket[]           @relation("TicketAssignedTo")
+  ticketHistories          TicketHistory[]
+  ticketComments           TicketComment[]
 
   @@index([email])
   @@index([isActive])
@@ -164,4 +202,64 @@ model LoginHistory {
   @@index([userId, createdAt])
   @@index([success])
   @@index([ipAddress])
+}
+
+// --- Support Ticket System Models ---
+model Ticket {
+  id            String          @id @default(uuid())
+  subject       String
+  description   String
+  type          TicketType
+  priority      TicketPriority
+  severity      TicketSeverity  @default(minor)
+  status        TicketStatus    @default(submitted)
+  userId        Int
+  assignedToId  Int?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  resolvedAt    DateTime?
+  closedAt      DateTime?
+
+  user          User            @relation("TicketOwner", fields: [userId], references: [id], onDelete: Cascade)
+  assignedTo    User?           @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  comments      TicketComment[]
+  history       TicketHistory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+}
+
+model TicketHistory {
+  id           String       @id @default(uuid())
+  ticketId     String
+  changedById  Int
+  action       String
+  field        String
+  oldValue     String?
+  newValue     String
+  description  String?
+  createdAt    DateTime     @default(now())
+
+  ticket       Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  changedBy    User         @relation(fields: [changedById], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([changedById])
+}
+
+model TicketComment {
+  id         String   @id @default(uuid())
+  ticketId   String
+  userId     Int
+  content    String
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([userId])
 }
