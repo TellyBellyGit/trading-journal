@@ -10,9 +10,10 @@ import { tradesApi } from '../api/trades';
 interface DashboardProps {
   onViewChange?: (view: string) => void;
   onExportToAI?: () => void;
+  onViewChart?: (params: import('../types/Market').ChartViewParams) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI, onViewChart }) => {
   const [stats, setStats] = useState<TradeStats | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [streak, setStreak] = useState<{ type: string; count: number; display: string } | null>(null);
@@ -213,6 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
                       <th className="pb-3 text-gray-400 text-sm font-medium">P&L</th>
                       <th className="pb-3 text-gray-400 text-sm font-medium">% Change</th>
                       <th className="pb-3 text-gray-400 text-sm font-medium">Status</th>
+                      <th className="pb-3 text-gray-400 text-sm font-medium w-10"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -260,6 +262,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onViewChange, onExportToAI }) => 
                             }`}>
                             {trade.status}
                           </span>
+                        </td>
+                        <td className="py-3 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewChart?.({
+                                symbol: trade.symbol,
+                                entryDate: trade.entryDate,
+                                entryTime: trade.entryTime,
+                                entryPrice: trade.entryPrice,
+                                exitDate: trade.exitDate,
+                                exitTime: trade.exitTime,
+                                exitPrice: trade.exitPrice,
+                              });
+                            }}
+                            className="text-gray-400 hover:text-blue-400 transition-colors p-1"
+                            title={`View ${trade.symbol} chart`}
+                          >
+                            📉
+                          </button>
                         </td>
                       </tr>
                     ))}

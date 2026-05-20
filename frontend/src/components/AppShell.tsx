@@ -40,6 +40,7 @@ const getNavigationItems = (isAdmin: boolean = false) => [
   { id: 'calendar', label: 'Calendar', icon: '📅', active: false },
   { id: 'notes', label: 'Notes', icon: '📝', active: false },
   { id: 'playbook', label: 'Performance Indicators', icon: '🎯', active: false },
+  { id: 'charts', label: 'Charts', icon: '📉', active: false },
   { id: 'import', label: 'Import', icon: '📤', active: false },
   { id: 'subscription', label: 'Subscription', icon: '💳', active: false },
   { id: 'settings', label: 'Settings', icon: '⚙️', active: false },
@@ -279,6 +280,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'performance-indicators': return 'playbook';
       case 'subscription': return 'subscription';
       case 'settings': return 'settings';
+      case 'charts': return 'charts';
       case 'admin': return 'admin';
       default: return 'dashboard';
     }
@@ -296,6 +298,7 @@ const AppShell: React.FC<AppShellProps> = ({
       case 'playbook': return 'performance-indicators';
       case 'subscription': return 'subscription';
       case 'settings': return 'settings';
+      case 'charts': return 'charts';
       case 'admin': return 'admin';
       default: return 'original';
     }

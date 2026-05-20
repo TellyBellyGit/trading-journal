@@ -20,11 +20,12 @@ import userRouter from './routes/user';
 import subscriptionsRouter from './routes/subscriptions';
 import webhooksRouter from './routes/webhooks';
 import analysisRouter from './routes/analysis';
+import marketRouter from './routes/market';
 import { JWTUtils } from './utils/auth';
 import PrismaClientSingleton, { prisma } from './lib/prisma';
 import { emailService } from './services/emailService';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: true });
 
 const app = express();
 const PORT = process.env.PORT || 3002; // 🔥 CHANGED: Use 3002 instead of 3001
@@ -76,7 +77,8 @@ app.use('/api/notes', notesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/user', userRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
-app.use('/api/analysis', analysisRouter); 
+app.use('/api/analysis', analysisRouter);
+app.use('/api/market', marketRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

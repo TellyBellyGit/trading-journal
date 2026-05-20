@@ -17,6 +17,7 @@ interface AllTradesProps {
   onTradeDelete: (tradeId: number) => void;
   onTradeAdd: () => void;
   onExport: () => void;
+  onViewChart?: (params: import('../types/Market').ChartViewParams) => void;
 }
 
 // Truncated Assessment Component
@@ -43,6 +44,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
   onTradeDelete,
   onTradeAdd,
   onExport,
+  onViewChart,
 }) => {
   const { dateFormat } = useDateFormat();
   const { formatTradeTime } = useSettings();
@@ -782,6 +784,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                   >
                     Assessment {getSortIcon('assessment')}
                   </th>
+                  <th className="p-2 text-left text-gray-300 font-medium w-10">📉</th>
                   <th className="p-2 text-left text-gray-300 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -864,6 +867,23 @@ const AllTrades: React.FC<AllTradesProps> = ({
                     </td>
                     <td className="p-2">
                       <TruncatedAssessment assessment={trade.assessment} />
+                    </td>
+                    <td className="p-2 text-center">
+                      <button
+                        onClick={() => onViewChart?.({
+                          symbol: trade.symbol,
+                          entryDate: trade.entryDate,
+                          entryTime: trade.entryTime,
+                          entryPrice: trade.entryPrice,
+                          exitDate: trade.exitDate,
+                          exitTime: trade.exitTime,
+                          exitPrice: trade.exitPrice,
+                        })}
+                        className="text-gray-400 hover:text-blue-400 transition-colors p-1"
+                        title={`View ${trade.symbol} chart`}
+                      >
+                        📉
+                      </button>
                     </td>
                     <td className="p-2">
                       <button

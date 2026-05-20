@@ -32,6 +32,8 @@ import TradingCalendar from './TradingCalendar';
 import Notes from './Notes';
 import Settings from './Settings';
 import DatePickerModal from './DatePickerModal';
+import StockChartView from './charts/StockChartView';
+import type { ChartViewParams } from '../types/Market';
 import SubscriptionPage from '../pages/SubscriptionPage';
 import Admin from '../pages/Admin';
 import { subscriptionsApi } from '../api/subscriptions';
@@ -64,9 +66,19 @@ const TradingApp: React.FC = () => {
     message: string;
     trigger: string;
   } | null>(null);
+  const [chartPrefill, setChartPrefill] = useState<ChartViewParams | undefined>(undefined);
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
+    if (view !== 'charts') {
+      setChartPrefill(undefined);
+    }
+  };
+
+  // Navigate to charts view with pre-filled trade data for entry/exit markers
+  const handleViewChart = (params: ChartViewParams) => {
+    setChartPrefill(params);
+    setCurrentView('charts');
   };
 
   // Monitor subscription status and show strategic upgrade prompts
@@ -224,7 +236,7 @@ const TradingApp: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'original':
-        return <Dashboard onViewChange={handleViewChange} onExportToAI={handleExportToAI} />;
+        return <Dashboard onViewChange={handleViewChange} onExportToAI={handleExportToAI} onViewChart={handleViewChart} />;
       case 'analytics':
         return <AnalyticsDashboard />;
       case 'performance-indicators':
@@ -244,6 +256,7 @@ const TradingApp: React.FC = () => {
             onExport={() => {
               console.log('Export trades');
             }}
+            onViewChart={handleViewChart}
           />
         );
       case 'import':
@@ -256,10 +269,20 @@ const TradingApp: React.FC = () => {
         return <Settings />;
       case 'subscription':
         return <SubscriptionPage />;
+      case 'charts':
+        return (
+          <StockChartView
+            prefill={chartPrefill}
+            onBack={() => {
+              setChartPrefill(undefined);
+              setCurrentView('original');
+            }}
+          />
+        );
       case 'admin':
         return <Admin />;
       default:
-        return <Dashboard onViewChange={handleViewChange} onExportToAI={handleExportToAI} />;
+        return <Dashboard onViewChange={handleViewChange} onExportToAI={handleExportToAI} onViewChart={handleViewChart} />;
     }
   };
 
@@ -281,6 +304,8 @@ const TradingApp: React.FC = () => {
         return 'Settings';
       case 'subscription':
         return 'Subscription Management';
+      case 'charts':
+        return 'Stock Charts';
       case 'admin':
         return 'Admin Dashboard';
       default:
@@ -306,6 +331,8 @@ const TradingApp: React.FC = () => {
         return 'Configure your trading journal preferences and risk management';
       case 'subscription':
         return 'Manage your subscription, billing, and plan upgrades';
+      case 'charts':
+        return 'Intraday candlestick charts with volume';
       case 'admin':
         return 'System administration and user management';
       default:
