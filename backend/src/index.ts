@@ -34,6 +34,8 @@ const allowedOrigins = new Set<string>();
 if (process.env.FRONTEND_URL) {
   allowedOrigins.add(process.env.FRONTEND_URL);
 }
+// Allow Cloudflare Pages production domain
+allowedOrigins.add('https://trading-journal-dlb.pages.dev');
 // Allow local dev origins only when not in production
 if ((process.env.NODE_ENV || '').toLowerCase() !== 'production') {
   allowedOrigins.add('http://localhost:5173');
