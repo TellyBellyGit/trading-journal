@@ -381,43 +381,31 @@ export function createWorkify() {
           });
           expressReq.params = params;
 
-          // Run route handlers in sequence
-          let handlerIdx = 0;
-          const runRouteHandlers = (): Promise<void> => {
-            return new Promise((resolve, reject) => {
-              function next(err?: unknown) {
-                if (err) {
-                  for (const eh of errorHandlers) {
-                    try {
-                      eh(err, expressReq, expressRes, () => {});
-                    } catch (e) { /* swallow */ }
-                  }
-                  reject(err);
-                  return;
-                }
-                if (handlerIdx >= route.handlers.length) {
-                  resolve();
-                  return;
-                }
-                const handler = route.handlers[handlerIdx++];
-                try {
-                  const result = handler(expressReq, expressRes, next);
-                  if (result instanceof Promise) {
-                    return; // Wait for async handler
-                  }
-                  // Sync handler — continue chain
-                  next();
-                } catch (e) {
-                  reject(e);
-                }
+          // Run route handlers sequentially — each handler is either sync or async.
+          // We iterate through them, awaiting async ones and calling next() for sync ones.
+          for (let i = 0; i < route.handlers.length; i++) {
+            const handler = route.handlers[i];
+            try {
+              const result = handler(expressReq, expressRes, (err) => {
+                if (err) throw err;
+              });
+              // If handler is async, await its completion
+              if (result && typeof(result as any).then === 'function') {
+                await result;
               }
-              next();
-            });
-          };
-
-          await runRouteHandlers().catch(() => {
-            // Error already handled by errorHandlers above
-          });
+              // If handler already sent a response, stop the chain
+              if (expressRes.finished) break;
+            } catch (err) {
+              console.error('Route handler error:', err);
+              if (!expressRes.finished) {
+                expressRes.status(500).json({
+                  error: 'Internal Server Error',
+                  message: err instanceof Error ? err.message : 'Unknown error',
+                });
+              }
+              break;
+            }
+          }
 
           if (expressRes.finished) {
             return expressRes.toResponse();

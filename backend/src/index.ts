@@ -74,10 +74,10 @@ function mountRouter(prefix: string, router: CompatRouter) {
       wRouter.use(fullPrefix, mw);
     }
   // Register routes
+  // Register routes
   for (const entry of router.routes) {
     const fullPath = prefix + entry.path;
     const method = entry.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options';
-    console.log(`[MOUNT] ${method.toUpperCase()} ${fullPath}`);
     if (method in wRouter) {
       (wRouter[method] as any)(fullPath, ...entry.handlers);
     } else {
