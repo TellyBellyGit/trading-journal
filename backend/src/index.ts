@@ -59,19 +59,33 @@ wRouter.get('/api/health/email', async (_req, res) => {
 
 // ── Register all sub-routers ──────────────────────────────────────────────
 function mountRouter(prefix: string, router: CompatRouter) {
-  // Register router-level middlewares first
-  for (const mw of router.middlewares) {
-    const mwPrefix = (mw as any).__prefix;
-    const fullPrefix = mwPrefix ? prefix + mwPrefix : prefix;
-    wRouter.use(fullPrefix, mw);
-  }
+  try {
+    const routeCount = router?.routes?.length || 0;
+    console.log(`[MOUNT] ${prefix} — ${routeCount} routes, ${router?.middlewares?.length || 0} middlewares`);
+    
+    if (routeCount === 0) {
+      console.warn(`[MOUNT] WARNING: ${prefix} has 0 routes — module may not have loaded correctly`);
+    }
+
+    // Register router-level middlewares first
+    for (const mw of router.middlewares) {
+      const mwPrefix = (mw as any).__prefix;
+      const fullPrefix = mwPrefix ? prefix + mwPrefix : prefix;
+      wRouter.use(fullPrefix, mw);
+    }
   // Register routes
   for (const entry of router.routes) {
     const fullPath = prefix + entry.path;
-    const method = entry.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
+    const method = entry.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options';
+    console.log(`[MOUNT] ${method.toUpperCase()} ${fullPath}`);
     if (method in wRouter) {
       (wRouter[method] as any)(fullPath, ...entry.handlers);
+    } else {
+      console.warn(`[MOUNT] Method ${method} not in wRouter!`);
     }
+    }
+  } catch (err: any) {
+    console.error(`[MOUNT] ERROR mounting ${prefix}:`, err?.message || err);
   }
 }
 
