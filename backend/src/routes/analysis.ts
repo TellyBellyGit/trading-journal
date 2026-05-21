@@ -1,15 +1,19 @@
-import express from 'express';
+import express from '../lib/express-compat';
 import { authenticateToken } from '../middleware/auth';
-import OpenAI from 'openai';
 
 const router = express.Router();
 
 // Lazy DeepSeek client creation (avoids startup crash before envs load)
-const getDeepseekClient = (): OpenAI => {
+// Dynamic import avoids bundling openai + @deno/shim-deno in Workers global scope
+const getDeepseekClient = async (): Promise<any> => {
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) {
     throw new Error('Missing OPENAI_API_KEY');
   }
+  // Use computed string to prevent esbuild from statically bundling openai
+  // (which pulls in @deno/shim-deno, incompatible with Workers global scope)
+  const openaiModule = 'ope' + 'nai';
+  const { default: OpenAI } = await import(/* webpackIgnore: true */ openaiModule);
   return new OpenAI({
     apiKey: key,
     baseURL: 'https://api.deepseek.com',
@@ -169,7 +173,7 @@ router.post('/analyze-trade', authenticateToken, async (req, res) => {
     console.log('🧠 Starting AI trade analysis for user', req.user?.userId);
     
     // Call DeepSeek API
-    const deepseek = getDeepseekClient();
+    const deepseek = await getDeepseekClient();
     const completion = await deepseek.chat.completions.create({
       model: "deepseek-chat", // DeepSeek's chat model
       messages: [
@@ -281,7 +285,7 @@ router.post('/analyze-trades', authenticateToken, async (req, res) => {
     console.log('🧠 Starting AI bulk trades analysis for user', req.user?.userId);
     
     // Call DeepSeek API
-    const deepseek = getDeepseekClient();
+    const deepseek = await getDeepseekClient();
     const completion = await deepseek.chat.completions.create({
       model: "deepseek-chat",
       messages: [

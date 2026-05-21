@@ -1,5 +1,5 @@
 // backend/src/routes/user.ts
-import express from 'express';
+import express from '../lib/express-compat';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { prisma } from '../lib/prisma';

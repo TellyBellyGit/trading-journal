@@ -1,5 +1,5 @@
 // backend/src/routes/brokers.ts - Updated for Global Broker System
-import express from 'express';
+import express from '../lib/express-compat';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 

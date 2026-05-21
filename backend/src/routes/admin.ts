@@ -1,5 +1,5 @@
 // backend/src/routes/admin.ts
-import express from 'express';
+import express from '../lib/express-compat';
 import { requireAdmin, authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { prisma } from '../lib/prisma';

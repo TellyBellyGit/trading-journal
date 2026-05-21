@@ -1,4 +1,4 @@
-import express from 'express';
+import express from '../lib/express-compat';
 import { authenticateToken } from '../middleware/auth';
 import SubscriptionService from '../services/subscriptionService';
 import { SUBSCRIPTION_PLANS } from '../config/stripe';

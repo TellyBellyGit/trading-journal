@@ -8,17 +8,24 @@
 //
 // GET /api/market/symbols - returns unique symbols from user's trades
 
-import express from 'express';
+import express from '../lib/express-compat';
 import { authenticateToken } from '../middleware/auth';
-import { YahooFinanceProvider } from '../services/market/YahooFinanceProvider';
-import { ChartResponse, VALID_INTERVALS } from '../services/market/types';
+import type { ChartResponse } from '../services/market/types';
+import { VALID_INTERVALS } from '../services/market/types';
 import { logger } from '../utils/logger';
 import { prisma } from '../lib/prisma';
 
 const router = express.Router();
 
-// Initialize the market data provider (swap this line to change providers)
-const marketProvider = new YahooFinanceProvider();
+// Lazy-initialize market provider to avoid bundling yahoo-finance2
+// and its @deno/shim-deno dependency (incompatible with Workers global scope)
+let _marketProvider: any = null;
+const getMarketProvider = async (): Promise<any> => {
+  if (_marketProvider) return _marketProvider;
+  const { YahooFinanceProvider } = await import('../services/market/YahooFinanceProvider');
+  _marketProvider = new YahooFinanceProvider();
+  return _marketProvider;
+};
 
 // Simple in-memory cache to avoid rate-limiting Yahoo Finance
 const cache = new Map<string, { data: ChartResponse; expiry: number }>();
@@ -55,7 +62,8 @@ router.get('/chart/:symbol', authenticateToken, async (req, res) => {
     logger.info(`Market request: symbol=${symbol} interval=${interval} range=${range} entryDate=${entryDate || 'none'}`);
 
     // Fetch from provider
-    const bars = await marketProvider.fetchCandles(symbol, interval, range);
+    const provider = await getMarketProvider();
+    const bars = await provider.fetchCandles(symbol, interval, range);
 
     // Calculate freshness info
     const freshness = buildFreshnessInfo(entryDate, bars);
@@ -66,7 +74,7 @@ router.get('/chart/:symbol', authenticateToken, async (req, res) => {
       range,
       bars,
       freshness,
-      provider: marketProvider.name,
+      provider: (await getMarketProvider()).name,
       timestamp: new Date().toISOString(),
     };
 

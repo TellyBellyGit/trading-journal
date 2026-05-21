@@ -19,6 +19,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^7.8.0",
     "@prisma/client": "^6.8.2",
     "axios": "^1.10.0",
     "bcryptjs": "^3.0.2",
@@ -30,7 +32,7 @@
     "multer": "^2.0.1",
     "node-fetch": "^2.7.0",
     "openai": "^5.13.1",
-    "pg": "^8.16.3",
+    "pg": "^8.21.0",
     "resend": "^4.7.0",
     "stripe": "^18.3.0",
     "trading-journal": "file:..",
@@ -48,6 +50,7 @@
     "nodemon": "^3.1.10",
     "prisma": "^6.8.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "wrangler": "^4.93.1"
   }
 }

@@ -1,5 +1,5 @@
 // backend/src/routes/trades.ts
-import express from 'express';
+import express from '../lib/express-compat';
 import multer from 'multer';
 import { DuplicateDetection } from '../utils/duplicateDetection';
 import { authenticateToken } from '../middleware/auth';

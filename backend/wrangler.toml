@@ -1,0 +1,30 @@
+name = "trading-backend"
+main = "src/index.ts"
+compatibility_date = "2026-05-21"
+compatibility_flags = ["nodejs_compat"]
+
+# ── Observability ────────────────────────────────────────────────────────
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+# ── Environment Variables ─────────────────────────────────────────────────
+# These are the vars your Worker expects at runtime (set via Cloudflare
+# Dashboard or `wrangler secret put`). Do NOT put secrets in this file.
+#
+# After deploying, run these commands once:
+#   wrangler secret put DATABASE_URL
+#   wrangler secret put DIRECT_URL
+#   wrangler secret put JWT_SECRET
+#   wrangler secret put JWT_REFRESH_SECRET
+#   wrangler secret put RESEND_API_KEY
+#   wrangler secret put STRIPE_SECRET_KEY
+#   wrangler secret put STRIPE_WEBHOOK_SECRET
+#
+# Non-secret vars can remain in [vars]:
+[vars]
+NODE_ENV = "production"
+FRONTEND_URL = "https://trading-journal-dlb.pages.dev"
+FROM_EMAIL = "noreply@tradrdash.com"
+FROM_NAME = "Trading Journal"
+PORT = "3002"

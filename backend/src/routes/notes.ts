@@ -1,5 +1,5 @@
 // backend/src/routes/notes.ts
-import express from 'express';
+import express from '../lib/express-compat';
 import { authenticateToken } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 
