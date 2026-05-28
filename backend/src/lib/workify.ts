@@ -452,7 +452,11 @@ export function createWorkify() {
           }),
           {
             status: 500,
-            headers: { 'content-type': 'application/json' },
+            headers: {
+              'content-type': 'application/json',
+              'Access-Control-Allow-Origin': request.headers.get('origin') || '*',
+              'Access-Control-Allow-Credentials': 'true',
+            },
           }
         );
       }
