@@ -2,7 +2,9 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
 
 // Check if Stripe/subscriptions should be bypassed
-const BYPASS_STRIPE = (import.meta as any).env?.VITE_BYPASS_STRIPE === 'true';
+// Force bypass until Cloudflare Pages VITE_BYPASS_STRIPE env var or backend CORS is configured.
+// Change to `=== 'true'` to use env var; `=== 'false'` to force disable bypass later.
+const BYPASS_STRIPE = (import.meta as any).env?.VITE_BYPASS_STRIPE !== 'false';
 
 // Create axios instance with authentication
 const api = axios.create({
