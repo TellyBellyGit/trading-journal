@@ -46,6 +46,28 @@ export class ExpressCompatRequest {
   /** The native Worker Request (preserved for middleware that might need it) */
   public raw: Request;
 
+  // Minimal EventEmitter polyfill for multer compat (req.on('data', ...) / req.on('end', ...))
+  private _listeners: Record<string, Array<(...args: any[]) => void>> = {};
+
+  on(event: string, listener: (...args: any[]) => void): this {
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push(listener);
+    // For 'end' event, emit immediately since body is already parsed in workify handler
+    if (event === 'end') {
+      listener();
+    }
+    return this;
+  }
+
+  emit(event: string, ...args: any[]): boolean {
+    const listeners = this._listeners[event];
+    if (!listeners) return false;
+    for (const fn of listeners) {
+      fn(...args);
+    }
+    return true;
+  }
+
   constructor(request: Request, routeParams?: Record<string, string>) {
     this.raw = request;
     this.method = request.method;
