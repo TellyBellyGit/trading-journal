@@ -136,12 +136,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  // Login function
+   // Login function
   const login = async (email: string, password: string): Promise<void> => {
+    console.log('🔐 [Auth] login() called with email:', email);
     try {
       setIsLoading(true);
       setError(null); // Clear any existing errors
       
+      console.log('🔐 [Auth] Sending POST to', `${API_BASE_URL}/auth/login`);
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {

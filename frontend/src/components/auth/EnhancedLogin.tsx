@@ -61,13 +61,18 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🖥️ [LoginForm] handleSubmit fired');
     setLoading(true);
     setError(null);
 
     try {
+      console.log('🖥️ [LoginForm] Calling login()...');
       await login(email, password);
+      console.log('🖥️ [LoginForm] login() resolved successfully');
       onSuccess?.();
+      console.log('🖥️ [LoginForm] onSuccess callback called');
     } catch (err: any) {
+      console.log('🖥️ [LoginForm] login() threw error:', err?.type, err?.message);
       let errorData: LoginError;
       
       if (err?.type || err?.status) {
