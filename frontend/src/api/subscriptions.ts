@@ -1,6 +1,8 @@
 import axios from 'axios';
-
 import { API_BASE_URL } from '../config/api';
+
+// Check if Stripe/subscriptions should be bypassed
+const BYPASS_STRIPE = (import.meta as any).env?.VITE_BYPASS_STRIPE === 'true';
 
 // Create axios instance with authentication
 const api = axios.create({
@@ -44,22 +46,75 @@ export interface SubscriptionStatus {
   planConfig: SubscriptionPlan;
 }
 
+// Mock data returned when VITE_BYPASS_STRIPE=true
+// This prevents CORS/network errors from subscription status checks
+const MOCK_SUBSCRIPTION_STATUS: SubscriptionStatus = {
+  id: 1,
+  plan: 'pro',
+  status: 'active',
+  maxTrades: -1, // unlimited
+  tradeCount: 0,
+  usagePercentage: 0,
+  currentPeriodStart: new Date().toISOString(),
+  currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  cancelAtPeriodEnd: false,
+  planConfig: {
+    id: 'pro',
+    name: 'Pro',
+    price: 19,
+    maxTrades: -1,
+    stripePriceId: null,
+    features: ['Unlimited trades', 'Rich text notes', 'Advanced analytics', 'Priority support']
+  }
+};
+
+const MOCK_PLANS: SubscriptionPlan[] = [
+  {
+    id: 'free',
+    name: 'Free',
+    price: 0,
+    maxTrades: 10,
+    stripePriceId: null,
+    features: ['10 trades/month', 'Basic notes', 'Basic analytics']
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 19,
+    maxTrades: -1,
+    stripePriceId: null,
+    features: ['Unlimited trades', 'Rich text notes', 'Advanced analytics', 'Priority support']
+  }
+];
+
 // Subscription API
 export const subscriptionsApi = {
   // Get current subscription status
   getStatus: async (): Promise<SubscriptionStatus> => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping subscription status API call');
+      return { ...MOCK_SUBSCRIPTION_STATUS };
+    }
     const response = await api.get('/subscriptions/status');
     return response.data;
   },
 
   // Get available plans
   getPlans: async (): Promise<SubscriptionPlan[]> => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping subscription plans API call');
+      return [...MOCK_PLANS];
+    }
     const response = await api.get('/subscriptions/plans');
     return response.data;
   },
 
   // Upgrade to paid plan
   upgrade: async (plan: string, paymentMethodId: string) => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping subscription upgrade API call');
+      return { success: true, message: 'Bypass mode - no actual upgrade performed' };
+    }
     const response = await api.post('/subscriptions/upgrade', {
       plan,
       paymentMethodId
@@ -69,18 +124,30 @@ export const subscriptionsApi = {
 
   // Cancel subscription
   cancel: async () => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping subscription cancel API call');
+      return { success: true };
+    }
     const response = await api.post('/subscriptions/cancel');
     return response.data;
   },
 
   // Reactivate subscription
   reactivate: async () => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping subscription reactivate API call');
+      return { success: true };
+    }
     const response = await api.post('/subscriptions/reactivate');
     return response.data;
   },
 
   // Downgrade subscription
   downgrade: async (targetPlan: string) => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping subscription downgrade API call');
+      return { success: true };
+    }
     const response = await api.post('/subscriptions/downgrade', {
       targetPlan
     });
@@ -89,12 +156,20 @@ export const subscriptionsApi = {
 
   // Check if user can add trade
   canAddTrade: async (): Promise<{ canAdd: boolean; reason?: string; remaining?: number }> => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping can-add-trade API call');
+      return { canAdd: true, remaining: -1 };
+    }
     const response = await api.get('/subscriptions/can-add-trade');
     return response.data;
   },
 
   // Development only: Reset trade count for testing
   resetTradeCount: async () => {
+    if (BYPASS_STRIPE) {
+      console.log('🔧 [BYPASS] Skipping reset-trade-count API call');
+      return { success: true };
+    }
     const response = await api.post('/subscriptions/reset-trade-count');
     return response.data;
   }
