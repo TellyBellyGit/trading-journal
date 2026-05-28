@@ -167,6 +167,23 @@ export default {
     }
 
     try {
+      // Handle CORS preflight OPTIONS requests before routing
+      if (request.method === 'OPTIONS') {
+        const origin = request.headers.get('origin') || '';
+        if (allowedOrigins.has(origin)) {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              'Access-Control-Allow-Origin': origin,
+              'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              'Access-Control-Allow-Credentials': 'true',
+              'Access-Control-Max-Age': '86400',
+            },
+          });
+        }
+      }
+
       const response = await staticFetch(request, env);
       const corsOrigin = request.headers.get('origin') || '*';
       if (!response.headers.get('Access-Control-Allow-Origin')) {
@@ -182,12 +199,20 @@ export default {
       return response;
     } catch (error) {
       console.error('Worker error:', error);
+      const corsOrigin = request.headers.get('origin') || '*';
       return new Response(
         JSON.stringify({
           error: 'Internal Server Error',
           message: error instanceof Error ? error.message : 'Unknown error',
         }),
-        { status: 500, headers: { 'content-type': 'application/json' } }
+        {
+          status: 500,
+          headers: {
+            'content-type': 'application/json',
+            'Access-Control-Allow-Origin': corsOrigin,
+            'Access-Control-Allow-Credentials': 'true',
+          },
+        }
       );
     } finally {
       clearPrismaInstance();
