@@ -172,53 +172,47 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/debug-login — diagnostic endpoint (REMOVE AFTER DEBUGGING)
-router.post('/debug-login', async (req, res) => {
+// POST /api/auth/db-diagnose — checks database connection and shows table info
+router.post('/db-diagnose', async (_req, res) => {
   try {
-    let { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: 'Email required' });
+    // Check connection and get counts
+    const [userCount, tradeCount, brokerCount, firstUsers] = await Promise.all([
+      prisma.user.count(),
+      prisma.trade.count(),
+      prisma.broker.count(),
+      prisma.user.findMany({
+        take: 5,
+        orderBy: { id: 'asc' },
+        select: { id: true, email: true, firstName: true, isActive: true, emailVerified: true }
+      })
+    ]);
+
+    // Extract host from a test query (only hostname, no credentials)
+    let dbHost = 'unknown';
+    try {
+      const result: any = await prisma.$queryRaw`SELECT current_database() as db, inet_server_addr() as host`;
+      dbHost = result?.[0]?.host || 'unknown';
+    } catch (e) {
+      dbHost = 'query_failed';
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-        isActive: true,
-        emailVerified: true,
-        loginAttempts: true,
-        lockedUntil: true
+    res.json({
+      connected: true,
+      database: {
+        userCount,
+        tradeCount,
+        brokerCount,
+        firstUsers,
+        testEmails: {
+          mabhatti: firstUsers.find(u => u.email === 'mabhatti@email.com') || null,
+          superuser: firstUsers.find(u => u.email === 'superuser@tradrdash.com') || null,
+        }
       }
     });
-
-    if (!user) {
-      return res.json({ exists: false, email: email.toLowerCase() });
-    }
-
-    // Run a test comparison against a known password to verify bcrypt works
-    const bcrypt = require('bcryptjs');
-    const testHashWork = bcrypt.compare('test-password', user.password)
-      .then(r => ({ compareResult: r }))
-      .catch(e => ({ compareError: e.message }));
-
-    return res.json({
-      exists: true,
-      email: user.email,
-      id: user.id,
-      passwordHashPrefix: user.password.substring(0, 10) + '...',
-      isActive: user.isActive,
-      emailVerified: user.emailVerified,
-      isLocked: user.lockedUntil && new Date() <= user.lockedUntil,
-      loginAttempts: user.loginAttempts,
-      testComparison: await testHashWork
-    });
   } catch (error: any) {
-    return res.status(500).json({
-      error: 'Debug endpoint failed',
-      message: error?.message || String(error),
-      stack: error?.stack?.substring(0, 500)
+    res.status(500).json({
+      connected: false,
+      error: error?.message || String(error),
     });
   }
 });
