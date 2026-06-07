@@ -172,6 +172,57 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// POST /api/auth/debug-login — diagnostic endpoint (REMOVE AFTER DEBUGGING)
+router.post('/debug-login', async (req, res) => {
+  try {
+    let { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        isActive: true,
+        emailVerified: true,
+        loginAttempts: true,
+        lockedUntil: true
+      }
+    });
+
+    if (!user) {
+      return res.json({ exists: false, email: email.toLowerCase() });
+    }
+
+    // Run a test comparison against a known password to verify bcrypt works
+    const bcrypt = require('bcryptjs');
+    const testHashWork = bcrypt.compare('test-password', user.password)
+      .then(r => ({ compareResult: r }))
+      .catch(e => ({ compareError: e.message }));
+
+    return res.json({
+      exists: true,
+      email: user.email,
+      id: user.id,
+      passwordHashPrefix: user.password.substring(0, 10) + '...',
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      isLocked: user.lockedUntil && new Date() <= user.lockedUntil,
+      loginAttempts: user.loginAttempts,
+      testComparison: await testHashWork
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      error: 'Debug endpoint failed',
+      message: error?.message || String(error),
+      stack: error?.stack?.substring(0, 500)
+    });
+  }
+});
+
 // POST /api/auth/login - Enhanced with security features
 router.post('/login', loginRateLimit, async (req, res) => {
   const loginStartTime = Date.now();
