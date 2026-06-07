@@ -145,9 +145,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('🔐 [Auth] Sending POST to', `${API_BASE_URL}/auth/login`);
       
-      // Add a 25-second timeout so the request doesn't hang forever on cold starts
+      // Add a 35-second timeout — Neon cold start can take 25-30s
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
 
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',

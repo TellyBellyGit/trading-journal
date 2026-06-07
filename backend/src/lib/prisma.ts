@@ -34,7 +34,7 @@ export const getPrisma = (databaseUrl: string): PrismaClient => {
 
   const neonClient = new Client({ 
     connectionString: databaseUrl,
-    connectionTimeoutMillis: 10000 // 10 seconds max connection attempt
+    connectionTimeoutMillis: 30000 // 30 seconds max connection attempt (cold start can be slow)
   });
   const adapter = new PrismaNeon(neonClient);
   return new PrismaClient({ adapter });
