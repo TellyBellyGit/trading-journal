@@ -172,14 +172,21 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/db-diagnose — checks database connection and shows table info
-router.post('/db-diagnose', async (_req, res) => {
+// GET /api/auth/db-diagnose — checks database connection and shows table info
+router.get('/db-diagnose', async (_req, res) => {
   try {
-    // Check connection and get counts
-    const [userCount, tradeCount, brokerCount, firstUsers] = await Promise.all([
+    // Step 1: Test raw connection
+    let rawResult = 'not tested';
+    try {
+      const rawTest: any = await prisma.$queryRaw`SELECT 1 as one`;
+      rawResult = rawTest?.[0]?.one === 1 ? 'OK' : 'unexpected:' + JSON.stringify(rawTest);
+    } catch (rawErr: any) {
+      rawResult = 'FAILED: ' + (rawErr?.message || String(rawErr));
+    }
+
+    // Step 2: Get table counts
+    const [userCount, firstUsers] = await Promise.all([
       prisma.user.count(),
-      prisma.trade.count(),
-      prisma.broker.count(),
       prisma.user.findMany({
         take: 5,
         orderBy: { id: 'asc' },
@@ -189,21 +196,20 @@ router.post('/db-diagnose', async (_req, res) => {
 
     res.json({
       connected: true,
-      database: {
-        userCount,
-        tradeCount,
-        brokerCount,
-        firstUsers,
-        testEmails: {
-          mabhatti: firstUsers.find(u => u.email === 'mabhatti@email.com') || null,
-          superuser: firstUsers.find(u => u.email === 'superuser@tradrdash.com') || null,
-        }
+      rawQuery: rawResult,
+      userCount,
+      firstUsers,
+      testEmails: {
+        mabhatti: firstUsers.find(u => u.email === 'mabhatti@email.com') || null,
+        superuser: firstUsers.find(u => u.email === 'superuser@tradrdash.com') || null,
       }
     });
   } catch (error: any) {
     res.status(500).json({
       connected: false,
       error: error?.message || String(error),
+      code: error?.code,
+      meta: error?.meta,
     });
   }
 });
