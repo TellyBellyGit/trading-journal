@@ -177,6 +177,12 @@ export default {
     }
 
     try {
+      // Warm up database connection — kickstarts Neon WebSocket handshake
+      // BEFORE handling the request. This is critical for cold Worker starts.
+      prisma.$queryRaw`SELECT 1`.then(() => {}).catch((warmupErr: any) => {
+        console.warn('⚠️ [WARMUP] DB warmup failed:', warmupErr?.message || warmupErr);
+      });
+
       // Handle CORS preflight OPTIONS requests before routing
       if (request.method === 'OPTIONS') {
         const origin = request.headers.get('origin') || '';

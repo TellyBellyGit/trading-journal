@@ -32,9 +32,9 @@ export const getPrisma = (databaseUrl: string): PrismaClient => {
     throw new Error('DATABASE_URL still contains placeholder text — replace with real Neon connection string');
   }
 
+  // Default Neon connect_timeout is 5s, which matches the ~hundreds-of-ms activation
   const neonClient = new Client({ 
-    connectionString: databaseUrl,
-    connectionTimeoutMillis: 30000 // 30 seconds max connection attempt (cold start can be slow)
+    connectionString: databaseUrl
   });
   const adapter = new PrismaNeon(neonClient);
   return new PrismaClient({ adapter });
