@@ -177,10 +177,10 @@ export default {
     }
 
     try {
-      // Warm up database connection immediately — kickstarts Neon WebSocket handshake
-      // so the actual route handler (e.g. login) doesn't wait for cold connection
-      await prisma.$queryRaw`SELECT 1`.catch((warmupErr: any) => {
-        console.warn('⚠️ [WARMUP] DB connection warmup failed:', warmupErr?.message || warmupErr);
+      // Warm up database connection — kickstarts Neon WebSocket handshake in background
+      // Don't await — let route handler and warmup establish connections in parallel
+      prisma.$queryRaw`SELECT 1`.catch((warmupErr: any) => {
+        console.warn('⚠️ [WARMUP] DB warmup failed:', warmupErr?.message || warmupErr);
       });
 
       // Handle CORS preflight OPTIONS requests before routing
