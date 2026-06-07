@@ -187,15 +187,6 @@ router.post('/db-diagnose', async (_req, res) => {
       })
     ]);
 
-    // Extract host from a test query (only hostname, no credentials)
-    let dbHost = 'unknown';
-    try {
-      const result: any = await prisma.$queryRaw`SELECT current_database() as db, inet_server_addr() as host`;
-      dbHost = result?.[0]?.host || 'unknown';
-    } catch (e) {
-      dbHost = 'query_failed';
-    }
-
     res.json({
       connected: true,
       database: {
