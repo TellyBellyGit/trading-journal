@@ -144,13 +144,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setError(null); // Clear any existing errors
       
       console.log('🔐 [Auth] Sending POST to', `${API_BASE_URL}/auth/login`);
+      
+      // Add a 25-second timeout so the request doesn't hang forever on cold starts
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -179,19 +186,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       sessionStorage.setItem('refresh_token', data.refreshToken);
       
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Login error:', error?.name, error?.message);
+      
+      // Handle AbortError (fetch timeout from AbortController)
+      const isTimeout = error?.name === 'AbortError';
       // Network/CORS errors result in TypeError: Failed to fetch
-      const isNetworkError = error?.message && /Failed to fetch|NetworkError/i.test(error.message);
-      const friendlyMessage = isNetworkError
-        ? 'Cannot reach the server. Ensure the backend is running and API URL is correct.'
-        : (error?.message || 'Login failed');
+      const isNetworkError = !isTimeout && (error?.message && /Failed to fetch|NetworkError/i.test(error.message));
+      
+      const friendlyMessage = isTimeout
+        ? 'The server is taking too long to respond. Please try again — this can happen when the backend is waking up from inactivity.'
+        : isNetworkError
+          ? 'Cannot reach the server. Ensure the backend is running and API URL is correct.'
+          : (error?.message || 'Login failed');
 
       // Store friendly error
       setError(friendlyMessage);
 
       // Throw structured error so UI can format it
       const err = new Error(friendlyMessage) as any;
-      err.type = isNetworkError ? 'network_error' : 'unknown';
+      err.type = isTimeout ? 'timeout_error' : isNetworkError ? 'network_error' : 'unknown';
       err.status = undefined;
       throw err;
     } finally {

@@ -32,7 +32,10 @@ export const getPrisma = (databaseUrl: string): PrismaClient => {
     throw new Error('DATABASE_URL still contains placeholder text — replace with real Neon connection string');
   }
 
-  const neonClient = new Client({ connectionString: databaseUrl });
+  const neonClient = new Client({ 
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 10000 // 10 seconds max connection attempt
+  });
   const adapter = new PrismaNeon(neonClient);
   return new PrismaClient({ adapter });
 };

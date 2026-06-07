@@ -10,7 +10,7 @@
  */
 
 import { createWorkify, type WorkifyEnv } from './lib/workify';
-import { getPrisma, setPrismaInstance, clearPrismaInstance } from './lib/prisma';
+import { getPrisma, setPrismaInstance, clearPrismaInstance, prisma } from './lib/prisma';
 import { CompatRouter } from './lib/express-compat';
 
 // ── Route imports (all now export CompatRouter from express-compat) ──
@@ -167,6 +167,12 @@ export default {
     }
 
     try {
+      // Warm up database connection immediately — kickstarts Neon WebSocket handshake
+      // so the actual route handler (e.g. login) doesn't wait for cold connection
+      await prisma.$queryRaw`SELECT 1`.catch((warmupErr: any) => {
+        console.warn('⚠️ [WARMUP] DB connection warmup failed:', warmupErr?.message || warmupErr);
+      });
+
       // Handle CORS preflight OPTIONS requests before routing
       if (request.method === 'OPTIONS') {
         const origin = request.headers.get('origin') || '';
