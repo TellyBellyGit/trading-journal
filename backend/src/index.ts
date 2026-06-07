@@ -80,6 +80,16 @@ function mountRouter(prefix: string, router: CompatRouter) {
     const method = entry.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options';
     if (method in wRouter) {
       (wRouter[method] as any)(fullPath, ...entry.handlers);
+      // Also register the version without trailing slash (for browser compatibility)
+      if (fullPath.endsWith('/') && fullPath.length > 1) {
+        const noSlashPath = fullPath.slice(0, -1);
+        (wRouter[method] as any)(noSlashPath, ...entry.handlers);
+      }
+      // Also register the version WITH trailing slash if missing (for consistency)
+      if (!fullPath.endsWith('/') && fullPath.length > 1) {
+        const withSlashPath = fullPath + '/';
+        (wRouter[method] as any)(withSlashPath, ...entry.handlers);
+      }
     } else {
       console.warn(`[MOUNT] Method ${method} not in wRouter!`);
     }
