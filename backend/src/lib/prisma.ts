@@ -1,4 +1,3 @@
-import { Client } from '@neondatabase/serverless';
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { PrismaClient } from '@prisma/client';
 
@@ -11,9 +10,37 @@ import { PrismaClient } from '@prisma/client';
 let _instance: PrismaClient | null = null;
 
 /**
+ * Sanitize the DATABASE_URL for Neon serverless driver compatibility.
+ * - Strips `channel_binding=require` (NOT supported by Neon's WebSocket
+ *   driver in Cloudflare Workers — causes "Connection terminated unexpectedly")
+ * - Ensures sslmode is set
+ */
+function sanitizeDatabaseUrl(url: string): string {
+  let sanitized = url;
+
+  // Remove channel_binding — the root cause of "Connection terminated unexpectedly"
+  sanitized = sanitized.replace(/[&?]channel_binding=[^&]/g, '');
+
+  // Ensure sslmode=require is present
+  if (!sanitized.includes('sslmode=')) {
+    const separator = sanitized.includes('?') ? '&' : '?';
+    sanitized += `${separator}sslmode=require`;
+  }
+
+  // Clean up any resulting double-? or trailing &
+  sanitized = sanitized.replace(/\?&/, '?').replace(/&$/, '');
+
+  return sanitized;
+}
+
+/**
  * Factory that creates a PrismaClient backed by the Neon serverless driver
  * via a secure WebSocket connection. Designed for Cloudflare Workers where
  * traditional TCP sockets and heavy Prisma query engines are unavailable.
+ *
+ * PrismaNeon (v7.8.0) constructor takes (PoolConfig, options). It creates its
+ * own Pool internally in connect(). We pass { connectionString: cleanUrl } as
+ * the config — let PrismaNeon manage the Pool lifecycle.
  *
  * Called once per request from the Worker fetch handler:
  *   setPrismaInstance(getPrisma(env.DATABASE_URL));
@@ -32,11 +59,14 @@ export const getPrisma = (databaseUrl: string): PrismaClient => {
     throw new Error('DATABASE_URL still contains placeholder text — replace with real Neon connection string');
   }
 
-  // Default Neon connect_timeout is 5s, which matches the ~hundreds-of-ms activation
-  const neonClient = new Client({ 
-    connectionString: databaseUrl
-  });
-  const adapter = new PrismaNeon(neonClient);
+  const cleanUrl = sanitizeDatabaseUrl(databaseUrl);
+
+  console.log('🗄️ [prisma] Creating PrismaNeon (v6.0 — let PrismaNeon manage its own Pool)');
+  console.log('🗄️ [prisma]   Stripped channel_binding:', databaseUrl.includes('channel_binding'));
+  console.log('🗄️ [prisma]   Pooled endpoint:', databaseUrl.includes('-pooler'));
+
+  // PrismaNeon constructor takes PoolConfig — it creates its own Pool in connect()
+  const adapter = new PrismaNeon({ connectionString: cleanUrl });
   return new PrismaClient({ adapter });
 };
 
@@ -50,7 +80,7 @@ export function setPrismaInstance(client: PrismaClient): void {
 
 /**
  * Clears the per-request PrismaClient instance.
- * Should be called after each request completes (in a finally block).
+ * Called after each request completes (in a finally block).
  */
 export function clearPrismaInstance(): void {
   _instance = null;
@@ -58,15 +88,6 @@ export function clearPrismaInstance(): void {
 
 // ---------------------------------------------------------------------------
 // Request-scoped Prisma proxy
-//
-// All existing route files import `{ prisma }` from '../lib/prisma' and use it
-// as a singleton (prisma.user.findUnique(...), prisma.trade.create(...), etc.).
-//
-// This proxy delegates every property access to the per-request _instance that
-// was set via setPrismaInstance() at the start of the fetch handler. This means
-// ZERO changes are required to any route file, middleware, or service file.
-//
-// IMPORTANT — NO BUSINESS LOGIC OR ROUTE FILES ARE MODIFIED.
 // ---------------------------------------------------------------------------
 const getInstanceOrThrow = (): Record<string | symbol, unknown> => {
   if (!_instance) {
@@ -82,7 +103,6 @@ const PRISMA_PROXY_HANDLER: ProxyHandler<object> = {
   get(_target, prop: string | symbol) {
     const inst = getInstanceOrThrow();
     const value = inst[prop];
-    // Bind methods (like $transaction, $queryRaw, etc.) to the instance
     if (typeof value === 'function') {
       return (value as Function).bind(inst);
     }
@@ -107,12 +127,6 @@ const PRISMA_PROXY_HANDLER: ProxyHandler<object> = {
 
 /**
  * The `prisma` export that all existing route files import.
- *
- * Usage in routes (unchanged from before):
- *   import { prisma } from '../lib/prisma';
- *   const user = await prisma.user.findUnique({ where: { id: 1 } });
- *
- * The proxy delegates to the per-request PrismaClient instance.
  */
 export const prisma: PrismaClient = new Proxy(
   {} as PrismaClient,

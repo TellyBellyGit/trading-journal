@@ -38,7 +38,7 @@ const { router: wRouter, toFetch: workifyFetch } = createWorkify();
 
 // Register health check routes directly
 wRouter.get('/api/health', (_req, res) => {
-  res.json({ status: 'OK', message: 'Trading Journal API is running' });
+  res.json({ status: 'OK', message: 'Trading Journal API is running', version: '3.0.0', deployTime: new Date().toISOString() });
 });
 
 wRouter.get('/api/health/email', async (_req, res) => {

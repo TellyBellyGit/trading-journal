@@ -173,45 +173,94 @@ router.post('/register', async (req, res) => {
 });
 
 // GET /api/auth/db-diagnose — checks database connection and shows table info
+// IMPORTANT: Always returns 200 with a diagnostic payload so CORS never blocks the response.
 router.get('/db-diagnose', async (_req, res) => {
-  try {
-    // Step 1: Test raw connection
-    let rawResult = 'not tested';
-    try {
-      const rawTest: any = await prisma.$queryRaw`SELECT 1 as one`;
-      rawResult = rawTest?.[0]?.one === 1 ? 'OK' : 'unexpected:' + JSON.stringify(rawTest);
-    } catch (rawErr: any) {
-      rawResult = 'FAILED: ' + (rawErr?.message || String(rawErr));
-    }
+  const diagnostics: any = {
+    connected: false,
+    steps: {},
+    timestamp: new Date().toISOString(),
+  };
 
-    // Step 2: Get table counts
-    const [userCount, firstUsers] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.findMany({
+  // Step 1: Test raw connection
+  try {
+    const startMs = Date.now();
+    const rawTest: any = await prisma.$queryRaw`SELECT 1 as one`;
+    const elapsed = Date.now() - startMs;
+    diagnostics.steps.rawQuery = {
+      success: rawTest?.[0]?.one === 1,
+      result: rawTest?.[0]?.one === 1 ? 'OK' : `unexpected: ${JSON.stringify(rawTest)}`,
+      elapsedMs: elapsed,
+    };
+  } catch (rawErr: any) {
+    diagnostics.steps.rawQuery = {
+      success: false,
+      error: rawErr?.message || String(rawErr),
+      code: rawErr?.code,
+      meta: rawErr?.meta,
+    };
+    console.error('🗄️ [db-diagnose] Raw query FAILED:', rawErr?.message, rawErr?.code, rawErr?.meta);
+  }
+
+  // Step 2: Try to count users
+  try {
+    const startMs = Date.now();
+    const count = await prisma.user.count();
+    const elapsed = Date.now() - startMs;
+    diagnostics.steps.userCount = {
+      success: true,
+      count,
+      elapsedMs: elapsed,
+    };
+    diagnostics.userCount = count;
+  } catch (countErr: any) {
+    diagnostics.steps.userCount = {
+      success: false,
+      error: countErr?.message || String(countErr),
+      code: countErr?.code,
+      meta: countErr?.meta,
+    };
+    console.error('🗄️ [db-diagnose] User count FAILED:', countErr?.message);
+  }
+
+  // Step 3: Try to fetch sample users (only if count succeeded)
+  if (diagnostics.steps.userCount?.success) {
+    try {
+      const startMs = Date.now();
+      const firstUsers = await prisma.user.findMany({
         take: 5,
         orderBy: { id: 'asc' },
         select: { id: true, email: true, firstName: true, isActive: true, emailVerified: true }
-      })
-    ]);
-
-    res.json({
-      connected: true,
-      rawQuery: rawResult,
-      userCount,
-      firstUsers,
-      testEmails: {
-        mabhatti: firstUsers.find(u => u.email === 'mabhatti@email.com') || null,
-        superuser: firstUsers.find(u => u.email === 'superuser@tradrdash.com') || null,
-      }
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      connected: false,
-      error: error?.message || String(error),
-      code: error?.code,
-      meta: error?.meta,
-    });
+      });
+      const elapsed = Date.now() - startMs;
+      diagnostics.steps.sampleUsers = {
+        success: true,
+        count: firstUsers.length,
+        elapsedMs: elapsed,
+      };
+      diagnostics.firstUsers = firstUsers;
+      diagnostics.testEmails = {
+        mabhatti: firstUsers.find((u: any) => u.email === 'mabhatti@email.com') || null,
+        superuser: firstUsers.find((u: any) => u.email === 'superuser@tradrdash.com') || null,
+      };
+    } catch (usersErr: any) {
+      diagnostics.steps.sampleUsers = {
+        success: false,
+        error: usersErr?.message || String(usersErr),
+        code: usersErr?.code,
+        meta: usersErr?.meta,
+      };
+      console.error('🗄️ [db-diagnose] Sample users FAILED:', usersErr?.message);
+    }
   }
+
+  // Determine overall connection status
+  diagnostics.connected = diagnostics.steps.rawQuery?.success === true;
+
+  // Always return 200 so CORS headers from the main handler apply correctly
+  console.log('🗄️ [db-diagnose] Diagnostic complete. Connected:', diagnostics.connected);
+  console.log('🗄️ [db-diagnose] Steps:', JSON.stringify(diagnostics.steps, null, 2));
+
+  res.json(diagnostics);
 });
 
 // POST /api/auth/login - Enhanced with security features
