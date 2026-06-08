@@ -1,4 +1,4 @@
-import express from '../lib/express-compat';
+import express from 'express';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();

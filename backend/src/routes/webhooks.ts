@@ -1,4 +1,4 @@
-import express from '../lib/express-compat';
+import express from 'express';
 import { stripe } from '../config/stripe';
 import SubscriptionService from '../services/subscriptionService';
 import { prisma } from '../lib/prisma';

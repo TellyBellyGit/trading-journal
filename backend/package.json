@@ -1,12 +1,12 @@
 {
   "name": "trading-journal-backend",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon src/server.ts",
     "dev:clean": "powershell -ExecutionPolicy Bypass -File ./scripts/start-dev.ps1",
-    "build": "node -e \"const{execSync}=require('child_process');try{execSync('npx tsc',{stdio:'inherit'})}catch(e){console.log('Build continuing despite TS errors (express-compat type mismatches are expected)');}\"",
-    "start": "npx prisma generate && npx prisma migrate deploy && node dist/index.js",
+    "build": "npx tsc",
+    "start": "npx prisma generate && npx prisma migrate deploy && node dist/server.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "migrate-brokers": "npx prisma db push --accept-data-loss && npx ts-node scripts/postMigrationSetup.ts",
@@ -19,8 +19,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@neondatabase/serverless": "^1.1.0",
-    "@prisma/adapter-neon": "^7.8.0",
     "@prisma/client": "^6.8.2",
     "axios": "^1.10.0",
     "bcryptjs": "^3.0.2",
@@ -50,7 +48,6 @@
     "nodemon": "^3.1.10",
     "prisma": "^6.8.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
-    "wrangler": "^4.93.1"
+    "typescript": "^5.8.3"
   }
 }

@@ -8,7 +8,7 @@
 //
 // GET /api/market/symbols - returns unique symbols from user's trades
 
-import express from '../lib/express-compat';
+import express from 'express';
 import { authenticateToken } from '../middleware/auth';
 import type { ChartResponse } from '../services/market/types';
 import { VALID_INTERVALS } from '../services/market/types';

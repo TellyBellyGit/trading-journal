@@ -1,4 +1,4 @@
-import express from '../lib/express-compat';
+import express from 'express';
 import { PasswordUtils, JWTUtils, PasswordValidator, EmailValidator } from '../utils/auth';
 import { authenticateToken } from '../middleware/auth';
 import { loginRateLimit, emailVerificationRateLimit, passwordResetRateLimit } from '../middleware/rateLimiting';

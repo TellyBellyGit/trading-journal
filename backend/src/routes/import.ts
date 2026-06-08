@@ -1,5 +1,5 @@
 // 1. Create: backend/src/routes/import.ts
-import express from '../lib/express-compat';
+import express from 'express';
 import { TradeAnalyzer, RawTradeData } from '../utils/tradeAnalyzer';
 import { CSVProcessor } from '../utils/csvProcessor';
 import { prisma } from '../lib/prisma';
