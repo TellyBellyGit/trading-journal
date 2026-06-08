@@ -24,6 +24,9 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
   const [error, setError] = useState<LoginError | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [guestCredentials, setGuestCredentials] = useState<{ username: string; email: string; password: string } | null>(null);
+  const [dbTestLoading, setDbTestLoading] = useState(false);
+  const [dbTestResult, setDbTestResult] = useState<any>(null);
+  const [dbTestError, setDbTestError] = useState<string | null>(null);
   const { login } = useAuth();
 
   const handleGuestLogin = async () => {
@@ -56,6 +59,83 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
       });
     } finally {
       setGuestLoading(false);
+    }
+  };
+
+  const handleTestDbConnection = async () => {
+    setDbTestLoading(true);
+    setDbTestResult(null);
+    setDbTestError(null);
+
+    const healthUrl = `${API_BASE_URL}/health`;
+    const diagnoseUrl = `${API_BASE_URL}/auth/db-diagnose`;
+
+    console.group('🗄️ [DB Test] Database Connection Diagnostic');
+    console.log('🗄️ [DB Test] Starting database connection test...');
+    console.log('🗄️ [DB Test] Base URL:', API_BASE_URL);
+
+    try {
+      // Step 1: Health check
+      console.log('🗄️ [DB Test] Step 1: Checking backend health at', healthUrl);
+      let healthOk = false;
+      try {
+        const healthResp = await fetch(healthUrl);
+        const healthData = await healthResp.json();
+        console.log('🗄️ [DB Test] Health check response status:', healthResp.status);
+        console.log('🗄️ [DB Test] Health check response body:', healthData);
+        healthOk = healthResp.ok;
+      } catch (healthErr: any) {
+        console.warn('🗄️ [DB Test] Health check FAILED:', healthErr?.message || healthErr);
+        console.warn('🗄️ [DB Test] This may indicate the backend is not running or unreachable.');
+      }
+
+      // Step 2: DB diagnose
+      console.log('🗄️ [DB Test] Step 2: Calling', diagnoseUrl);
+      const startTime = performance.now();
+      const resp = await fetch(diagnoseUrl);
+      const elapsed = Math.round(performance.now() - startTime);
+      const data = await resp.json();
+
+      console.log(`🗄️ [DB Test] Response received in ${elapsed}ms, status: ${resp.status}`);
+      console.log('🗄️ [DB Test] Full response:', JSON.stringify(data, null, 2));
+
+      // Parse diagnostics
+      if (resp.ok && data.connected) {
+        console.log('🗄️ [DB Test] ✅ Database CONNECTION: OK');
+        console.log('🗄️ [DB Test] Raw query (SELECT 1):', data.rawQuery);
+        console.log('🗄️ [DB Test] User count:', data.userCount);
+        console.log('🗄️ [DB Test] Sample users:', data.firstUsers);
+        if (data.testEmails) {
+          console.log('🗄️ [DB Test] Known email checks:', data.testEmails);
+        }
+      } else {
+        console.error('🗄️ [DB Test] ❌ Database CONNECTION: FAILED');
+        console.error('🗄️ [DB Test] Error details:', {
+          connected: data.connected,
+          error: data.error,
+          code: data.code,
+          meta: data.meta,
+        });
+      }
+
+      console.log('🗄️ [DB Test] Health check passed:', healthOk);
+      console.log('🗄️ [DB Test] === Diagnostic complete ===');
+      console.groupEnd();
+
+      setDbTestResult({
+        healthOk,
+        ...data,
+        elapsed,
+        status: resp.status,
+      });
+    } catch (err: any) {
+      console.error('🗄️ [DB Test] ❌ Exception during DB test:', err?.message || err);
+      console.error('🗄️ [DB Test] Full error:', err);
+      console.groupEnd();
+
+      setDbTestError(err?.message || 'Unknown error during database test');
+    } finally {
+      setDbTestLoading(false);
     }
   };
 
@@ -358,6 +438,71 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
               )}
             </button>
           </div>
+
+          {/* ── Database Connection Test ── */}
+          <div className="border-t border-gray-700 pt-4">
+            <button
+              type="button"
+              onClick={handleTestDbConnection}
+              disabled={dbTestLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-teal-500/50 text-sm font-medium rounded-md text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {dbTestLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-teal-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Testing connection...
+                </>
+              ) : (
+                '🗄️ Test Database Connection'
+              )}
+            </button>
+          </div>
+
+          {/* DB Test Results */}
+          {dbTestResult && (
+            <div className={`p-4 rounded-lg border text-sm font-mono ${dbTestResult.connected ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-red-500/30 bg-red-500/10 text-red-400'}`}>
+              <div className="flex items-center space-x-2 mb-2">
+                <span>{dbTestResult.connected ? '✅' : '❌'}</span>
+                <span className="font-bold">{dbTestResult.connected ? 'Database Connected' : 'Database Connection Failed'}</span>
+                <span className="text-xs opacity-70">({dbTestResult.elapsed}ms)</span>
+              </div>
+              <div className="space-y-1 text-xs opacity-80">
+                <p>Health: {dbTestResult.healthOk ? '✅ reachable' : '❌ unreachable'}</p>
+                <p>Raw Query (SELECT 1): {dbTestResult.rawQuery || 'N/A'}</p>
+                <p>User Count: {dbTestResult.userCount ?? 'N/A'}</p>
+                {dbTestResult.firstUsers && dbTestResult.firstUsers.length > 0 && (
+                  <div>
+                    <p className="mb-1">First {dbTestResult.firstUsers.length} users:</p>
+                    {dbTestResult.firstUsers.map((u: any) => (
+                      <p key={u.id} className="pl-2">• {u.email} (id:{u.id}, active:{String(u.isActive)}, verified:{String(u.emailVerified)})</p>
+                    ))}
+                  </div>
+                )}
+                {!dbTestResult.connected && dbTestResult.error && (
+                  <p className="text-red-300 mt-1">Error: {dbTestResult.error}</p>
+                )}
+                {!dbTestResult.connected && dbTestResult.code && (
+                  <p className="text-red-300">Code: {dbTestResult.code}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {dbTestError && !dbTestResult && (
+            <div className="p-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+              <div className="flex items-start space-x-2">
+                <span>❌</span>
+                <div className="flex-1">
+                  <h4 className="font-medium">Connection Test Failed</h4>
+                  <p className="mt-1 text-xs font-mono">{dbTestError}</p>
+                  <p className="mt-2 text-xs opacity-70">Check the browser console (F12) for full diagnostic logs.</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {onSwitchToRegister && (
             <div className="text-center">
