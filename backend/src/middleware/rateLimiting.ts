@@ -9,10 +9,10 @@
  * Limiting rules in the dashboard or WAF.
  */
 
-import type { ExpressCompatRequest, ExpressCompatResponse } from '../lib/workify';
+import type { Request, Response } from 'express';
 
 function noopRateLimit() {
-  return (_req: ExpressCompatRequest, _res: ExpressCompatResponse, next: () => void) => {
+  return (_req: Request, _res: Response, next: () => void) => {
     next();
   };
 }
