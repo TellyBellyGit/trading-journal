@@ -1,20 +1,31 @@
-// 1. Create: backend/src/routes/import.ts
 import express from 'express';
+import multer from 'multer';
 import { TradeAnalyzer, RawTradeData } from '../utils/tradeAnalyzer';
 import { CSVProcessor } from '../utils/csvProcessor';
 import { prisma } from '../lib/prisma';
 
 const router = express.Router();
 
-// Process CSV file endpoint — uses native Request.formData() instead of multer
-// (multer relies on Node.js streams which aren't available in Cloudflare Workers)
-router.post('/process', async (req, res) => {
-  try {
-    // Use the native Worker Request to parse FormData (no multer/streams needed)
-    const formData = await req.raw.formData();
-    const file = formData.get('csvFile') as File | null;
+// Configure multer for in-memory file storage (CSV files are small text files)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept CSV files only
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+});
 
-    if (!file) {
+// Process CSV file endpoint
+router.post('/process', upload.single('csvFile'), async (req, res) => {
+  try {
+    if (!req.file) {
       return res.status(400).json({
         error: {
           message: 'No file uploaded',
@@ -23,28 +34,8 @@ router.post('/process', async (req, res) => {
       });
     }
 
-    // Validate file type
-    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      return res.status(400).json({
-        error: {
-          message: 'Invalid file type',
-          details: ['Only CSV files are allowed']
-        }
-      });
-    }
-
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      return res.status(400).json({
-        error: {
-          message: 'File too large',
-          details: ['Maximum file size is 10MB']
-        }
-      });
-    }
-
-    // Convert file to text
-    const csvContent = await file.text();
+    // Read CSV content from the in-memory buffer
+    const csvContent = req.file.buffer.toString('utf-8');
 
     // Validate CSV format
     const validation = CSVProcessor.validateCSVFormat(csvContent);
@@ -104,6 +95,14 @@ router.post('/process', async (req, res) => {
 
   } catch (error) {
     console.error('Error processing CSV:', error);
+    if (error instanceof multer.MulterError) {
+      return res.status(400).json({
+        error: {
+          message: error.code === 'LIMIT_FILE_SIZE' ? 'File too large' : 'Upload error',
+          details: [error.message]
+        }
+      });
+    }
     res.status(500).json({
       error: {
         message: 'Internal server error',
@@ -248,51 +247,3 @@ router.get('/brokers', async (req, res) => {
 });
 
 export default router;
-
-// 2. Add to your main server file (backend/src/server.ts or app.ts):
-/*
-import importRoutes from './routes/import';
-
-// Add this line with your other routes:
-app.use('/api/trades/import', importRoutes);
-*/
-
-// 3. Install required dependencies:
-/*
-npm install multer @types/multer
-*/
-
-// 4. Create the utility files in backend/src/utils/:
-// - tradeAnalyzer.ts (from previous artifact)
-// - csvProcessor.ts (from previous artifact)
-
-// 5. Update your frontend API (frontend/src/api/trades.ts) - add to tradesApi:
-/*
-// Import trades from CSV
-import: {
-  process: async (file: File) => {
-    const formData = new FormData();
-    formData.append('csvFile', file);
-    
-    const response = await api.post('/trades/import/process', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  },
-
-  save: async (trades: any[], brokerId: number) => {
-    const response = await api.post('/trades/import/save', {
-      trades,
-      brokerId
-    });
-    return response.data;
-  },
-
-  getBrokers: async () => {
-    const response = await api.get('/trades/import/brokers');
-    return response.data;
-  }
-}
-*/
