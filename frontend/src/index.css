@@ -120,6 +120,22 @@ html, body, * {
   }
 }
 
+@keyframes progressIndeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-progress-indeterminate {
+  animation: progressIndeterminate 2s ease-in-out infinite;
+}
+
 /* Tiptap Editor Dark Theme Styles */
 .ProseMirror {
   background-color: #1f2937 !important;

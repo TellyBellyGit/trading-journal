@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import DatabaseWakeModal from './DatabaseWakeModal';
 
 interface LoginError {
   message: string;
@@ -28,6 +29,7 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
   const [dbTestResult, setDbTestResult] = useState<any>(null);
   const [dbTestError, setDbTestError] = useState<string | null>(null);
   const { login } = useAuth();
+  const isDevMode = new URLSearchParams(window.location.search).get('dev') === 'true';
 
   const handleGuestLogin = async () => {
     setGuestLoading(true);
@@ -292,7 +294,9 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <>
+      <DatabaseWakeModal isOpen={loading} />
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-gray-800 rounded-lg shadow-xl p-8 space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
@@ -440,6 +444,8 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
           </div>
 
           {/* ── Database Connection Test ── */}
+          {isDevMode && (
+          <>
           <div className="border-t border-gray-700 pt-4">
             <button
               type="button"
@@ -503,6 +509,8 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
               </div>
             </div>
           )}
+          </>
+          )}
 
           {onSwitchToRegister && (
             <div className="text-center">
@@ -521,6 +529,7 @@ const EnhancedLogin: React.FC<EnhancedLoginProps> = ({ onSwitchToRegister, onFor
         </form>
       </div>
     </div>
+    </>
   );
 };
 

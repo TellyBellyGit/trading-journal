@@ -136,77 +136,124 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-   // Login function
+  // Helper: perform a single login fetch attempt
+  const attemptLogin = async (email: string, password: string, timeoutMs: number = 15000) => {
+    console.log('🔐 [Auth] Sending POST to', `${API_BASE_URL}/auth/login`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = errorData.error || 'Login failed';
+      
+      const err = new Error(errorMessage) as any;
+      err.type = errorData.type;
+      err.attemptsRemaining = errorData.attemptsRemaining;
+      err.retryAfter = errorData.retryAfter;
+      err.canResendVerification = errorData.canResendVerification;
+      err.status = response.status;
+      throw err;
+    }
+
+    const data: AuthResponse = await response.json();
+    return data;
+  };
+
+  // Check if an error is a cold-start / network issue (retry-able)
+  const isRetryableError = (error: any): boolean => {
+    if (error?.status) return false; // server responded with an auth error — don't retry
+    const isTimeout = error?.name === 'AbortError';
+    const isNetworkError = error?.message && /Failed to fetch|NetworkError/i.test(error.message);
+    return isTimeout || isNetworkError;
+  };
+
+  // Login function
   const login = async (email: string, password: string): Promise<void> => {
     console.log('🔐 [Auth] login() called with email:', email);
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      setError(null); // Clear any existing errors
+      console.log('🔐 [Auth] Attempting login...');
       
-      console.log('🔐 [Auth] Sending POST to', `${API_BASE_URL}/auth/login`);
+      // First attempt
+      const data = await attemptLogin(email, password);
       
-      // Add a 15-second timeout — Neon compute wakes in ~hundreds of ms
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.error || 'Login failed';
-        
-        // Store error in context state
-        setError(errorMessage);
-        
-        // Throw a structured error so UI can show specific messages
-        const err = new Error(errorMessage) as any;
-        err.type = errorData.type;
-        err.attemptsRemaining = errorData.attemptsRemaining;
-        err.retryAfter = errorData.retryAfter;
-        err.canResendVerification = errorData.canResendVerification;
-        err.status = response.status;
-        throw err;
-      }
-
-      const data: AuthResponse = await response.json();
-      
-      // Store auth data
+      // Success on first try
       setUser(data.user);
       setToken(data.token);
       sessionStorage.setItem('auth_token', data.token);
       sessionStorage.setItem('auth_user', JSON.stringify(data.user));
       sessionStorage.setItem('refresh_token', data.refreshToken);
+      console.log('🔐 [Auth] Login succeeded on first attempt');
+      return;
       
-    } catch (error: any) {
-      console.error('Login error:', error?.name, error?.message);
+    } catch (firstError: any) {
+      console.log('🔐 [Auth] First attempt failed:', firstError?.name, firstError?.message);
       
-      // Handle AbortError (fetch timeout from AbortController)
-      const isTimeout = error?.name === 'AbortError';
-      // Network/CORS errors result in TypeError: Failed to fetch
-      const isNetworkError = !isTimeout && (error?.message && /Failed to fetch|NetworkError/i.test(error.message));
-      
-      const friendlyMessage = isTimeout
-        ? 'The server is taking too long to respond. Please try again — this can happen when the backend is waking up from inactivity.'
-        : isNetworkError
-          ? 'Cannot reach the server. Ensure the backend is running and API URL is correct.'
-          : (error?.message || 'Login failed');
+      // If it's NOT a retryable error (e.g. wrong password), fail immediately
+      if (!isRetryableError(firstError)) {
+        const friendlyMessage = firstError?.message || 'Login failed';
+        setError(friendlyMessage);
+        const err = new Error(friendlyMessage) as any;
+        err.type = firstError?.type || 'unknown';
+        err.status = firstError?.status;
+        err.attemptsRemaining = firstError?.attemptsRemaining;
+        err.retryAfter = firstError?.retryAfter;
+        err.canResendVerification = firstError?.canResendVerification;
+        throw err;
+      }
 
-      // Store friendly error
-      setError(friendlyMessage);
+      // Retryable error — wait 3 seconds for Neon to wake up, then retry once
+      console.log('🔐 [Auth] Cold start detected — waiting 3 seconds before retry...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      try {
+        console.log('🔐 [Auth] Retrying login (attempt 2)...');
+        // Give the retry a bit more time since the DB should be waking up
+        const data = await attemptLogin(email, password, 20000);
+        
+        // Success on retry
+        setUser(data.user);
+        setToken(data.token);
+        sessionStorage.setItem('auth_token', data.token);
+        sessionStorage.setItem('auth_user', JSON.stringify(data.user));
+        sessionStorage.setItem('refresh_token', data.refreshToken);
+        console.log('🔐 [Auth] Login succeeded on retry');
+        return;
+        
+      } catch (retryError: any) {
+        console.log('🔐 [Auth] Retry also failed:', retryError?.name, retryError?.message);
+        
+        // Both attempts failed
+        const isStillRetryable = isRetryableError(retryError);
+        const friendlyMessage = isStillRetryable
+          ? 'Unable to establish a connection after two attempts. The server may still be waking up — please wait a moment and try again.'
+          : (retryError?.message || 'Login failed');
 
-      // Throw structured error so UI can format it
-      const err = new Error(friendlyMessage) as any;
-      err.type = isTimeout ? 'timeout_error' : isNetworkError ? 'network_error' : 'unknown';
-      err.status = undefined;
-      throw err;
+        setError(friendlyMessage);
+        
+        const err = new Error(friendlyMessage) as any;
+        err.type = retryError?.status
+          ? (retryError?.type || 'unknown')
+          : (isStillRetryable ? 'timeout_error' : 'unknown');
+        err.status = retryError?.status;
+        err.attemptsRemaining = retryError?.attemptsRemaining;
+        err.retryAfter = retryError?.retryAfter;
+        err.canResendVerification = retryError?.canResendVerification;
+        throw err;
+      }
     } finally {
       setIsLoading(false);
     }
