@@ -55,21 +55,21 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
       // Fetch all trades for the month
       const trades = await api.trades.getAllLegacy();
 
-      // Auto-navigate to the month containing the earliest trade
-      // This ensures the calendar shows data immediately instead of a blank current month
+      // Auto-navigate to the month containing the latest trade
+      // This ensures the calendar shows the most recent trading activity
       if (!hasAutoNavigated && trades.length > 0) {
-        const earliestTrade = trades.reduce((earliest, trade) => {
+        const latestTrade = trades.reduce((latest, trade) => {
           const tradeDate = new Date(trade.entryDate);
-          return tradeDate < earliest ? tradeDate : earliest;
+          return tradeDate > latest ? tradeDate : latest;
         }, new Date(trades[0].entryDate));
 
-        const earliestMonth = earliestTrade.getMonth();
-        const earliestYear = earliestTrade.getFullYear();
+        const latestMonth = latestTrade.getMonth();
+        const latestYear = latestTrade.getFullYear();
 
-        // Only jump if the current calendar month doesn't match the earliest trade month
-        if (currentMonth !== earliestMonth || currentYear !== earliestYear) {
+        // Only jump if the current calendar month doesn't match the latest trade month
+        if (currentMonth !== latestMonth || currentYear !== latestYear) {
           setHasAutoNavigated(true);
-          setCurrentDate(new Date(earliestYear, earliestMonth, 1));
+          setCurrentDate(new Date(latestYear, latestMonth, 1));
           setLoading(false);
           return; // useEffect will re-trigger loadCalendarData with the new date
         }
