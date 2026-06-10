@@ -209,12 +209,16 @@ router.post('/save', authenticateToken, async (req, res) => {
       duplicates: dbTrades.length - newTrades.length
     });
 
-  } catch (error) {
-    console.error('Error saving trades:', error);
+  } catch (error: any) {
+    console.error('❌ Error saving trades:', error?.message || error);
+    console.error('❌ Error stack:', error?.stack);
+    if (error?.code) console.error('❌ Prisma error code:', error.code);
+    if (error?.meta) console.error('❌ Prisma error meta:', JSON.stringify(error.meta));
     res.status(500).json({
       error: {
         message: 'Database error',
-        details: ['Failed to save trades to database']
+        details: [error?.message || 'Failed to save trades to database'],
+        code: error?.code || null
       }
     });
   }
