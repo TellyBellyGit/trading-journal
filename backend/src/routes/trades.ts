@@ -741,9 +741,16 @@ router.post('/', authenticateToken, async (req, res) => {
       ...trade,
       gracePeriod: gracePeriodInfo
     });
-  } catch (error) {
-    console.error('Error creating trade:', error);
-    res.status(500).json({ error: 'Failed to create trade' });
+  } catch (error: any) {
+    console.error('❌ Error creating trade:', error?.message || error);
+    console.error('❌ Error stack:', error?.stack);
+    if (error?.code) console.error('❌ Prisma error code:', error.code);
+    if (error?.meta) console.error('❌ Prisma error meta:', JSON.stringify(error.meta));
+    res.status(500).json({ 
+      error: 'Failed to create trade',
+      detail: error?.message || 'Unknown error',
+      code: error?.code || null
+    });
   }
 });
 
