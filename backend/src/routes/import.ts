@@ -181,32 +181,17 @@ router.post('/save', authenticateToken, async (req, res) => {
       });
     }
 
-    // Save trades to database using transaction
-    const result = await prisma.$transaction(async (tx) => {
-      const savedTrades = [];
-      
-      for (const trade of newTrades) {
-        try {
-          const savedTrade = await tx.trade.create({
-            data: trade,
-            include: {
-              broker: true
-            }
-          });
-          savedTrades.push(savedTrade);
-        } catch (error) {
-          console.error(`Failed to save trade for ${trade.symbol}:`, error);
-        }
-      }
-      
-      return savedTrades;
+    // Save trades using bulk create (fast, avoids transaction timeout)
+    const createResult = await prisma.trade.createMany({
+      data: newTrades,
+      skipDuplicates: true,
     });
 
     res.json({
       success: true,
-      message: `Successfully imported ${result.length} trades`,
-      imported: result.length,
-      duplicates: dbTrades.length - newTrades.length
+      message: `Successfully imported ${createResult.count} trades`,
+      imported: createResult.count,
+      duplicates: dbTrades.length - newTrades.length + (newTrades.length - createResult.count)
     });
 
   } catch (error: any) {
