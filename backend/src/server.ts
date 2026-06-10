@@ -18,6 +18,22 @@ import marketRouter from './routes/market';
 const app = express();
 const PORT = process.env.PORT || 3002;
 
+// ── Startup: Fix auto-increment sequences ──────────────────────────────────
+async function fixSequences() {
+  try {
+    const prisma = new PrismaClient();
+    await prisma.$connect();
+    // Reset Trade sequence to match actual max ID + 1
+    await prisma.$executeRawUnsafe(`
+      SELECT setval(pg_get_serial_sequence('"Trade"', 'id'), COALESCE((SELECT MAX(id) FROM "Trade"), 1))
+    `);
+    console.log('✅ Trade ID sequence reset to match existing data');
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error('⚠️ Failed to fix sequences (non-fatal):', err);
+  }
+}
+
 // ── CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   'https://trading-journal-dlb.pages.dev',
@@ -73,7 +89,10 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // ── Start server ──────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`🚀 Trading Journal API running on port ${PORT}`);
-  console.log(`🌐 Health: http://localhost:${PORT}/api/health`);
-});
+(async () => {
+  await fixSequences();
+  app.listen(PORT, () => {
+    console.log(`🚀 Trading Journal API running on port ${PORT}`);
+    console.log(`🌐 Health: http://localhost:${PORT}/api/health`);
+  });
+})();
