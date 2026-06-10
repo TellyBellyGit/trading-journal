@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { TradeAnalyzer, RawTradeData } from '../utils/tradeAnalyzer';
 import { CSVProcessor } from '../utils/csvProcessor';
+import { authenticateToken } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 
 const router = express.Router();
@@ -23,7 +24,7 @@ const upload = multer({
 });
 
 // Process CSV file endpoint
-router.post('/process', upload.single('csvFile'), async (req, res) => {
+router.post('/process', authenticateToken, upload.single('csvFile'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -113,9 +114,10 @@ router.post('/process', upload.single('csvFile'), async (req, res) => {
 });
 
 // Save trades to database endpoint
-router.post('/save', async (req, res) => {
+router.post('/save', authenticateToken, async (req, res) => {
   try {
     const { trades, brokerId = 1 } = req.body;
+    const userId = req.user!.userId;
 
     if (!trades || !Array.isArray(trades)) {
       return res.status(400).json({
@@ -141,11 +143,12 @@ router.post('/save', async (req, res) => {
     }
 
     // Convert to database format (matches your Prisma schema exactly)
-    const dbTrades = TradeAnalyzer.convertToDatabaseFormat(trades, brokerId);
+    const dbTrades = TradeAnalyzer.convertToDatabaseFormat(trades, brokerId, userId);
 
-    // Check for existing trades to prevent duplicates
+    // Check for existing trades to prevent duplicates (scoped to this user)
     const existingTrades = await prisma.trade.findMany({
       where: {
+        userId,
         brokerId,
         symbol: { in: trades.map((t: any) => t.symbol) }
       },
@@ -218,7 +221,7 @@ router.post('/save', async (req, res) => {
 });
 
 // Get available brokers for import (reuse your existing broker logic)
-router.get('/brokers', async (req, res) => {
+router.get('/brokers', authenticateToken, async (req, res) => {
   try {
     const brokers = await prisma.broker.findMany({
       where: { isActive: true },

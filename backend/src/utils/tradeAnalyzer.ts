@@ -271,7 +271,8 @@ export class TradeAnalyzer {
   // Convert to database format
   public static convertToDatabaseFormat(
     analyzedTrades: AnalyzedTrade[],
-    brokerId: number
+    brokerId: number,
+    userId: number
   ): any[] {
     return analyzedTrades.map(trade => {
       // Ensure entryTime is a Date object
@@ -303,7 +304,8 @@ export class TradeAnalyzer {
         commission: null,
         tags: null,
         tradeId: null,
-        executionVenue: null
+        executionVenue: null,
+        userId
       };
     });
   }

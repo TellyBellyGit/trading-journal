@@ -610,7 +610,14 @@ router.post('/', authenticateToken, async (req, res) => {
     const userId = req.user!.userId;
 
     // Enhanced subscription limits with grace period
-    const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(userId);
+    let subscriptionStatus = null;
+    try {
+      subscriptionStatus = await SubscriptionService.getSubscriptionStatus(userId);
+    } catch (subError) {
+      console.error('⚠️ Failed to check subscription status (non-blocking):', subError);
+      // Continue without subscription check — don't block trade creation
+    }
+    
     if (subscriptionStatus && subscriptionStatus.maxTrades > 0) {
       const GRACE_TRADES = 2;
       const effectiveLimit = subscriptionStatus.maxTrades + GRACE_TRADES;
