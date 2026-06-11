@@ -119,6 +119,11 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
     try {
       const range = '5d'; // Fetch 5 days of data with extended hours
       const response = await marketApi.getChart(sym.trim(), intv, range, entry);
+      console.log(
+        `📊 Chart data: ${response.bars.length} bars for ${sym.trim()} at ${intv}` +
+        (entry ? ` (entryDate: ${entry.split('T')[0]})` : '') +
+        ` | Provider: ${response.provider}`
+      );
       setBars(response.bars);
       setFreshness(response.freshness);
       setProvider(response.provider);
