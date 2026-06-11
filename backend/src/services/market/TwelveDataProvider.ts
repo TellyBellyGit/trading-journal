@@ -112,9 +112,6 @@ export class TwelveDataProvider extends MarketDataProvider {
       params.set('date', date);
     }
 
-    // Include pre/post market data (4AM-8PM EST)
-    params.set('prepost', 'true');
-
     const url = `${this.baseUrl}/time_series?${params.toString()}`;
 
     logger.info(`TwelveData: GET ${url}`);
