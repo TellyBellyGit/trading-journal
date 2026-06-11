@@ -10,8 +10,10 @@ import {
   ISeriesApi,
   CandlestickSeries,
   HistogramSeries,
+  LineSeries,
   CandlestickData,
   HistogramData,
+  LineData,
   SeriesMarker,
   Time,
   ColorType,
@@ -19,6 +21,7 @@ import {
   createSeriesMarkers,
 } from 'lightweight-charts';
 import type { OhlcvBar, FreshnessInfo, TradeMarker } from '../../types/Market';
+import type { EmaLine } from '../../utils/emaCalculator';
 
 interface StockChartProps {
   bars: OhlcvBar[];
@@ -27,6 +30,8 @@ interface StockChartProps {
   freshness: FreshnessInfo;
   loading?: boolean;
   markers?: TradeMarker[];
+  ema50?: EmaLine[];
+  ema200?: EmaLine[];
 }
 
 const CHART_COLORS = {
@@ -55,11 +60,15 @@ const StockChart: React.FC<StockChartProps> = ({
   freshness,
   loading = false,
   markers = [],
+  ema50,
+  ema200,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const ema50SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const ema200SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
 
   // Create chart once (only on mount or symbol change)
   useEffect(() => {
@@ -121,9 +130,28 @@ const StockChart: React.FC<StockChartProps> = ({
       visible: false,
     });
 
+    // EMA line series (added on top of price pane)
+    const ema50Series = chart.addSeries(LineSeries, {
+      color: '#60a5fa',       // blue-400
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
+    const ema200Series = chart.addSeries(LineSeries, {
+      color: '#fbbf24',       // amber-400
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
     chartRef.current = chart;
     candleSeriesRef.current = candleSeries;
     volumeSeriesRef.current = volumeSeries;
+    ema50SeriesRef.current = ema50Series;
+    ema200SeriesRef.current = ema200Series;
 
     const handleResize = () => {
       const r = container.getBoundingClientRect();
@@ -195,6 +223,35 @@ const StockChart: React.FC<StockChartProps> = ({
       (candleSeriesRef.current as any).setMarkers?.(seriesMarkers as any);
     }
   }, [markers]);
+
+  // Update EMA line series when computed data changes
+  useEffect(() => {
+    if (ema50SeriesRef.current) {
+      if (ema50 && ema50.length > 0) {
+        const lineData: LineData[] = ema50.map(e => ({
+          time: e.time as Time,
+          value: e.value,
+        }));
+        ema50SeriesRef.current.setData(lineData);
+      } else {
+        ema50SeriesRef.current.setData([]);
+      }
+    }
+  }, [ema50]);
+
+  useEffect(() => {
+    if (ema200SeriesRef.current) {
+      if (ema200 && ema200.length > 0) {
+        const lineData: LineData[] = ema200.map(e => ({
+          time: e.time as Time,
+          value: e.value,
+        }));
+        ema200SeriesRef.current.setData(lineData);
+      } else {
+        ema200SeriesRef.current.setData([]);
+      }
+    }
+  }, [ema200]);
 
   // Determine overlay state
   const showLoading = loading;

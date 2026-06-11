@@ -48,6 +48,7 @@ FRONTEND_URL=https://your-frontend-domain.com
 ```
 RESEND_API_KEY=your_resend_api_key
 FROM_EMAIL=noreply@yourdomain.com
+TWELVE_DATA_API_KEY=your_twelve_data_api_key
 FROM_NAME=Trading Journal
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret

@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StockChart from './StockChart';
 import { marketApi } from '../../api/market';
 import type { OhlcvBar, FreshnessInfo, ChartViewParams, TradeMarker } from '../../types/Market';
+import { calculateEMA } from '../../utils/emaCalculator';
 
 interface StockChartViewProps {
   prefill?: ChartViewParams;
@@ -20,7 +21,8 @@ const INTERVALS = [
 
 const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
   const [symbol, setSymbol] = useState(prefill?.symbol || '');
-  const [interval, setInterval] = useState('5m');
+  const [interval, setInterval] = useState('1m');
+  const [showEma, setShowEma] = useState(true);
   const [entryDate, setEntryDate] = useState(
     prefill?.entryDate ? prefill.entryDate.split('T')[0] : ''
   );
@@ -45,6 +47,17 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
       fetchChart(prefill.symbol, interval, prefill.entryDate);
     }
   }, []);
+
+  // Compute EMAs from bars (client-side, using close prices)
+  const ema50 = useMemo(() => {
+    if (!showEma || bars.length === 0) return undefined;
+    return calculateEMA(bars, 50);
+  }, [bars, showEma]);
+
+  const ema200 = useMemo(() => {
+    if (!showEma || bars.length === 0) return undefined;
+    return calculateEMA(bars, 200);
+  }, [bars, showEma]);
 
   // Build entry/exit markers from prefill trade data
   const markers: TradeMarker[] = useMemo(() => {
@@ -242,14 +255,34 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
 
         {/* Chart */}
         {(searched || loading || prefill) && (
-          <StockChart
-            bars={bars}
-            symbol={symbol || prefill?.symbol || ''}
-            interval={interval}
-            freshness={freshness}
-            loading={loading}
-            markers={markers}
-          />
+          <div className="relative w-full" style={{ height: 'calc(100vh - 300px)', minHeight: '450px' }}>
+            <StockChart
+              bars={bars}
+              symbol={symbol || prefill?.symbol || ''}
+              interval={interval}
+              freshness={freshness}
+              loading={loading}
+              markers={markers}
+              ema50={ema50}
+              ema200={ema200}
+            />
+            {/* EMA toggle overlay */}
+            <div className="absolute top-3 right-3 z-10">
+              <button
+                onClick={() => setShowEma(!showEma)}
+                className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                  showEma
+                    ? 'bg-blue-600/60 border-blue-500 text-white'
+                    : 'bg-gray-800/80 border-gray-600 text-gray-400 hover:text-gray-200'
+                }`}
+                title="Toggle EMA 50 / 200 indicators"
+              >
+                <span style={{ color: showEma ? '#60a5fa' : '#9ca3af' }}>‒‒</span>
+                {' EMA'}
+                <span className="ml-1 text-[10px] opacity-60">50/200</span>
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
