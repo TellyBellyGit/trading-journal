@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twelve Data Chart Test</title>
+  <script src="https://unpkg.com/lightweight-charts@5.0.1/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h1 .badge {
+      font-size: 0.7rem;
+      background: #22c55e;
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      background: #16213e;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      border: 1px solid #2a2a4a;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .control-group label {
+      font-size: 0.75rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .control-group input,
+    .control-group select {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #3a3a5a;
+      background: #0f0f23;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      font-family: inherit;
+      min-width: 140px;
+    }
+    .control-group input:focus,
+    .control-group select:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+    button {
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: none;
+      background: #6366f1;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      height: 38px;
+    }
+    button:hover { background: #4f46e5; }
+    button:disabled { background: #3a3a5a; cursor: not-allowed; }
+    .status-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 10px 16px;
+      background: #16213e;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #2a2a4a;
+      font-size: 0.8rem;
+    }
+    .status-bar .stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-bar .stat .label { color: #888; }
+    .status-bar .stat .value { font-weight: 600; }
+    .status-bar .stat .ok { color: #22c55e; }
+    .status-bar .stat .warn { color: #f59e0b; }
+    .status-bar .stat .err { color: #ef4444; }
+    #chart-container {
+      width: 100%;
+      height: 500px;
+      background: #0f0f23;
+      border-radius: 10px;
+      border: 1px solid #2a2a4a;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    #chart-container .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #555;
+      font-size: 1.1rem;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .section-title h3 {
+      font-size: 0.85rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .section-title button {
+      font-size: 0.75rem;
+      padding: 4px 12px;
+      height: auto;
+      background: #2a2a4a;
+    }
+    pre {
+      background: #0f0f23;
+      border: 1px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #a0a0b8;
+    }
+    .error-box {
+      background: #3b0a0a;
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .success-box {
+      background: #0a3b0a;
+      border: 1px solid #22c55e;
+      color: #86efac;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .info-note {
+      background: #1a1a3e;
+      border: 1px solid #6366f1;
+      color: #a5b4fc;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 0.8rem;
+    }
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      📈 Twelve Data Chart Test
+      <span class="badge">PROTOTYPE</span>
+    </h1>
+
+    <div class="info-note">
+      <strong>Twelve Data Free Tier:</strong> 800 calls/day • 8 calls/min • Historical intraday data supported.
+      Provider: Twelve Data via <code>time_series</code> endpoint.
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="symbol">Symbol</label>
+        <input type="text" id="symbol" value="AAPL" placeholder="AAPL, TSLA..." style="min-width:100px">
+      </div>
+      <div class="control-group">
+        <label for="interval">Interval</label>
+        <select id="interval">
+          <option value="1min" selected>1 minute</option>
+          <option value="5min">5 minute</option>
+          <option value="15min">15 minute</option>
+          <option value="30min">30 minute</option>
+          <option value="1h">1 hour</option>
+          <option value="1day">1 day (daily)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="date">Date</label>
+        <input type="date" id="date" value="2026-06-09">
+      </div>
+      <button id="fetch-btn" onclick="fetchData()">🔍 Fetch</button>
+      <button id="quick-today" onclick="quickToday()" style="background:#2a2a4a;">Today</button>
+    </div>
+
+    <div class="status-bar" id="status-bar" style="display:none;">
+      <div class="stat"><span class="label">Provider:</span><span class="value" id="stat-provider">-</span></div>
+      <div class="stat"><span class="label">Bars:</span><span class="value" id="stat-bars">-</span></div>
+      <div class="stat"><span class="label">Symbol:</span><span class="value" id="stat-symbol">-</span></div>
+      <div class="stat"><span class="label">Exchange:</span><span class="value" id="stat-exchange">-</span></div>
+      <div class="stat"><span class="label">Credits Used:</span><span class="value" id="stat-credits">-</span></div>
+      <div class="stat"><span class="label">Status:</span><span class="value" id="stat-status">-</span></div>
+    </div>
+
+    <div id="message-container"></div>
+
+    <div id="chart-container">
+      <div class="placeholder">Enter a symbol and date, then click Fetch</div>
+    </div>
+
+    <div class="section-title">
+      <h3>📋 Raw API Response</h3>
+      <button onclick="toggleRaw()" id="toggle-raw-btn">Hide</button>
+    </div>
+    <pre id="raw-response" style="color:#555;">No data fetched yet.</pre>
+  </div>
+
+  <script>
+    const API_KEY = 'a5be49f68c2948e1af497dd8149b4ee0';
+    const PROVIDER = 'Twelve Data';
+
+    let chart = null;
+    let candleSeries = null;
+
+    function initChart() {
+      const container = document.getElementById('chart-container');
+      container.innerHTML = '';
+      if (chart) { chart.remove(); chart = null; }
+
+      chart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: 500,
+        layout: {
+          background: { color: '#0f0f23' },
+          textColor: '#888',
+        },
+        grid: {
+          vertLines: { color: '#1a1a3a' },
+          horzLines: { color: '#1a1a3a' },
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal,
+        },
+        rightPriceScale: {
+          borderColor: '#2a2a4a',
+        },
+        timeScale: {
+          borderColor: '#2a2a4a',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      });
+
+      candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+        upColor: '#22c55e',
+        downColor: '#ef4444',
+        borderUpColor: '#22c55e',
+        borderDownColor: '#ef4444',
+        wickUpColor: '#22c55e',
+        wickDownColor: '#ef4444',
+      });
+
+      const resizeObserver = new ResizeObserver(() => {
+        if (chart && container.clientWidth > 0) {
+          chart.applyOptions({ width: container.clientWidth, height: 500 });
+        }
+      });
+      resizeObserver.observe(container);
+    }
+
+    function quickToday() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+      fetchData();
+    }
+
+    async function fetchData() {
+      const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+      const interval = document.getElementById('interval').value;
+      const date = document.getElementById('date').value;
+
+      if (!symbol) { showError('Please enter a symbol'); return; }
+      if (!date) { showError('Please select a date'); return; }
+
+      const btn = document.getElementById('fetch-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Fetching...';
+
+      clearMessages();
+      document.getElementById('status-bar').style.display = 'none';
+      document.getElementById('raw-response').textContent = 'Loading...';
+      document.getElementById('raw-response').style.color = '#555';
+
+      try {
+        // Twelve Data time_series endpoint
+        // Supports exact start_date and end_date parameters
+        // Note: Twelve Data free tier uses "date" (not "start_date"/"end_date") for historical intraday
+        const url = `https://api.twelvedata.com/time_series?` +
+          `symbol=${encodeURIComponent(symbol)}` +
+          `&interval=${encodeURIComponent(interval)}` +
+          `&date=${encodeURIComponent(date)}` +
+          `&outputsize=5000` +
+          `&apikey=${API_KEY}`;
+
+        console.log('Fetching:', url);
+        const response = await fetch(url);
+        const rawText = await response.text();
+
+        // Show raw response (even on error)
+        let data;
+        try {
+          data = JSON.parse(rawText);
+          document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
+        } catch {
+          document.getElementById('raw-response').textContent = rawText || '(empty response)';
+        }
+        document.getElementById('raw-response').style.color = '#a0a0b8';
+
+        // Handle HTTP error status
+        if (!response.ok) {
+          showError(`HTTP ${response.status}: ${rawText || 'No response body'}`);
+          updateStatus(symbol, `HTTP ${response.status}`, 0, '-', 0);
+          return;
+        }
+
+        // Check for Twelve Data error responses
+        if (data.status === 'error') {
+          showError(`Twelve Data Error: ${data.message || JSON.stringify(data)}`);
+          updateStatus(symbol, 'error', 0, data.meta?.exchange || '-', data.meta?.credits_used || 0);
+          return;
+        }
+
+        if (data.code && data.message) {
+          showError(`API Error (${data.code}): ${data.message}`);
+          updateStatus(symbol, 'error', 0, '-', 0);
+          return;
+        }
+
+        // Parse bars
+        const values = data.values;
+        if (!values || !Array.isArray(values) || values.length === 0) {
+          showError(`No bar data returned. The market may have been closed (weekend/holiday) or the date is outside available range.`);
+          updateStatus(symbol, 'no data', 0, data.meta?.exchange || '-', data.meta?.credits_used || 0);
+          return;
+        }
+
+        // Convert to lightweight-charts format
+        // Twelve Data returns bars in reverse chronological order (newest first)
+        const bars = values.map(bar => ({
+          time: new Date(bar.datetime).getTime() / 1000, // Unix seconds
+          open: parseFloat(bar.open),
+          high: parseFloat(bar.high),
+          low: parseFloat(bar.low),
+          close: parseFloat(bar.close),
+          volume: bar.volume ? parseFloat(bar.volume) : 0,
+        }));
+
+        // Sort ascending by time
+        bars.sort((a, b) => a.time - b.time);
+
+        // Render chart
+        initChart();
+        candleSeries.setData(bars);
+        chart.timeScale().fitContent();
+
+        // Show success message
+        showSuccess(`✅ Retrieved ${bars.length} bars for ${symbol} on ${date} from ${data.meta?.exchange || 'unknown exchange'}`);
+
+        // Update status bar
+        updateStatus(symbol, '✅ OK', bars.length, data.meta?.exchange || '-', data.meta?.credits_used || 0);
+
+      } catch (err) {
+        showError(`Network error: ${err.message}`);
+        updateStatus(symbol, 'Network Error', 0, '-', 0);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Fetch';
+      }
+    }
+
+    function updateStatus(symbol, status, barCount, exchange, creditsUsed) {
+      document.getElementById('status-bar').style.display = 'flex';
+      document.getElementById('stat-provider').textContent = PROVIDER;
+      document.getElementById('stat-bars').textContent = barCount;
+      document.getElementById('stat-symbol').textContent = symbol;
+      document.getElementById('stat-exchange').textContent = exchange;
+      document.getElementById('stat-credits').textContent = creditsUsed;
+      document.getElementById('stat-status').textContent = status;
+      document.getElementById('stat-status').className = 'value ' +
+        (status.includes('OK') ? 'ok' : status.includes('Warn') ? 'warn' : 'err');
+    }
+
+    function showError(msg) {
+      const container = document.getElementById('message-container');
+      container.innerHTML = `<div class="error-box">❌ ${msg}</div>`;
+    }
+
+    function showSuccess(msg) {
+      const container = document.getElementById('message-container');
+      const existing = container.innerHTML;
+      container.innerHTML = `<div class="success-box">${msg}</div>${existing}`;
+    }
+
+    function clearMessages() {
+      document.getElementById('message-container').innerHTML = '';
+    }
+
+    function toggleRaw() {
+      const pre = document.getElementById('raw-response');
+      const btn = document.getElementById('toggle-raw-btn');
+      if (pre.style.display === 'none') {
+        pre.style.display = 'block';
+        btn.textContent = 'Hide';
+      } else {
+        pre.style.display = 'none';
+        btn.textContent = 'Show';
+      }
+    }
+
+    // Set default date to 2 days ago (what the user was testing)
+    window.addEventListener('DOMContentLoaded', () => {
+      const d = new Date();
+      d.setDate(d.getDate() - 2);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+    });
+  </script>
+</body>
+</html>

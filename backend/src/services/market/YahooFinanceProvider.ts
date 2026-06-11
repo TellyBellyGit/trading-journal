@@ -27,7 +27,8 @@ export class YahooFinanceProvider extends MarketDataProvider {
   async fetchCandles(
     symbol: string,
     interval: string,
-    range: string
+    range: string,
+    _entryDate?: string
   ): Promise<OhlcvBar[]> {
     const normalizedSymbol = symbol.toUpperCase().trim();
 

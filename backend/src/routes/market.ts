@@ -17,13 +17,13 @@ import { prisma } from '../lib/prisma';
 
 const router = express.Router();
 
-// Lazy-initialize market provider to avoid bundling yahoo-finance2
-// and its @deno/shim-deno dependency (incompatible with Workers global scope)
+// Lazy-initialize market provider.
+// Swap the import to change providers (YahooFinanceProvider, TwelveDataProvider, etc.)
 let _marketProvider: any = null;
 const getMarketProvider = async (): Promise<any> => {
   if (_marketProvider) return _marketProvider;
-  const { YahooFinanceProvider } = await import('../services/market/YahooFinanceProvider');
-  _marketProvider = new YahooFinanceProvider();
+  const { TwelveDataProvider } = await import('../services/market/TwelveDataProvider');
+  _marketProvider = new TwelveDataProvider();
   return _marketProvider;
 };
 
@@ -51,8 +51,8 @@ router.get('/chart/:symbol', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check cache
-    const cacheKey = `${symbol.toUpperCase()}:${interval}:${range}`;
+    // Check cache (include entryDate in key since different dates = different data)
+    const cacheKey = `${symbol.toUpperCase()}:${interval}:${range}:${entryDate || 'none'}`;
     const cached = cache.get(cacheKey);
     if (cached && cached.expiry > Date.now()) {
       logger.info(`Market cache HIT for ${cacheKey}`);
@@ -63,7 +63,7 @@ router.get('/chart/:symbol', authenticateToken, async (req, res) => {
 
     // Fetch from provider
     const provider = await getMarketProvider();
-    const bars = await provider.fetchCandles(symbol, interval, range);
+    const bars = await provider.fetchCandles(symbol, interval, range, entryDate);
 
     // Calculate freshness info
     const freshness = buildFreshnessInfo(entryDate, bars);

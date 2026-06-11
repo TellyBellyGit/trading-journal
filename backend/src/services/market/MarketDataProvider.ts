@@ -10,14 +10,16 @@ export abstract class MarketDataProvider {
 
   /**
    * Fetch candle/OHLCV data for a symbol.
-   * @param symbol  Ticker symbol (e.g., 'AAPL', 'TSLA')
-   * @param interval Bar interval: '1m', '5m', '15m', '1h'
-   * @param range    Date range: '1d', '5d', '1mo'
+   * @param symbol    Ticker symbol (e.g., 'AAPL', 'TSLA')
+   * @param interval  Bar interval: '1m', '5m', '15m', '1h'
+   * @param range     Date range: '1d', '5d', '1mo'
+   * @param entryDate Optional ISO date string from trade (for date-specific queries)
    * @returns Promise resolving to an array of OhlcvBar objects
    */
   abstract fetchCandles(
     symbol: string,
     interval: string,
-    range: string
+    range: string,
+    entryDate?: string
   ): Promise<OhlcvBar[]>;
 }
