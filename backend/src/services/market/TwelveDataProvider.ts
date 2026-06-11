@@ -73,22 +73,28 @@ export class TwelveDataProvider extends MarketDataProvider {
     // Fetch trade day first (always needed)
     const tradeBars = await this.fetchDay(symbol, interval, tradeDate);
 
-    // Try previous days until we find one with data
-    while (prevBars.length === 0 && attempts < maxAttempts) {
+    // Accumulate bars from previous days until we have enough (>=200) for EMA 200 warmup
+    while (prevBars.length < 200 && attempts < maxAttempts) {
       prevDay = this.getPreviousTradingDay(prevDay);
       attempts++;
 
       logger.info(
-        `TwelveData: warmup attempt ${attempts}/${maxAttempts}: trying prevDay=${prevDay} for ${symbol}`
+        `TwelveData: warmup attempt ${attempts}/${maxAttempts}: trying prevDay=${prevDay} for ${symbol} (have ${prevBars.length} bars, need 200)`
       );
 
       try {
-        prevBars = await this.fetchDay(symbol, interval, prevDay);
+        const dayBars = await this.fetchDay(symbol, interval, prevDay);
+        if (dayBars.length > 0) {
+          // Append bars from this day (deduplicate later during merge)
+          prevBars = [...prevBars, ...dayBars];
+          logger.info(
+            `TwelveData: warmup attempt ${attempts} got ${dayBars.length} bars from ${prevDay}, total prev bars now ${prevBars.length}`
+          );
+        }
       } catch (err: any) {
         logger.warning(
           `TwelveData: warmup attempt ${attempts} failed for ${prevDay}: ${err.message}`
         );
-        prevBars = [];
       }
     }
 
