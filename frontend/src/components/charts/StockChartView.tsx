@@ -55,9 +55,11 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
       }
       try {
         const result = await exportTrades(dateToUse, dateToUse);
+        console.log(`📋 Day symbols for ${dateToUse}:`, result);
         const symbols = [...new Set((result || []).map((t: any) => t.symbol).filter(Boolean))] as string[];
         setDaySymbols(symbols);
-      } catch {
+      } catch (err) {
+        console.error('Failed to load day symbols:', err);
         setDaySymbols([]);
       }
     };
@@ -242,8 +244,8 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                 ))}
               </datalist>
 
-              {/* Change dropdown */}
-              {daySymbols.length > 0 && (
+              {/* Change dropdown - always show when there's a date context */}
+              {(entryDate || prefill?.entryDate) && (
                 <div className="relative" ref={changeDropdownRef}>
                   <button
                     type="button"
@@ -254,18 +256,24 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                   </button>
                   {changeDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-40 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto">
-                      {daySymbols.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => handleSymbolChange(s)}
-                          className={`w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-blue-600 hover:text-white transition-colors ${
-                            s === symbol ? 'bg-blue-600/30 text-blue-300' : ''
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
+                      {daySymbols.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-gray-500 italic">
+                          No other tickers found
+                        </div>
+                      ) : (
+                        daySymbols.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => handleSymbolChange(s)}
+                            className={`w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-blue-600 hover:text-white transition-colors ${
+                              s === symbol ? 'bg-blue-600/30 text-blue-300' : ''
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
