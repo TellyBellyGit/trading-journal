@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import StockChart from './StockChart';
 import { marketApi } from '../../api/market';
-import { exportTrades } from '../../api/trades';
+import { tradesApi } from '../../api/trades';
 import type { OhlcvBar, FreshnessInfo, ChartViewParams, TradeMarker } from '../../types/Market';
 import { calculateEMA } from '../../utils/emaCalculator';
 
@@ -54,9 +54,15 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
         return;
       }
       try {
-        const result = await exportTrades(dateToUse, dateToUse);
-        console.log(`📋 Day symbols for ${dateToUse}:`, result);
-        const symbols = [...new Set((result || []).map((t: any) => t.symbol).filter(Boolean))] as string[];
+        const allTrades = await tradesApi.getAllLegacy();
+        console.log(`📋 All trades fetched: ${allTrades.length}`);
+        // Filter trades that match the entry date (ignoring time)
+        const matchingTrades = allTrades.filter((t: any) => {
+          const tradeDate = (t.entryDate || '').split('T')[0];
+          return tradeDate === dateToUse;
+        });
+        console.log(`📋 Matching trades for ${dateToUse}: ${matchingTrades.length}`, matchingTrades);
+        const symbols = [...new Set(matchingTrades.map((t: any) => t.symbol).filter(Boolean))] as string[];
         setDaySymbols(symbols);
       } catch (err) {
         console.error('Failed to load day symbols:', err);
