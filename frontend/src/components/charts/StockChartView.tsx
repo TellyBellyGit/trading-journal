@@ -241,7 +241,7 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                 placeholder="AAPL, TSLA..."
-                className={`flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${
+                className={`flex-1 px-3 py-2 h-[42px] bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${
                   (entryDate || prefill?.entryDate) ? 'rounded-l-lg' : 'rounded-lg'
                 }`}
                 list="trade-symbols"
@@ -258,7 +258,7 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                   <button
                     type="button"
                     onClick={() => setChangeDropdownOpen(!changeDropdownOpen)}
-                    className="px-4 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm font-medium rounded-r-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 h-[42px] bg-gray-700 border border-gray-600 text-gray-300 text-sm font-medium rounded-r-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
                   >
                     Change ▾
                   </button>
