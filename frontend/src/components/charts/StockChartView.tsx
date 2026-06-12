@@ -367,6 +367,7 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
         {(searched || loading || prefill) && (
           <div className="relative w-full" style={{ height: 'calc(100vh - 300px)', minHeight: '450px' }}>
             <StockChart
+              key={symbol || prefill?.symbol || 'chart'}
               bars={bars}
               symbol={symbol || prefill?.symbol || ''}
               interval={interval}
