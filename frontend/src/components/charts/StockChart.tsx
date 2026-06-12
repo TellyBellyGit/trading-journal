@@ -296,24 +296,6 @@ const StockChart: React.FC<StockChartProps> = ({
         </div>
       )}
 
-      {/* Info footer */}
-      {!showLoading && !showEmpty && (
-        <div className="absolute bottom-2 right-2 z-10 bg-gray-900/80 border border-gray-700 rounded px-3 py-1.5 text-xs text-gray-400">
-          <span>Yahoo Finance</span>
-          <span className="mx-2">|</span>
-          <span>{bars.length} bars</span>
-          <span className="mx-2">|</span>
-          <span>{interval}</span>
-          {markers.length > 0 && (
-            <>
-              <span className="mx-2">|</span>
-              <span style={{ color: '#22c55e' }}>▲ Entry</span>
-              <span className="mx-1">/</span>
-              <span style={{ color: '#ef4444' }}>▼ Exit</span>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 };

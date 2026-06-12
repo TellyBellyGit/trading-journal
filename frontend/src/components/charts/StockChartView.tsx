@@ -241,7 +241,9 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                 placeholder="AAPL, TSLA..."
-                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-l-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className={`flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 ${
+                  (entryDate || prefill?.entryDate) ? 'rounded-l-lg' : 'rounded-lg'
+                }`}
                 list="trade-symbols"
               />
               <datalist id="trade-symbols">
@@ -256,7 +258,7 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                   <button
                     type="button"
                     onClick={() => setChangeDropdownOpen(!changeDropdownOpen)}
-                    className="px-3 py-2 bg-gray-600 border-y border-gray-600 text-gray-300 text-sm font-medium hover:bg-gray-500 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-gray-700 border border-gray-600 text-gray-300 text-sm font-medium rounded-r-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
                   >
                     Change ▾
                   </button>
@@ -284,14 +286,6 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                   )}
                 </div>
               )}
-
-              <button
-                type="submit"
-                disabled={loading || !symbol.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? '...' : 'Load'}
-              </button>
             </div>
           </div>
 
@@ -378,7 +372,7 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
               ema200={ema200}
             />
             {/* EMA toggle overlay */}
-            <div className="absolute top-3 right-3 z-10">
+            <div className="absolute top-3 left-3 z-10">
               <button
                 onClick={() => setShowEma(!showEma)}
                 className={`px-2.5 py-1 text-xs rounded border transition-colors ${
