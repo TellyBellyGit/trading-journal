@@ -116,9 +116,12 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
       return Math.floor(new Date(`${datePart}T${timeStr}`).getTime() / 1000);
     };
 
-    // Get trades for the currently selected symbol from dayTrades
-    const currentSymbol = symbol || prefill?.symbol || '';
-    const symbolTrades = dayTrades.filter((t: any) => t.symbol === currentSymbol);
+    // Get trades for the currently selected symbol from dayTrades (case-insensitive)
+    const currentSymbol = (symbol || prefill?.symbol || '').toUpperCase();
+    const symbolTrades = dayTrades.filter((t: any) =>
+      (t.symbol || '').toUpperCase() === currentSymbol
+    );
+    console.log(`🎯 Markers for ${currentSymbol}: ${symbolTrades.length} trades`, symbolTrades);
 
     symbolTrades.forEach((trade: any) => {
       // Entry marker
