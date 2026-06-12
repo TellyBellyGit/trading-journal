@@ -35,7 +35,6 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
   const [searched, setSearched] = useState(false);
   const [provider, setProvider] = useState('');
   const [daySymbols, setDaySymbols] = useState<string[]>([]);
-  const [dayTrades, setDayTrades] = useState<any[]>([]);
   const [changeDropdownOpen, setChangeDropdownOpen] = useState(false);
   const changeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -65,11 +64,9 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
         console.log(`📋 Matching trades for ${dateToUse}: ${matchingTrades.length}`, matchingTrades);
         const symbols = [...new Set(matchingTrades.map((t: any) => t.symbol).filter(Boolean))] as string[];
         setDaySymbols(symbols);
-        setDayTrades(matchingTrades);
       } catch (err) {
         console.error('Failed to load day symbols:', err);
         setDaySymbols([]);
-        setDayTrades([]);
       }
     };
     loadDaySymbols();
@@ -106,57 +103,51 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
     return calculateEMA(bars, 200);
   }, [bars, showEma]);
 
-  // Build entry/exit markers from day trades for the currently selected symbol
+  // Build entry/exit markers from prefill trade data
   const markers: TradeMarker[] = useMemo(() => {
     const result: TradeMarker[] = [];
+    if (!prefill) return result;
 
+    // Combine date and time to get a timestamp
     const combineDateTime = (dateStr: string, timeStr?: string): number => {
       if (!timeStr) return Math.floor(new Date(dateStr).getTime() / 1000);
+      // Try parsing as "HH:MM" or "HH:MM:SS"
       const datePart = dateStr.split('T')[0];
       return Math.floor(new Date(`${datePart}T${timeStr}`).getTime() / 1000);
     };
 
-    // Get trades for the currently selected symbol from dayTrades (case-insensitive)
-    const currentSymbol = (symbol || prefill?.symbol || '').toUpperCase();
-    const symbolTrades = dayTrades.filter((t: any) =>
-      (t.symbol || '').toUpperCase() === currentSymbol
-    );
-    console.log(`🎯 Markers for ${currentSymbol}: ${symbolTrades.length} trades`, symbolTrades);
-
-    symbolTrades.forEach((trade: any) => {
-      // Entry marker
-      if (trade.entryPrice != null) {
-        const entryTs = combineDateTime(trade.entryDate, trade.entryTime);
-        if (!isNaN(entryTs)) {
-          result.push({
-            time: entryTs,
-            position: 'belowBar',
-            color: '#22c55e',
-            shape: 'arrowUp',
-            text: `Entry $${Number(trade.entryPrice).toFixed(2)}`,
-            size: 2,
-          });
-        }
+    // Entry marker
+    if (prefill.entryPrice != null) {
+      const entryTs = combineDateTime(prefill.entryDate, prefill.entryTime);
+      if (!isNaN(entryTs)) {
+        result.push({
+          time: entryTs,
+          position: 'belowBar',
+          color: '#22c55e',  // green-500
+          shape: 'arrowUp',
+          text: `Entry $${prefill.entryPrice.toFixed(2)}`,
+          size: 2,
+        });
       }
+    }
 
-      // Exit marker
-      if (trade.exitPrice != null && trade.exitDate && trade.exitDate !== 'null') {
-        const exitTs = combineDateTime(trade.exitDate, trade.exitTime || undefined);
-        if (!isNaN(exitTs)) {
-          result.push({
-            time: exitTs,
-            position: 'aboveBar',
-            color: '#ef4444',
-            shape: 'arrowDown',
-            text: `Exit $${Number(trade.exitPrice).toFixed(2)}`,
-            size: 2,
-          });
-        }
+    // Exit marker
+    if (prefill.exitPrice != null && prefill.exitDate && prefill.exitDate !== 'null') {
+      const exitTs = combineDateTime(prefill.exitDate, prefill.exitTime || undefined);
+      if (!isNaN(exitTs)) {
+        result.push({
+          time: exitTs,
+          position: 'aboveBar',
+          color: '#ef4444',  // red-500
+          shape: 'arrowDown',
+          text: `Exit $${prefill.exitPrice.toFixed(2)}`,
+          size: 2,
+        });
       }
-    });
+    }
 
     return result;
-  }, [dayTrades, symbol, prefill?.symbol]);
+  }, [prefill]);
 
   const fetchChart = useCallback(async (
     sym: string,
