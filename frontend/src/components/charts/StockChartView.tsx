@@ -1,9 +1,10 @@
 // StockChartView.tsx
 // Full-page view for the chart — symbol selector, interval toggle, date picker, chart.
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import StockChart from './StockChart';
 import { marketApi } from '../../api/market';
+import { exportTrades } from '../../api/trades';
 import type { OhlcvBar, FreshnessInfo, ChartViewParams, TradeMarker } from '../../types/Market';
 import { calculateEMA } from '../../utils/emaCalculator';
 
@@ -33,6 +34,9 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [provider, setProvider] = useState('');
+  const [daySymbols, setDaySymbols] = useState<string[]>([]);
+  const [changeDropdownOpen, setChangeDropdownOpen] = useState(false);
+  const changeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Load trade symbols for dropdown
   useEffect(() => {
@@ -40,6 +44,38 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
       .then((res) => setTradeSymbols(res.symbols))
       .catch(() => {});
   }, []);
+
+  // Load symbols from the same entry date for "Change" dropdown
+  useEffect(() => {
+    const loadDaySymbols = async () => {
+      const dateToUse = entryDate || prefill?.entryDate?.split('T')[0];
+      if (!dateToUse) {
+        setDaySymbols([]);
+        return;
+      }
+      try {
+        const result = await exportTrades(dateToUse, dateToUse);
+        const symbols = [...new Set((result || []).map((t: any) => t.symbol).filter(Boolean))] as string[];
+        setDaySymbols(symbols);
+      } catch {
+        setDaySymbols([]);
+      }
+    };
+    loadDaySymbols();
+  }, [entryDate, prefill?.entryDate]);
+
+  // Close Change dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (changeDropdownRef.current && !changeDropdownRef.current.contains(e.target as Node)) {
+        setChangeDropdownOpen(false);
+      }
+    };
+    if (changeDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [changeDropdownOpen]);
 
   // Auto-fetch if prefill provided
   useEffect(() => {
@@ -149,6 +185,18 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
     }
   };
 
+  const handleSymbolChange = (newSymbol: string) => {
+    setSymbol(newSymbol);
+    setChangeDropdownOpen(false);
+    fetchChart(newSymbol, interval, entryDate || undefined);
+  };
+
+  const handleOpenTradingView = () => {
+    const ticker = symbol || prefill?.symbol;
+    if (!ticker) return;
+    window.open(`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(ticker)}`, '_blank');
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header bar */}
@@ -193,6 +241,36 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                   <option key={s} value={s} />
                 ))}
               </datalist>
+
+              {/* Change dropdown */}
+              {daySymbols.length > 0 && (
+                <div className="relative" ref={changeDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setChangeDropdownOpen(!changeDropdownOpen)}
+                    className="px-3 py-2 bg-gray-600 border-y border-gray-600 text-gray-300 text-sm font-medium hover:bg-gray-500 transition-colors whitespace-nowrap"
+                  >
+                    Change ▾
+                  </button>
+                  {changeDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-40 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto">
+                      {daySymbols.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => handleSymbolChange(s)}
+                          className={`w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-blue-600 hover:text-white transition-colors ${
+                            s === symbol ? 'bg-blue-600/30 text-blue-300' : ''
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading || !symbol.trim()}
@@ -201,6 +279,19 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
                 {loading ? '...' : 'Load'}
               </button>
             </div>
+          </div>
+
+          {/* Today's Chart button */}
+          <div className="self-end">
+            <button
+              type="button"
+              onClick={handleOpenTradingView}
+              disabled={!(symbol || prefill?.symbol)}
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Open today's chart on TradingView"
+            >
+              📈 Today's Chart
+            </button>
           </div>
 
           {/* Interval selector */}
