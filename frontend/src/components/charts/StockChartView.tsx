@@ -108,14 +108,42 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
     const result: TradeMarker[] = [];
     if (!prefill) return result;
 
-    // Combine date and time to get a timestamp
+    // Parse a trade date/time as US Eastern time (DST-aware).
+    // Trade times come from a US broker and represent US Eastern market time.
+    // US DST: 2nd Sunday March → EDT (UTC-4); 1st Sunday November → EST (UTC-5).
+    const toEasternTimestamp = (dateStr: string, timeStr?: string): number => {
+      const datePart = dateStr.split('T')[0]; // "2026-06-12"
+      const timePart = timeStr || '12:00:00';  // default midday if no time
+      // Normalize time to HH:MM:SS
+      const parts = timePart.split(':');
+      const hh = parts[0]?.padStart(2, '0') || '12';
+      const mm = parts[1]?.padStart(2, '0') || '00';
+      const ss = parts[2]?.padStart(2, '0') || '00';
+      const timeNorm = `${hh}:${mm}:${ss}`;
+
+      // Determine US Eastern DST offset for this date
+      const [y, m, d] = datePart.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      const year = date.getFullYear();
+
+      // 2nd Sunday in March (DST starts)
+      const marchSecondSunday = new Date(year, 2, 1);
+      marchSecondSunday.setDate(1 + ((7 - marchSecondSunday.getDay()) % 7) + 7);
+      // 1st Sunday in November (DST ends)
+      const novFirstSunday = new Date(year, 10, 1);
+      novFirstSunday.setDate(1 + ((7 - novFirstSunday.getDay()) % 7));
+
+      const isDST = date >= marchSecondSunday && date < novFirstSunday;
+      const offset = isDST ? '-04:00' : '-05:00';
+
+      // Construct ISO 8601 string interpreted as US Eastern time
+      const iso = `${datePart}T${timeNorm}${offset}`;
+      return Math.floor(new Date(iso).getTime() / 1000);
+    };
+
+    // Combine date and time to get a timestamp (now via DST-aware Eastern parser)
     const combineDateTime = (dateStr: string, timeStr?: string): number => {
-      // Trades are stored in UK local time, but chart bars are in US Eastern time.
-      // Subtract 5 hours (18000 seconds) to convert UK → EST for correct chart alignment.
-      const EST_OFFSET_SECONDS = 5 * 3600;
-      if (!timeStr) return Math.floor(new Date(dateStr).getTime() / 1000) - EST_OFFSET_SECONDS;
-      const datePart = dateStr.split('T')[0];
-      return Math.floor(new Date(`${datePart}T${timeStr}`).getTime() / 1000) - EST_OFFSET_SECONDS;
+      return toEasternTimestamp(dateStr, timeStr);
     };
 
     // Entry marker
