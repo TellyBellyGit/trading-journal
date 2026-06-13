@@ -110,10 +110,12 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
 
     // Combine date and time to get a timestamp
     const combineDateTime = (dateStr: string, timeStr?: string): number => {
-      if (!timeStr) return Math.floor(new Date(dateStr).getTime() / 1000);
-      // Try parsing as "HH:MM" or "HH:MM:SS"
+      // Trades are stored in UK local time, but chart bars are in US Eastern time.
+      // Subtract 5 hours (18000 seconds) to convert UK → EST for correct chart alignment.
+      const EST_OFFSET_SECONDS = 5 * 3600;
+      if (!timeStr) return Math.floor(new Date(dateStr).getTime() / 1000) - EST_OFFSET_SECONDS;
       const datePart = dateStr.split('T')[0];
-      return Math.floor(new Date(`${datePart}T${timeStr}`).getTime() / 1000);
+      return Math.floor(new Date(`${datePart}T${timeStr}`).getTime() / 1000) - EST_OFFSET_SECONDS;
     };
 
     // Entry marker
