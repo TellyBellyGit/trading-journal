@@ -177,19 +177,56 @@ export class TwelveDataProvider extends MarketDataProvider {
           bar.low != null &&
           bar.close != null
       )
-      .map((bar: any) => ({
-        time: Math.floor(new Date(bar.datetime).getTime() / 1000),
-        open: parseFloat(bar.open),
-        high: parseFloat(bar.high),
-        low: parseFloat(bar.low),
-        close: parseFloat(bar.close),
-        volume: bar.volume ? parseFloat(bar.volume) : 0,
-      }));
+      .map((bar: any) => {
+        const rawDatetime: string = bar.datetime;
+        const naiveTime = Math.floor(new Date(rawDatetime).getTime() / 1000);
+        const correctedTime = this.parseEasternDatetime(rawDatetime);
+
+        // 🔍 DIAGNOSTIC: Log first 3 and last bar to verify timezone correction
+        return {
+          time: correctedTime,
+          open: parseFloat(bar.open),
+          high: parseFloat(bar.high),
+          low: parseFloat(bar.low),
+          close: parseFloat(bar.close),
+          volume: bar.volume ? parseFloat(bar.volume) : 0,
+          _diagnostic: { rawDatetime, naiveTime, correctedTime },
+        };
+      });
 
     // Sort ascending
     bars.sort((a, b) => a.time - b.time);
 
+    // 🔍 DIAGNOSTIC: Log timezone correction summary on every fetch
+    if (bars.length > 0) {
+      const first = bars[0] as any;
+      const last = bars[bars.length - 1] as any;
+      logger.info(
+        `TwelveData timezone fix: ${bars.length} bars | ` +
+        `First: raw="${first._diagnostic.rawDatetime}" naive=${new Date(first._diagnostic.naiveTime * 1000).toISOString()} corrected=${new Date(first._diagnostic.correctedTime * 1000).toISOString()} | ` +
+        `Last: raw="${last._diagnostic.rawDatetime}" naive=${new Date(last._diagnostic.naiveTime * 1000).toISOString()} corrected=${new Date(last._diagnostic.correctedTime * 1000).toISOString()}`
+      );
+      // Strip diagnostic fields before returning
+      bars.forEach((b: any) => {
+        delete b._diagnostic;
+      });
+    }
+
     return bars;
+  }
+
+  /**
+   * Parse a Twelve Data datetime string (Eastern timezone, e.g. "2026-06-12 16:04:00")
+   * into a UTC Unix timestamp.
+   * Twelve Data returns datetimes in the exchange timezone (America/New_York for US stocks)
+   * but new Date() parses them naively without timezone context, causing a -4h (EDT) or -5h (EST) offset.
+   */
+  private parseEasternDatetime(datetimeStr: string): number {
+    // Append Eastern timezone so JavaScript interprets the datetime correctly
+    // Format: "2026-06-12 16:04:00" → "2026-06-12T16:04:00 America/New_York"
+    // Replace the space between date and time with 'T', then add timezone marker
+    const isoWithTz = datetimeStr.replace(' ', 'T') + ' America/New_York';
+    return Math.floor(new Date(isoWithTz).getTime() / 1000);
   }
 
   /**
