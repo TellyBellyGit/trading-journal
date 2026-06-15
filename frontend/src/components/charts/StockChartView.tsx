@@ -118,30 +118,9 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
     console.log('    exitPrice:', prefill.exitPrice);
 
     // Database stores times in UK local time (BST in summer, GMT in winter).
-    // Chart bars are in US Eastern time (EDT/EST). UK and US Eastern are always
-    // exactly 5 hours apart year-round (both switch DST on roughly the same dates).
-    // Subtract 5 hours from the UK time to get US Eastern time.
-    const UK_TO_EASTERN_OFFSET = 5 * 3600;
-    
-    // Helper to convert UK local time to Eastern time using proper Intl API (like SettingsContext does)
-    const toEasternCorrect = (dateStr: string, timeStr?: string): string => {
-      if (!timeStr) return 'N/A';
-      try {
-        const datePart = dateStr.split('T')[0];
-        const ukDateTime = new Date(`${datePart}T${timeStr}`);
-        return ukDateTime.toLocaleString('en-US', {
-          timeZone: 'America/New_York',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-        });
-      } catch { return 'ERROR'; }
-    };
-
+    // new Date("YYYY-MM-DDTHH:MM:SS") in a UK browser parses as BST/GMT and
+    // converts to UTC automatically — same approach AllTrades uses via SettingsContext.
+    // The resulting UTC timestamp matches Twelve Data chart bar timestamps directly.
     const combineDateTime = (label: string, dateStr: string, timeStr?: string): number => {
       let ts: number;
       if (!timeStr) {
@@ -150,25 +129,19 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
         const datePart = dateStr.split('T')[0];
         ts = Math.floor(new Date(`${datePart}T${timeStr}`).getTime() / 1000);
       }
-      const easternTs = ts - UK_TO_EASTERN_OFFSET;
-      
+
       // 🔍 DIAGNOSTIC: full journey
-      console.log(`  🕐 ${label} time conversion journey:`);
+      console.log(`  🕐 ${label} time conversion:`);
       console.log(`     Input: dateStr="${dateStr}", timeStr="${timeStr}"`);
-      console.log(`     Step 1 - Combined as UK local: "${dateStr.split('T')[0]}T${timeStr}"`);
+      console.log(`     Combined: "${dateStr.split('T')[0]}T${timeStr}"`);
       if (timeStr) {
         const asDate = new Date(`${dateStr.split('T')[0]}T${timeStr}`);
-        console.log(`     Step 2 - new Date() interprets as: ${asDate.toISOString()} (UTC)`);
-        console.log(`     Step 3 - UK local interpretation: ${asDate.toString()}`);
+        console.log(`     UK local → UTC: ${asDate.toISOString()}`);
       }
-      console.log(`     Step 4 - Raw unix timestamp (ts): ${ts} → ${new Date(ts * 1000).toISOString()}`);
-      console.log(`     Step 5 - Subtract ${UK_TO_EASTERN_OFFSET}s (5h hardcoded): easternTs=${easternTs}`);
-      console.log(`     Step 6 - Result: ${new Date(easternTs * 1000).toISOString()} (UTC) = ${new Date(easternTs * 1000).toLocaleString('en-US', { timeZone: 'America/New_York' })} Eastern`);
-      if (timeStr) {
-        console.log(`     ✅ CORRECT Eastern should be: ${toEasternCorrect(dateStr, timeStr)} (using Intl API)`);
-      }
-      
-      return easternTs;
+      console.log(`     Timestamp (ts): ${ts} → ${new Date(ts * 1000).toISOString()} (UTC)`);
+      console.log(`     On chart (ET): ${new Date(ts * 1000).toLocaleString('en-US', { timeZone: 'America/New_York' })}`);
+
+      return ts;
     };
 
     // Entry marker
