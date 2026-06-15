@@ -138,10 +138,15 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
         const asDate = new Date(`${dateStr.split('T')[0]}T${timeStr}`);
         console.log(`     UK local → UTC: ${asDate.toISOString()}`);
       }
-      console.log(`     Timestamp (ts): ${ts} → ${new Date(ts * 1000).toISOString()} (UTC)`);
-      console.log(`     On chart (ET): ${new Date(ts * 1000).toLocaleString('en-US', { timeZone: 'America/New_York' })}`);
+      console.log(`     Raw timestamp (ts): ${ts} → ${new Date(ts * 1000).toISOString()} (UTC)`);
 
-      return ts;
+      // Snap to minute boundary so marker aligns exactly with the 1m chart bar.
+      // Without this, a timestamp like 16:04:26 is closer to 16:05:00 and misaligns.
+      const snapped = Math.floor(ts / 60) * 60;
+      console.log(`     Snapped to minute: ${snapped} → ${new Date(snapped * 1000).toISOString()} (UTC)`);
+      console.log(`     On chart (ET): ${new Date(snapped * 1000).toLocaleString('en-US', { timeZone: 'America/New_York' })}`);
+
+      return snapped;
     };
 
     // Entry marker
