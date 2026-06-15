@@ -10,6 +10,7 @@ import Pagination from './Pagination'; // Import Pagination component
 import { formatSimpleDate } from '../utils/formatters';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { useSettings } from '../contexts/SettingsContext';
+import ChartDiagnosticsModal from './charts/ChartDiagnosticsModal';
 
 interface AllTradesProps {
   loading?: boolean;
@@ -73,6 +74,9 @@ const AllTrades: React.FC<AllTradesProps> = ({
   
   // NEW: Edit trade navigation state
   const [editingTradeId, setEditingTradeId] = useState<number | 'new' | null>(null);
+
+  // Chart diagnostics modal state
+  const [chartDiagnosticsTrade, setChartDiagnosticsTrade] = useState<any | null>(null);
 
   // Ref for top pagination to scroll to
   const topPaginationRef = useRef<HTMLDivElement>(null);
@@ -891,7 +895,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
                             console.log('  Parsed as UK local time → exit:', ukExit.toISOString(), '(UTC)');
                           }
                           console.groupEnd();
-                          onViewChart?.({
+                          setChartDiagnosticsTrade({
                             symbol: trade.symbol,
                             entryDate: trade.entryDate,
                             entryTime: trade.entryTime,
@@ -1113,6 +1117,26 @@ const AllTrades: React.FC<AllTradesProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chart Diagnostics Modal */}
+      {chartDiagnosticsTrade && (
+        <ChartDiagnosticsModal
+          trade={chartDiagnosticsTrade}
+          onCancel={() => setChartDiagnosticsTrade(null)}
+          onContinue={(adjustedParams) => {
+            setChartDiagnosticsTrade(null);
+            onViewChart?.({
+              symbol: adjustedParams.symbol,
+              entryDate: adjustedParams.entryDate,
+              entryTime: adjustedParams.entryTime,
+              entryPrice: adjustedParams.entryPrice,
+              exitDate: adjustedParams.exitDate || null,
+              exitTime: adjustedParams.exitTime || undefined,
+              exitPrice: adjustedParams.exitPrice || null,
+            });
+          }}
+        />
       )}
 
       {/* Edit Trade Modal Overlay */}
