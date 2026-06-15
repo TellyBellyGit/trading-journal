@@ -214,6 +214,17 @@ const StockChart: React.FC<StockChartProps> = ({
       size: m.size ?? 2,
     }));
 
+    // 🔍 DIAGNOSTIC: Log what's being passed to lightweight-charts
+    console.group('🔍 [StockChart → lightweight-charts] Setting markers');
+    console.log('  Input markers count:', markers.length);
+    seriesMarkers.forEach((sm, i) => {
+      const ts = typeof sm.time === 'number' ? sm.time : Number(sm.time);
+      console.log(`  Marker ${i}: time=${sm.time} (${new Date(ts * 1000).toISOString()} UTC)`);
+      console.log(`    Eastern: ${new Date(ts * 1000).toLocaleString('en-US', { timeZone: 'America/New_York' })}`);
+      console.log(`    text="${sm.text}", position=${sm.position}, shape=${sm.shape}, color=${sm.color}`);
+    });
+    console.groupEnd();
+
     // v5 lightweight-charts: use standalone createSeriesMarkers to set markers
     // Cast to any to work around strict TS SeriesMarker union types
     try {

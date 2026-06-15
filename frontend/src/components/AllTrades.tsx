@@ -870,15 +870,37 @@ const AllTrades: React.FC<AllTradesProps> = ({
                     </td>
                     <td className="p-2 text-center">
                       <button
-                        onClick={() => onViewChart?.({
-                          symbol: trade.symbol,
-                          entryDate: trade.entryDate,
-                          entryTime: trade.entryTime,
-                          entryPrice: trade.entryPrice,
-                          exitDate: trade.exitDate,
-                          exitTime: trade.exitTime,
-                          exitPrice: trade.exitPrice,
-                        })}
+                        onClick={() => {
+                          // 🔍 DIAGNOSTIC: Log raw trade data as received from database (UK local times)
+                          console.group('🔍 [AllTrades → Chart] Raw data from database');
+                          console.log('  trade.entryDate (raw):', trade.entryDate, typeof trade.entryDate);
+                          console.log('  trade.entryTime (raw):', trade.entryTime, typeof trade.entryTime);
+                          console.log('  trade.entryPrice:', trade.entryPrice);
+                          console.log('  trade.exitDate (raw):', trade.exitDate, typeof trade.exitDate);
+                          console.log('  trade.exitTime (raw):', trade.exitTime, typeof trade.exitTime);
+                          console.log('  trade.exitPrice:', trade.exitPrice);
+                          // Show what these look like when parsed as UK local time
+                          if (trade.entryDate && trade.entryTime) {
+                            const datePart = (trade.entryDate || '').split('T')[0];
+                            const ukEntry = new Date(`${datePart}T${trade.entryTime}`);
+                            console.log('  Parsed as UK local time → entry:', ukEntry.toISOString(), '(UTC)');
+                          }
+                          if (trade.exitDate && trade.exitTime && trade.exitDate !== 'null') {
+                            const datePart = (trade.exitDate || '').split('T')[0];
+                            const ukExit = new Date(`${datePart}T${trade.exitTime}`);
+                            console.log('  Parsed as UK local time → exit:', ukExit.toISOString(), '(UTC)');
+                          }
+                          console.groupEnd();
+                          onViewChart?.({
+                            symbol: trade.symbol,
+                            entryDate: trade.entryDate,
+                            entryTime: trade.entryTime,
+                            entryPrice: trade.entryPrice,
+                            exitDate: trade.exitDate,
+                            exitTime: trade.exitTime,
+                            exitPrice: trade.exitPrice,
+                          });
+                        }}
                         className="text-gray-400 hover:text-blue-400 transition-colors p-1"
                         title={`View ${trade.symbol} chart`}
                       >
