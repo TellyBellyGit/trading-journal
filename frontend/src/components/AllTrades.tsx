@@ -77,6 +77,7 @@ const AllTrades: React.FC<AllTradesProps> = ({
 
   // Chart diagnostics modal state
   const [chartDiagnosticsTrade, setChartDiagnosticsTrade] = useState<any | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(true);
 
   // Ref for top pagination to scroll to
   const topPaginationRef = useRef<HTMLDivElement>(null);
@@ -520,6 +521,16 @@ const AllTrades: React.FC<AllTradesProps> = ({
                 🎴 Cards
               </button>
             </div>
+
+            <button
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                showDiagnostics ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'
+              }`}
+              title={showDiagnostics ? 'Click to skip diagnostics and go straight to chart' : 'Click to show diagnostics before chart'}
+            >
+              🔍 Diag {showDiagnostics ? 'ON' : 'OFF'}
+            </button>
           </div>
         </div>
       </div>
@@ -875,35 +886,27 @@ const AllTrades: React.FC<AllTradesProps> = ({
                     <td className="p-2 text-center">
                       <button
                         onClick={() => {
-                          // 🔍 DIAGNOSTIC: Log raw trade data as received from database (UK local times)
-                          console.group('🔍 [AllTrades → Chart] Raw data from database');
-                          console.log('  trade.entryDate (raw):', trade.entryDate, typeof trade.entryDate);
-                          console.log('  trade.entryTime (raw):', trade.entryTime, typeof trade.entryTime);
-                          console.log('  trade.entryPrice:', trade.entryPrice);
-                          console.log('  trade.exitDate (raw):', trade.exitDate, typeof trade.exitDate);
-                          console.log('  trade.exitTime (raw):', trade.exitTime, typeof trade.exitTime);
-                          console.log('  trade.exitPrice:', trade.exitPrice);
-                          // Show what these look like when parsed as UK local time
-                          if (trade.entryDate && trade.entryTime) {
-                            const datePart = (trade.entryDate || '').split('T')[0];
-                            const ukEntry = new Date(`${datePart}T${trade.entryTime}`);
-                            console.log('  Parsed as UK local time → entry:', ukEntry.toISOString(), '(UTC)');
+                          if (showDiagnostics) {
+                            setChartDiagnosticsTrade({
+                              symbol: trade.symbol,
+                              entryDate: trade.entryDate,
+                              entryTime: trade.entryTime,
+                              entryPrice: trade.entryPrice,
+                              exitDate: trade.exitDate,
+                              exitTime: trade.exitTime,
+                              exitPrice: trade.exitPrice,
+                            });
+                          } else {
+                            onViewChart?.({
+                              symbol: trade.symbol,
+                              entryDate: trade.entryDate,
+                              entryTime: trade.entryTime,
+                              entryPrice: trade.entryPrice,
+                              exitDate: trade.exitDate,
+                              exitTime: trade.exitTime,
+                              exitPrice: trade.exitPrice,
+                            });
                           }
-                          if (trade.exitDate && trade.exitTime && trade.exitDate !== 'null') {
-                            const datePart = (trade.exitDate || '').split('T')[0];
-                            const ukExit = new Date(`${datePart}T${trade.exitTime}`);
-                            console.log('  Parsed as UK local time → exit:', ukExit.toISOString(), '(UTC)');
-                          }
-                          console.groupEnd();
-                          setChartDiagnosticsTrade({
-                            symbol: trade.symbol,
-                            entryDate: trade.entryDate,
-                            entryTime: trade.entryTime,
-                            entryPrice: trade.entryPrice,
-                            exitDate: trade.exitDate,
-                            exitTime: trade.exitTime,
-                            exitPrice: trade.exitPrice,
-                          });
                         }}
                         className="text-gray-400 hover:text-blue-400 transition-colors p-1"
                         title={`View ${trade.symbol} chart`}
