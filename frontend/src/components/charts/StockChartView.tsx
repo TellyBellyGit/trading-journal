@@ -198,12 +198,23 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
 
     try {
       const range = '5d'; // Fetch 5 days of data with extended hours
-      const response = await marketApi.getChart(sym.trim(), intv, range, entry);
+      const response: any = await marketApi.getChart(sym.trim(), intv, range, entry);
       console.log(
         `📊 Chart data: ${response.bars.length} bars for ${sym.trim()} at ${intv}` +
         (entry ? ` (entryDate: ${entry.split('T')[0]})` : '') +
         ` | Provider: ${response.provider}`
       );
+      // 🔍 DIAGNOSTIC: Log API response diagnostics (bar timestamp samples)
+      if (response._diagnostics) {
+        console.group('🔍 [API Response _diagnostics]');
+        console.log('  Bar count:', response._diagnostics.barCount);
+        console.log('  Bar sample (time → UTC → ET):');
+        response._diagnostics.barSample.forEach((b: any, i: number) => {
+          console.log(`    [${i}] ts=${b.time} → ${b.utc} → ET: ${b.et}`);
+        });
+        console.log('  Note:', response._diagnostics.note);
+        console.groupEnd();
+      }
       setBars(response.bars);
       setFreshness(response.freshness);
       setProvider(response.provider);

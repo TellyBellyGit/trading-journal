@@ -179,97 +179,38 @@ export class TwelveDataProvider extends MarketDataProvider {
       )
       .map((bar: any) => {
         const rawDatetime: string = bar.datetime;
-        const naiveTime = Math.floor(new Date(rawDatetime).getTime() / 1000);
-        const correctedTime = this.parseEasternDatetime(rawDatetime);
+        // Original approach: parse directly — bars were always correctly positioned
+        // The only bug was in the frontend combineDateTime's hardcoded 5h offset
+        const ts = Math.floor(new Date(rawDatetime).getTime() / 1000);
 
-        // 🔍 DIAGNOSTIC: Log first 3 and last bar to verify timezone correction
         return {
-          time: correctedTime,
+          time: ts,
           open: parseFloat(bar.open),
           high: parseFloat(bar.high),
           low: parseFloat(bar.low),
           close: parseFloat(bar.close),
           volume: bar.volume ? parseFloat(bar.volume) : 0,
-          _diagnostic: { rawDatetime, naiveTime, correctedTime },
+          _diag: { rawDatetime, ts },
         };
       });
 
     // Sort ascending
     bars.sort((a, b) => a.time - b.time);
 
-    // 🔍 DIAGNOSTIC: Log timezone correction summary on every fetch
+    // 🔍 DIAGNOSTIC: Log range summary so we can see raw Twelve Data datetimes
     if (bars.length > 0) {
       const first = bars[0] as any;
       const last = bars[bars.length - 1] as any;
       logger.info(
-        `TwelveData timezone fix: ${bars.length} bars | ` +
-        `First: raw="${first._diagnostic.rawDatetime}" naive=${new Date(first._diagnostic.naiveTime * 1000).toISOString()} corrected=${new Date(first._diagnostic.correctedTime * 1000).toISOString()} | ` +
-        `Last: raw="${last._diagnostic.rawDatetime}" naive=${new Date(last._diagnostic.naiveTime * 1000).toISOString()} corrected=${new Date(last._diagnostic.correctedTime * 1000).toISOString()}`
+        `TwelveData bars: ${bars.length} total | ` +
+        `First: raw="${first._diag.rawDatetime}" → ts=${first._diag.ts} (${new Date(first._diag.ts * 1000).toISOString()}) | ` +
+        `Last: raw="${last._diag.rawDatetime}" → ts=${last._diag.ts} (${new Date(last._diag.ts * 1000).toISOString()})`
       );
       // Strip diagnostic fields before returning
-      bars.forEach((b: any) => {
-        delete b._diagnostic;
-      });
+      bars.forEach((b: any) => { delete b._diag; });
     }
 
     return bars;
-  }
-
-  /**
-   * Parse a Twelve Data datetime string (Eastern timezone, e.g. "2026-06-12 16:04:00")
-   * into a UTC Unix timestamp.
-   * Twelve Data returns datetimes in the exchange timezone (Eastern US).
-   * Uses Date.UTC() + DST-aware offset to avoid server timezone dependencies.
-   */
-  private parseEasternDatetime(datetimeStr: string): number {
-    // Parse "2026-06-12 16:04:00" → [2026, 6, 12, 16, 4, 0]
-    const [datePart, timePart] = datetimeStr.split(' ');
-    const [y, m, d] = datePart.split('-').map(Number);
-    const timeSegments = timePart.split(':').map(Number);
-    const hh = timeSegments[0] || 0;
-    const mm = timeSegments[1] || 0;
-    const ss = timeSegments[2] || 0;
-
-    // Date.UTC treats the wall-clock time AS UTC — we then add the offset to get real UTC.
-    // Eastern Daylight Time = UTC-4  → add 4 hours to convert to UTC
-    // Eastern Standard Time  = UTC-5  → add 5 hours to convert to UTC
-    const asUtcMs = Date.UTC(y, m - 1, d, hh, mm, ss);
-    const offsetHours = this.isEasternDaylightTime(y, m - 1, d) ? 4 : 5;
-    return Math.floor((asUtcMs + offsetHours * 3600 * 1000) / 1000);
-  }
-
-  /**
-   * Determine if a given date is in US Eastern Daylight Time (EDT).
-   * EDT runs from 2nd Sunday in March to 1st Sunday in November.
-   */
-  private isEasternDaylightTime(year: number, month: number, day: number): boolean {
-    // March: DST starts on 2nd Sunday (day 8-14)
-    if (month < 2) return false;       // Jan-Feb → EST
-    if (month > 10) return false;      // Dec → EST
-    if (month > 2 && month < 10) return true; // Apr-Oct → EDT
-
-    // March: before 2nd Sunday → EST; on/after → EDT
-    if (month === 2) {
-      const secondSundayMarch = this.nthSundayOfMonth(year, 2, 2); // March = index 2, 2nd Sunday
-      return day >= secondSundayMarch;
-    }
-
-    // November: before 1st Sunday → EDT; on/after → EST
-    // month === 10 (November, 0-indexed)
-    const firstSundayNovember = this.nthSundayOfMonth(year, 10, 1); // Nov = index 10, 1st Sunday
-    return day < firstSundayNovember;
-  }
-
-  /**
-   * Find the nth Sunday of a given month (0-indexed month: 0=Jan, 10=Nov).
-   */
-  private nthSundayOfMonth(year: number, month: number, n: number): number {
-    // Day 1 of the month
-    const firstDay = new Date(Date.UTC(year, month, 1));
-    // Days until first Sunday (0=Sun)
-    const daysUntilSunday = (7 - firstDay.getUTCDay()) % 7;
-    // First Sunday is 1 + daysUntilSunday, nth Sunday adds 7*(n-1)
-    return 1 + daysUntilSunday + 7 * (n - 1);
   }
 
   /**

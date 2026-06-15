@@ -68,14 +68,26 @@ router.get('/chart/:symbol', authenticateToken, async (req, res) => {
     // Calculate freshness info
     const freshness = buildFreshnessInfo(entryDate, bars);
 
-    const response: ChartResponse = {
+    // 🔍 DIAGNOSTIC: Sample bar info for browser console
+    const barSample = bars.slice(0, 3).concat(bars.slice(-1)).map(b => ({
+      time: (b as any).time,
+      utc: new Date((b as any).time * 1000).toISOString(),
+      et: new Date((b as any).time * 1000).toLocaleString('en-US', { timeZone: 'America/New_York' }),
+    }));
+
+    const response: any = {
       symbol: symbol.toUpperCase(),
       interval,
       range,
       bars,
       freshness,
-      provider: (await getMarketProvider()).name,
+      provider: provider.name,
       timestamp: new Date().toISOString(),
+      _diagnostics: {
+        barCount: bars.length,
+        barSample,
+        note: 'All bar timestamps are UTC Unix timestamps',
+      },
     };
 
     // Store in cache
