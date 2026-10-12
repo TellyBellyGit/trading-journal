@@ -45,6 +45,13 @@ logs
 # Prisma
 /generated/prisma
 
+# Cloudflare Workers / Wrangler
+.wrangler/
+wrangler-dev.log
+.dev.vars
+.dev.vars.*
+
+
 # Runtime data
 pids
 *.pid

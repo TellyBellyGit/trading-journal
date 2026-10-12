@@ -1,4 +1,5 @@
 import express from 'express';
+import { rawBody } from '../lib/bodyParser';
 import { stripe } from '../config/stripe';
 import SubscriptionService from '../services/subscriptionService';
 import { prisma } from '../lib/prisma';
@@ -6,7 +7,7 @@ import { prisma } from '../lib/prisma';
 const router = express.Router();
 
 // Stripe webhook endpoint (raw body needed for signature verification)
-router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/stripe', rawBody('application/json'), async (req, res) => {
   const sig = req.headers['stripe-signature'] as string;
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 

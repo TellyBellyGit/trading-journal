@@ -1,7 +1,22 @@
 name = "trading-backend"
 main = "src/index.ts"
 compatibility_date = "2026-05-21"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = [
+  "nodejs_compat",
+  # Node.js HTTP *server* APIs (http.createServer / ServerResponse / httpServerHandler).
+  # Auto-enabled by nodejs_compat for compatibility dates >= 2025-09-01; listed
+  # explicitly so the intent is clear and future compat-date changes don't break it.
+  "enable_nodejs_http_server_modules"
+]
+
+# ── Build aliases ────────────────────────────────────────────────────────
+# Replace body-parser with a Workers-safe no-op shim. `express` reads
+# bodyParser.json/.raw/... at load time, which pulls in body-parser →
+# raw-body → iconv-lite, and iconv-lite crashes on the Workers runtime.
+# Node/local development is unaffected (this alias only applies to the
+# Wrangler/esbuild bundle).
+[alias]
+"body-parser" = "./src/shims/body-parser.ts"
 
 # ── Observability ────────────────────────────────────────────────────────
 [observability]

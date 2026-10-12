@@ -5,7 +5,7 @@ This guide configures Cloudflare Pages to deploy the Vite frontend in `frontend/
 ## Prerequisites
 - GitHub repository: `TellyBellyGit/trading-journal`
 - Branch strategy: `dev` (default), `master` (production)
-- Backend deployed on Railway with a production URL
+- Backend deployed as a Cloudflare Worker (`trading-backend`) — see `backend/CLOUDFLARE_WORKERS.md`
 
 ## Create Pages Project
 1) In Cloudflare Dashboard, go to `Pages → Create project → Connect to Git`.
@@ -24,11 +24,11 @@ This guide configures Cloudflare Pages to deploy the Vite frontend in `frontend/
 Configure separately for Production (master) and Preview (dev/PRs):
 
 - Production (branch: `master`)
-  - `VITE_API_URL=https://<your-railway-backend-prod-url>`
+  - `VITE_API_URL=https://trading-backend.mabhatti.workers.dev` (Worker **origin only**, no `/api`)
   - Optional: `VITE_STRIPE_PUBLIC_KEY=pk_live_...` and other `VITE_*` variables
 
 - Preview (branches: `dev`, PRs)
-  - `VITE_API_URL=https://<your-dev-or-staging-backend-url>`
+  - Currently **unset**, so preview builds fall back to `http://localhost:3003` (see `frontend/src/config/api.ts`). Set this to a staging backend only if you want previews talking to a real API — pointing previews at the production Worker means preview builds would hit the production database.
   - Optional: `VITE_ENV=preview`
 
 Notes:
@@ -41,8 +41,8 @@ Notes:
 3) SSL/TLS mode: “Full” is recommended.
 
 ## Backend CORS Alignment
-- In Railway (production), set `FRONTEND_URL` to your Pages production domain.
-- Keep production CORS strict (only your production domain).
+- The Worker sets `FRONTEND_URL=https://trading-journal-dlb.pages.dev` in `backend/wrangler.toml` (`[vars]`).
+- CORS is handled by `backend/src/app.ts`, which also explicitly allows `https://trading-journal-dlb.pages.dev`.
 - For preview builds hitting a non-production backend, allow the preview domain (e.g., `*.pages.dev`) on that backend.
 
 ## Verify Deployments
