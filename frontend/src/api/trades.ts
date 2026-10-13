@@ -109,6 +109,31 @@ const exportTrades = async (startDate: string, endDate: string, status?: string)
   return response.data.trades || response.data;
 };
 
+// Read paths are cached briefly (see ./cache.ts) so that switching views does
+// not re-request identical data.
+import { cachedApi, clearApiCache, DEFAULT_TTL_MS } from './cache';
+
+// The API caps every page at 500 rows, so scoped queries page through instead
+// of asking the Worker for the entire trade history in one request.
+const RANGE_PAGE_SIZE = 500;
+const RANGE_MAX_ROWS = 2000;
+
+// Shared search fetch. Defined outside the object literal so that `searchRange`
+// can page through results without referencing the literal it is declared in.
+const fetchSearchPage = (
+  filters: TradeFilters,
+  page: number,
+  limit: number,
+  sortBy: string,
+  sortOrder: 'asc' | 'desc'
+): Promise<PaginatedResponse<Trade> & { sorting?: any }> => {
+  const params = { ...filters, page, limit, sortBy, sortOrder };
+  return cachedApi(`trades:search:${JSON.stringify(params)}`, async () => {
+    const response = await api.get('/trades/search', { params });
+    return response.data;
+  });
+};
+
 export const tradesApi = {
   // Get all trades (with optional broker filter, pagination, and sorting)
   getAll: async (
@@ -120,15 +145,32 @@ export const tradesApi = {
   ): Promise<PaginatedResponse<Trade> & { sorting?: any }> => {
     const params: any = { page, limit, sortBy, sortOrder };
     if (brokerId) params.brokerId = brokerId;
-    const response = await api.get('/trades', { params });
-    return response.data;
+    return cachedApi(
+      `trades:list:${brokerId ?? 'all'}:${page}:${limit}:${sortBy}:${sortOrder}`,
+      async () => {
+        const response = await api.get('/trades', { params });
+        return response.data;
+      },
+      DEFAULT_TTL_MS
+    );
   },
 
-  // Legacy method for backward compatibility (returns all trades without pagination)
-  getAllLegacy: async (brokerId?: number): Promise<Trade[]> => {
-    const params = brokerId ? { brokerId, limit: 10000 } : { limit: 10000 };
-    const response = await api.get('/trades', { params });
-    return response.data.trades || response.data;
+  // Fetches every page of a date/broker scoped query, up to a hard ceiling.
+  // Replaces the old "getAllLegacy" pattern that asked the Worker for 10,000
+  // rows in a single request.
+  searchRange: async (filters: TradeFilters, maxRows: number = RANGE_MAX_ROWS): Promise<Trade[]> => {
+    const rows: Trade[] = [];
+    let page = 1;
+    while (rows.length < maxRows) {
+      const response = await fetchSearchPage(filters, page, RANGE_PAGE_SIZE, 'entryDate', 'asc');
+      const batch = response.trades || [];
+      rows.push(...batch);
+      if (batch.length === 0 || !response.pagination?.hasNextPage) {
+        break;
+      }
+      page += 1;
+    }
+    return rows.slice(0, maxRows);
   },
 
   // Get single trade with full details
@@ -140,30 +182,35 @@ export const tradesApi = {
   // Create new trade
   create: async (trade: NewTrade): Promise<Trade> => {
     const response = await api.post('/trades', trade);
+    clearApiCache('trades:');
     return response.data;
   },
 
   // Update trade
   update: async (id: number, trade: Partial<NewTrade>): Promise<Trade> => {
     const response = await api.put(`/trades/${id}`, trade);
+    clearApiCache('trades:');
     return response.data;
   },
 
   // 🔥 NEW: Update only trade notes (for auto-save)
   updateNotes: async (id: number, notes: string): Promise<{ success: boolean; updatedAt: string }> => {
     const response = await api.patch(`/trades/${id}/notes`, { notes });
+    clearApiCache('trades:');
     return response.data;
   },
 
   // 🔥 NEW: Update only trade assessment (for auto-save)
   updateAssessment: async (id: number, assessment: string): Promise<{ success: boolean; updatedAt: string }> => {
     const response = await api.patch(`/trades/${id}/assessment`, { assessment });
+    clearApiCache('trades:');
     return response.data;
   },
 
   // 🔥 NEW: Update only trade strategy (for auto-save)
   updateStrategy: async (id: number, strategy: string): Promise<{ success: boolean; updatedAt: string }> => {
     const response = await api.patch(`/trades/${id}/strategy`, { strategy });
+    clearApiCache('trades:');
     return response.data;
   },
 
@@ -174,24 +221,20 @@ export const tradesApi = {
     limit: number = 20,
     sortBy: string = 'entryDate',
     sortOrder: 'asc' | 'desc' = 'desc'
-  ): Promise<PaginatedResponse<Trade> & { sorting?: any }> => {
-    const params = { ...filters, page, limit, sortBy, sortOrder };
-    const response = await api.get('/trades/search', { params });
-    return response.data;
-  },
-
-  // Legacy search method for backward compatibility
-  searchLegacy: async (filters: TradeFilters): Promise<Trade[]> => {
-    const params = { ...filters, limit: 10000 };
-    const response = await api.get('/trades/search', { params });
-    return response.data.trades || response.data;
-  },
+  ): Promise<PaginatedResponse<Trade> & { sorting?: any }> =>
+    fetchSearchPage(filters, page, limit, sortBy, sortOrder),
 
   // 🔥 NEW: Get trade statistics
   getStats: async (brokerId?: number): Promise<TradeStats> => {
     const params = brokerId ? { brokerId } : {};
-    const response = await api.get('/trades/stats', { params });
-    return response.data;
+    return cachedApi(
+      `trades:stats:${brokerId ?? 'all'}`,
+      async () => {
+        const response = await api.get('/trades/stats', { params });
+        return response.data;
+      },
+      DEFAULT_TTL_MS
+    );
   },
 
   // 🔥 NEW: Get dashboard data (combines stats, recent trades, and server-calculated streak)
@@ -202,13 +245,20 @@ export const tradesApi = {
     timestamp: string;
   }> => {
     const params = brokerId ? { brokerId } : {};
-    const response = await api.get('/trades/dashboard', { params });
-    return response.data;
+    return cachedApi(
+      `trades:dashboard:${brokerId ?? 'all'}`,
+      async () => {
+        const response = await api.get('/trades/dashboard', { params });
+        return response.data;
+      },
+      DEFAULT_TTL_MS
+    );
   },
 
   // Delete trade
   delete: async (id: number): Promise<void> => {
     await api.delete(`/trades/${id}`);
+    clearApiCache('trades:');
   },
 
 import: {
@@ -241,6 +291,7 @@ import: {
       });
       
       console.log('💾 Save response:', response.data);
+      clearApiCache('trades:');
       
       return response.data;
     } catch (error) {

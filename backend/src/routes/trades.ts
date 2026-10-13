@@ -62,6 +62,36 @@ interface AnalyzedTrade {
   status: 'Open' | 'Closed';
 }
 
+// ---------------------------------------------------------------------------
+// Pagination + date-range guards
+// ---------------------------------------------------------------------------
+// Workers have a hard per-request CPU/memory budget, so clients must not be
+// able to ask for unbounded result sets. Every list endpoint funnels its
+// caller supplied page/limit values through these helpers.
+const MAX_PAGE_SIZE = 500;
+const DEFAULT_PAGE_SIZE = 20;
+
+const parsePositiveInt = (raw: unknown, fallback: number): number => {
+  const value = parseInt(String(raw ?? ''), 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+};
+
+const parsePageSize = (raw: unknown): number =>
+  Math.min(parsePositiveInt(raw, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
+
+// Date-only values ("2025-05-31") are expanded to end-of-day UTC so that an
+// inclusive range covers the whole requested day.
+const parseEndOfDay = (raw: unknown): Date | null => {
+  const value = String(raw ?? '').trim();
+  if (!value) {
+    return null;
+  }
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T23:59:59.999Z` : value;
+  const date = new Date(iso);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+
 // 🔥 ENHANCED: Get all trades with broker information, pagination, and sorting
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -73,8 +103,8 @@ router.get('/', authenticateToken, async (req, res) => {
       sortOrder = 'desc' 
     } = req.query;
     
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
+    const pageNum = parsePositiveInt(page, 1);
+    const limitNum = parsePageSize(limit);
     const skip = (pageNum - 1) * limitNum;
     
     const whereClause: any = { userId: req.user!.userId };
@@ -95,7 +125,8 @@ router.get('/', authenticateToken, async (req, res) => {
       'exitPrice': 'exitPrice',
       'duration': 'duration',
       'status': 'status',
-      'broker': 'brokerId' // Sort by broker ID for database efficiency
+      'broker': 'brokerId', // Sort by broker ID for database efficiency
+      'createdAt': 'createdAt' // Used for "first N trades" eligibility checks
     };
     
     // Validate sort parameters
@@ -320,6 +351,7 @@ router.get('/search', authenticateToken, async (req, res) => {
       direction, 
       strategy, 
       fromDate,
+      toDate,
       tags,
       brokerId,
       status,
@@ -331,8 +363,8 @@ router.get('/search', authenticateToken, async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
+    const pageNum = parsePositiveInt(page, 1);
+    const limitNum = parsePageSize(limit);
     const skip = (pageNum - 1) * limitNum;
 
     const where: any = { userId: req.user!.userId };
@@ -346,17 +378,28 @@ router.get('/search', authenticateToken, async (req, res) => {
     if (strategy) {
       where.strategy = { contains: strategy as string };
     }
-    if (fromDate) {
-      const fromDateObj = new Date(fromDate as string);
-      if (isNaN(fromDateObj.getTime())) {
+    if (fromDate || toDate) {
+      const fromDateObj = fromDate ? new Date(fromDate as string) : null;
+      if (fromDateObj && isNaN(fromDateObj.getTime())) {
         console.warn('🔍 Invalid fromDate format:', fromDate);
         return res.status(400).json({ 
           error: 'Invalid fromDate format. Use YYYY-MM-DD format',
           received: fromDate 
         });
       }
-      console.log('🔍 FromDate filter applied:', fromDate, '→', fromDateObj);
-      where.entryDate = { gte: fromDateObj };
+      const toDateObj = parseEndOfDay(toDate);
+      if (toDate && !toDateObj) {
+        console.warn('🔍 Invalid toDate format:', toDate);
+        return res.status(400).json({
+          error: 'Invalid toDate format. Use YYYY-MM-DD format',
+          received: toDate
+        });
+      }
+      console.log('🔍 Date range filter applied:', fromDateObj, '→', toDateObj);
+      where.entryDate = {
+        ...(fromDateObj ? { gte: fromDateObj } : {}),
+        ...(toDateObj ? { lte: toDateObj } : {})
+      };
     }
     if (tags) {
       where.tags = { contains: tags as string };
@@ -431,7 +474,8 @@ router.get('/search', authenticateToken, async (req, res) => {
       'exitPrice': 'exitPrice',
       'duration': 'duration',
       'status': 'status',
-      'broker': 'brokerId'
+      'broker': 'brokerId',
+      'createdAt': 'createdAt' // Used by "first N trades" eligibility checks
     };
     
     // Validate sort parameters
@@ -461,7 +505,7 @@ router.get('/search', authenticateToken, async (req, res) => {
 
     // Calculate date context for enhanced pagination
     let dateContext = undefined;
-    const hasDateFilter = fromDate;
+    const hasDateFilter = fromDate || toDate;
     if (hasDateFilter && trades.length > 0) {
       const pageStartDate = trades[0].entryDate;
       const pageEndDate = trades[trades.length - 1].entryDate;

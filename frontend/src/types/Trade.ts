@@ -102,6 +102,7 @@ export interface TradeFilters {
   direction?: string;
   strategy?: string;
   fromDate?: string;
+  toDate?: string;         // 🔥 ADD: inclusive upper bound for date-range queries
   //dateFrom?: string;
   //dateTo?: string;
   //startDate?: string;      // 🔥 ADD

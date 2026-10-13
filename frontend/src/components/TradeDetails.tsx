@@ -960,12 +960,13 @@ const TradeDetails: React.FC<TradeDetailsProps> = ({ tradeId, onBack }) => {
         // Check if user can use rich text features
         // Free users: only first 10 trades get rich text notes
         if (status.plan === 'free') {
-          // Get user's trade count to determine eligibility using centralized API
+          // Only the 10 oldest trades can use rich text, so fetch just those.
+          // The API caps page sizes and supports createdAt ordering.
           try {
-            const trades = await tradesApi.getAllLegacy();
+            const { trades } = await tradesApi.getAll(undefined, 1, 10, 'createdAt', 'asc');
             
             // Sort trades by creation date and check if current trade is in first 10
-            const sortedTrades = trades.sort((a: any, b: any) => 
+            const sortedTrades = [...trades].sort((a: any, b: any) => 
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             );
             const currentTradeIndex = sortedTrades.findIndex((t: any) => t.id === tradeId);

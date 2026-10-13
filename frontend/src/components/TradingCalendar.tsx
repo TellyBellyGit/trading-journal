@@ -52,33 +52,48 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
       const firstDay = new Date(currentYear, currentMonth, 1);
       const lastDay = new Date(currentYear, currentMonth + 1, 0);
       
-      // Fetch all trades for the month
-      const trades = await api.trades.getAllLegacy();
+      // Auto-navigate to the month containing the latest trade.
+      // This is now a single-row lookup: the API caps page sizes, so the
+      // calendar no longer downloads the entire trade history to work out
+      // which month to display.
+      if (!hasAutoNavigated) {
+        setHasAutoNavigated(true);
+        try {
+          const latest = await api.trades.getAll(undefined, 1, 1, 'entryDate', 'desc');
+          const latestTrade = latest.trades?.[0];
 
-      // Auto-navigate to the month containing the latest trade
-      // This ensures the calendar shows the most recent trading activity
-      if (!hasAutoNavigated && trades.length > 0) {
-        const latestTrade = trades.reduce((latest, trade) => {
-          const tradeDate = new Date(trade.entryDate);
-          return tradeDate > latest ? tradeDate : latest;
-        }, new Date(trades[0].entryDate));
+          if (latestTrade) {
+            const latestDate = new Date(latestTrade.entryDate);
+            const latestMonth = latestDate.getMonth();
+            const latestYear = latestDate.getFullYear();
 
-        const latestMonth = latestTrade.getMonth();
-        const latestYear = latestTrade.getFullYear();
-
-        // Only jump if the current calendar month doesn't match the latest trade month
-        if (currentMonth !== latestMonth || currentYear !== latestYear) {
-          setHasAutoNavigated(true);
-          setCurrentDate(new Date(latestYear, latestMonth, 1));
-          setLoading(false);
-          return; // useEffect will re-trigger loadCalendarData with the new date
+            // Only jump if the current calendar month doesn't match the latest trade month
+            if (currentMonth !== latestMonth || currentYear !== latestYear) {
+              setCurrentDate(new Date(latestYear, latestMonth, 1));
+              setLoading(false);
+              return; // useEffect will re-trigger loadCalendarData with the new date
+            }
+          }
+        } catch (navError) {
+          console.error('Error determining the latest trade month:', navError);
         }
       }
       
-      // Filter trades for current month
+      // Fetch a window padded by one day on each side; date-only strings are
+      // expanded server-side to cover the whole day, and the local filter below
+      // keeps only the visible month. The padding means timezone offsets can
+      // never clip the first/last day of the month.
+      const pad = (value: number) => String(value).padStart(2, '0');
+      const windowStart = new Date(currentYear, currentMonth, 0); // last day of previous month
+      const windowEnd = new Date(currentYear, currentMonth + 1, 1); // first day of next month
+      const fromDateKey = `${windowStart.getFullYear()}-${pad(windowStart.getMonth() + 1)}-${pad(windowStart.getDate())}`;
+      const toDateKey = `${windowEnd.getFullYear()}-${pad(windowEnd.getMonth() + 1)}-${pad(windowEnd.getDate())}`;
+      const trades = await api.trades.searchRange({ fromDate: fromDateKey, toDate: toDateKey });
+
+      // Filter trades for current month (safety net for timezone edge cases)
       const monthTrades = trades.filter(trade => {
         const tradeDate = new Date(trade.entryDate);
-        return tradeDate >= firstDay && tradeDate <= lastDay;
+        return tradeDate >= firstDay && tradeDate <= new Date(lastDay.getTime() + 86399999);
       });
 
       // Group trades by date
@@ -218,7 +233,8 @@ const TradingCalendar: React.FC<TradingCalendarProps> = ({ onDateClick }) => {
     console.log(`Clicked day ${day}, formatted as: ${dateKey}`);
     
     try {
-      const trades = await api.trades.getAllLegacy();
+      // Only fetch the clicked day; date-only strings cover the whole UTC day
+      const trades = await api.trades.searchRange({ fromDate: dateKey, toDate: dateKey });
       const dayTrades = trades.filter(trade => {
         // Use consistent date formatting for comparison
         const tradeDate = new Date(trade.entryDate);

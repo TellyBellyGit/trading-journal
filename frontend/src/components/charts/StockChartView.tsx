@@ -54,7 +54,7 @@ const StockChartView: React.FC<StockChartViewProps> = ({ prefill, onBack }) => {
         return;
       }
       try {
-        const allTrades = await tradesApi.getAllLegacy();
+        const allTrades = await tradesApi.searchRange({ fromDate: dateToUse, toDate: dateToUse });
         console.log(`📋 All trades fetched: ${allTrades.length}`);
         // Filter trades that match the entry date (ignoring time)
         const matchingTrades = allTrades.filter((t: any) => {
